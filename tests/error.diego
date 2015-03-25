@@ -1,0 +1,5 @@
+func myKitty (): bool
+	return true;
+end notMyKitty
+
+write 20;

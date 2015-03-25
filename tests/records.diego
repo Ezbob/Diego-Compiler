@@ -1,0 +1,15 @@
+type funnyType = record of {
+	this : int,
+	is : bool,
+	sparta : int,
+	maybe : funnyType
+};
+var fun : funnyType;
+
+allocate fun;
+fun.this = 42;
+fun.is = true;
+fun.is = false;
+fun.sparta = 37;
+allocate fun.maybe; 
+fun.maybe.maybe = null;

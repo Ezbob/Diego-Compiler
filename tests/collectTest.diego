@@ -1,0 +1,13 @@
+
+
+func function3 (a : int, b : int) : bool
+	
+	#a = 3;	
+
+	if(a == 3) then return false;
+	else return true; 
+
+return true;
+end function3	
+
+write null;

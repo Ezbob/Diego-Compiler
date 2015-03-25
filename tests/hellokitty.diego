@@ -1,0 +1,5 @@
+func helloworld (): int
+	return 45;
+end helloworld
+
+return 42;

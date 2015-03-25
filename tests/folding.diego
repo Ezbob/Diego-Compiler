@@ -1,0 +1,102 @@
+(*
+ * this is a nonsense function (* but I like it *)
+ *)
+func function1 () : int
+		return 1+2;
+end function1
+
+func function3 () : int
+	return 4-2;
+end function3
+
+func function4 () : int
+	return 4*2;
+end function4
+
+func function5 () : int
+	return 9/3;
+end function5
+
+(*
+func function6 () : int
+	var a : int;
+	a = 2;
+	return 9/0;
+end function6
+*)
+
+func function7 () : int
+	return 3 <= 5;
+end function7
+
+func function8 () : int
+	return 6 <= 5;
+end function8
+
+func function9 () : int
+	return 3 >= 5;
+end function9
+
+func function10 () : int
+	return 6 >= 5;
+end function10
+
+func function11 () : int
+	return 5 == 5;
+end function11
+
+func function12 () : int
+	return 6 == 5;
+end function12
+
+func function13 () : int
+	return 6 != 5;
+end function13
+
+func function14 () : int
+	return 5 != 5;
+end function14
+
+func function15 () : int
+	return 6 < 5;
+end function15
+
+func function16 () : int
+	return 4 < 5;
+end function16
+
+func function17 () : int
+	return 4 > 5;
+end function17
+
+func function18 () : int
+	return 6 > 5;
+end function18
+
+func function19 () : int
+	return 6 == 5 && 6 > 5;
+end function19
+
+func function20 () : int
+	return 5 == 5 && 6 > 5;
+end function20
+
+func function21 () : int
+	return 5 == 6 || 4 > 5;
+end function21
+
+func function22 () : int
+	return 5 == 5 || 6 > 5;
+end function22
+
+func function23 () : int
+	return 5 == 5 || 4 > 5;
+end function23
+
+func function24 () : int
+	return 5 == 6 || 6 > 5;
+end function24
+
+write function1(10,45);
+
+

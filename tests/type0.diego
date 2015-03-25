@@ -1,0 +1,35 @@
+func function1 () : int
+	var a : int, b : int;
+	a = 42; b = 10;
+
+	if a == b then {
+		a = b;
+		return 23;
+	}else {
+		b = a;
+		return 23;
+	}
+	return 12;
+end function1
+
+func function2 () : int
+
+	type newFunThing = c;
+	type newFunThing2 = newFunThing;
+	type newFunThing3 = newFunThing2;
+	var c : int;
+	var a : bool;
+	type lol1 = lol2;
+	type lol2 = lol1;
+	
+	return 42;
+end function2
+
+func function3 () : bool
+
+	return true;
+
+end function3
+
+
+write 32;

@@ -1,0 +1,9 @@
+var c : int, d : int;
+var a : bool;
+
+c = 2; 
+d = 4;
+write d+c;
+write d-c;
+write d*c;
+write d/c; 

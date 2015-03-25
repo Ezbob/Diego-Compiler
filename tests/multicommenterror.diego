@@ -1,0 +1,7 @@
+(*
+
+func myKitty (): bool
+	return true;
+end myKitty
+
+write 20;

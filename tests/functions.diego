@@ -1,0 +1,72 @@
+(*
+ * this is a nonsense function (* but I like it *)
+ *)
+func function1 () : int
+	var a : int, b : int;
+	a = 42; b = 10;
+
+	if a == b then {
+		a = b;
+		return 23;
+	}else {
+		b = a;
+		return 23;
+	}
+	return 12;
+end function1
+
+func function2 () : int
+	var a : int, b : int;
+	a = 42; b = 10;
+
+	a = 5+5+5+5+5;
+	b = 10+5;
+
+	if a == b then {
+		a = b;
+		return 23;
+	}else {
+		b = a;
+		return 23;
+	}
+	return 21;
+end function2
+
+
+func function3 () : int
+	var a : int, b : int;
+	a = 42; b = 10;
+
+	if a == b then {
+		a = b;
+	}else {
+		b = a;
+	}
+	return 23;
+end function3
+
+func function3 () : int
+	var a : int, b : int;
+	a = 42; b = 10;
+
+	if 5 == 1 then {
+		if a == b then {
+			return 10;
+		}else {
+			return 23;
+		}
+	}else {
+		return a;
+	}
+	return 1;
+end function3
+
+(*
+(*
+ * This function should return a boolean value
+ *)
+func function2 (a: int , b : int) : bool
+	return a-b && !(b-a) || a > 0 && b <= 10; 
+end function2	
+*)
+write function1(10,45);
