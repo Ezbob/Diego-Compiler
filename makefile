@@ -4,10 +4,10 @@ OUTPUTFILE = kitty
 B3PATH = typechecker
 B2PATH = parserscanner
 B1PATH = symbol
-DEPS = *.h $(B1PATH)/*.h $(B2PATH)/*.h $(B3PATH)/*.h
-OBJS = kitty.o $(B1PATH)/*.o $(B2PATH)/*.o $(B3PATH)/*.o
+OBJS = $(B1PATH)/*.o $(B2PATH)/*.o $(B3PATH)/*.o kitty.o dlinkedlist.o \
+		kittyir.o
 
-$(OUTPUTFILE): $(OBJS) $(DEPS)
+$(OUTPUTFILE): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@
 
 $(B1PATH)/*.o:
@@ -23,4 +23,7 @@ $(B3PATH)/*.o:
 	$(CC) $(CFLAGS) -c $? -o $@
 
 clean: 
-	$(RM) $(OUTPUTFILE) $(OBJS) *~
+	$(RM) $(OUTPUTFILE) $(OBJS) *~ && \
+	cd $(B1PATH) && make clean && \
+	cd ../$(B2PATH) && make clean && \
+	cd ../$(B3PATH) && make clean \

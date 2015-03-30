@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include "parserscanner/y.tab.h"
 #include "parserscanner/kittytree.h"
-#include "kittyweed.h"
-#include "kittyprinter.h"
+#include "typechecker/kittyweed.h"
+#include "typechecker/kittyprinter.h"
 #include "symbol/symbol.h"
-#include "kittytype.h"
-#include "kittycheck.h"
+#include "typechecker/kittytype.h"
+#include "typechecker/kittycheck.h"
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS 0
 #define FAILURE -1
@@ -38,14 +38,6 @@ int main( void )
 			return FAILURE;
 			break;
 	}
-	begin_weed(_main_);
-
-	collect(_main_);
-	
-	begin_check(_main_);
-
-	printer_body(_main_);
-
 
 	return SUCCESS;
 }
