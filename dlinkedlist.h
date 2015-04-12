@@ -36,7 +36,8 @@ void append_element(linked_list *, void *);
 void prepend_element(linked_list *, void *);
 
 /* 
- * Retrives the first element in the list, or NULL if no first element is found
+ * Retrives the first element in the list, or NULL if no first element is 
+ * found
  */
 void *get_first_element(linked_list *);
 
@@ -63,8 +64,9 @@ void *get_element(linked_list *, int);
 int get_length(linked_list *);
 
 /* 
- * Makes a string containing all pointers to the element data in the linked list.
- * This hopefully gives some insight into the contents of the linked list. 
+ * Makes a string containing all pointers to the element data in the linked 
+ * list. This hopefully gives some insight into the contents of the linked 
+ * list. 
  */
 void list_dump(linked_list *);
 

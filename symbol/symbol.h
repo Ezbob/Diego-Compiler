@@ -5,7 +5,8 @@
 
 typedef struct SYMBOLTYPE {
   int visited;
-  enum { SYMBOL_FUNCTION, SYMBOL_INT, SYMBOL_BOOL, SYMBOL_ID, SYMBOL_RECORD, SYMBOL_ARRAY, SYMBOL_NULL, SYMBOL_UNKNOWN } type;
+  enum { SYMBOL_FUNCTION, SYMBOL_INT, SYMBOL_BOOL, SYMBOL_ID, SYMBOL_RECORD, 
+    SYMBOL_ARRAY, SYMBOL_NULL, SYMBOL_UNKNOWN } type;
   union { 
 		struct TYPE *array;
 		struct TYPE *declaration_type;
