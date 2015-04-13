@@ -5,7 +5,7 @@ B3PATH = typechecker
 B2PATH = parserscanner
 B1PATH = symbol
 OBJS = $(B1PATH)/*.o $(B2PATH)/*.o $(B3PATH)/*.o kitty.o dlinkedlist.o \
-		kittyir.o
+		kittyir.o irInstructions.o
 
 $(OUTPUTFILE): $(OBJS)
 	$(CC) $(CFLAGS) $^ -o $@

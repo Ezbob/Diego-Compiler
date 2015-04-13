@@ -6,6 +6,7 @@
 #include "symbol/symbol.h"
 #include "typechecker/kittytype.h"
 #include "typechecker/kittycheck.h"
+#include "kittyir.h"
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS 0
 #define FAILURE -1
@@ -38,6 +39,7 @@ int main( void )
 			return FAILURE;
 			break;
 	}
+	IR_pretty_printer( IR_build() );
 
 	return SUCCESS;
 }

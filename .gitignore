@@ -1,0 +1,5 @@
+**/*.o
+**/lex.yy.*
+**/y.tab.*
+errors
+kitty

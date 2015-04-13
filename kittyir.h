@@ -1,10 +1,10 @@
 #ifndef KITTY_EMITTER_H
 #define KITTY_EMITTER_H 
 #include "dlinkedlist.h"
-
+#include "parserscanner/kittytree.h"
 
 typedef struct IR_INSTRUCTION {
-	void *label; // label defined as address
+	char *label; // label defined as name
 	enum { movl, call, pushl, popl, addl, subl } op_code; // add more instruc-
 														// -tions when we need
 														// them
