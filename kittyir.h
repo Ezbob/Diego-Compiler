@@ -3,20 +3,28 @@
 #include "dlinkedlist.h"
 #include "parserscanner/kittytree.h"
 
+typedef struct IR_LINE {
+	char *label;
+	enum {
+		empty_line,
+		label_line,
+		instruction_line
+	} kind;
+	struct IR_INSTRUCTION *instruction;
+} IR_LINE;
+
 typedef struct IR_INSTRUCTION {
-	char *label; // label defined as name
-	enum { movl, call, pushl, popl, addl, subl } op_code; // add more instruc-
-														// -tions when we need
-														// them
+	enum { globl, string, movl, call, pushl, popl, addl, subl, ret } op_code; 
+							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
-
 } IR_INSTRUCTION;
 
 typedef struct ARGUMENT {
 	enum { address_arg, register_arg, label_arg, constant_arg } kind;
 	union {
 		struct TEMP *reg;
+		char *label;
 		int intConst;
 	} value;
 } ARGUMENT;
@@ -53,5 +61,6 @@ void IR_builder_expression ( EXPRES *exp);
 void IR_builder_term ( TERM *term);
 void IR_builder_act_list ( ACT_LIST *actlst);
 void IR_builder_expression_list ( EXP_LIST *explst);
-
+void IR_pretty_printer_instruction ( IR_INSTRUCTION *);
+void IR_pretty_printer ( linked_list *);
 #endif

@@ -3,13 +3,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static linked_list *instructions; // linked list of instructions
+static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
 
 linked_list *IR_build() {
-	instructions = initialize_list();
+	ir_lines = initialize_list();
+	// make ".globl main" directive
+	IR_INSTRUCTION *globl_directive = make_instruction_globl();
+	globl_directive->arg1 = make_argument_label("main");
+	IR_LINE *globl_line = make_line_instruction(globl_directive,
+		".globl");
+	append_element(ir_lines, globl_line);
+    // make "main:" label line
+    IR_LINE *main_label = make_line_label("main");
+    append_element(ir_lines, main_label);
+
+
 	IR_builder_body(_main_);
-	return instructions;
+	return ir_lines;
 }
 
 void IR_builder_function(FUNC *func) {
@@ -68,13 +79,14 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 
 void IR_builder_statement ( STATEMENT *st) {
 	IR_INSTRUCTION *new_instruction;
+	IR_LINE *new_line;
 	switch(st->kind) {
 		case print_S_K:
 			new_instruction = make_instruction_call();
-			new_instruction->label = calloc(20,sizeof(char));
-			
-			sprintf(new_instruction->label,"printf");
-			append_element(instructions,new_instruction);
+			new_instruction->arg1 = make_argument_label("printf");
+			new_line = make_line_instruction(new_instruction,NULL);
+
+			append_element(ir_lines,new_line);
 			break;
 		default:
 			break;
@@ -109,30 +121,55 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 
 }
 
-void IR_pretty_printer ( linked_list *instruction_list ) {
+void IR_pretty_printer ( linked_list *line_list ) {
 	linked_list *temp;
-	IR_INSTRUCTION *instruction_to_print;
+	IR_LINE *line_to_print;
 
-	temp = instruction_list->next;
-	while(temp != instruction_list){
-		instruction_to_print = (IR_INSTRUCTION *) temp->data;
+	temp = line_list->next;
+	while(temp != line_list){
+		line_to_print = (IR_LINE *) temp->data;
 
-		switch(instruction_to_print->op_code){
-			case movl:
+		switch(line_to_print->kind){
+			case empty_line:
+				printf("\n");
 				break;
-			case call:
-				printf("Call %s\n", instruction_to_print->label);
+			case label_line:
+				printf("%s:\n", line_to_print->label );
 				break;
-			case pushl:
-				break;
-			case popl:
-				break;
-			case addl:
-				break;
-			case subl:
+			case instruction_line:
+				if(line_to_print->label != NULL){
+					printf("%s ", line_to_print->label);
+				}
+				IR_pretty_printer_instruction(line_to_print->instruction);
 				break;
 		}
 
 		temp = temp->next;
+	}
+}
+
+void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr ) {
+	switch(instr->op_code){
+		case globl:
+			printf("%s\n", instr->arg1->value.label);
+			break;
+		case string:
+			printf("%s\n", instr->arg1->value.label);
+			break;
+		case movl:
+			break;
+		case call:
+			printf("\t call %s\n", instr->arg1->value.label);
+			break;
+		case pushl:
+			break;
+		case popl:
+			break;
+		case addl:
+			break;
+		case subl:
+			break;
+		case ret:
+			break;
 	}
 }
