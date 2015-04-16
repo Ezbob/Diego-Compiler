@@ -100,16 +100,32 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 }
 
 void IR_builder_statement ( STATEMENT *st) {
-	IR_INSTRUCTION *new_instruction; // note: using arrays here
-	IR_LINE *new_line; // note: using arrays here
+	IR_INSTRUCTION **new_instructions; // note: using arrays here
+	IR_LINE **new_lines; // note: using arrays here
+	int number_of_instructions;
+	int i;
 	switch(st->kind) {
 		case print_S_K:
 			// the printf call
-			new_instruction = make_instruction_call();
-			new_instruction->arg1 = make_argument_label("printf");
-			new_line = make_line_instruction(new_instruction,NULL);
+			number_of_instructions = 2;
+			new_instructions = (IR_INSTRUCTION **) 
+					malloc(sizeof(IR_INSTRUCTION) * number_of_instructions);
+			new_lines = (IR_INSTRUCTION **)
+					malloc(sizeof(IR_LINE) * number_of_instructions);
 
-			append_element(ir_lines,new_line);
+			IR_builder_expression(st->value.exp);
+
+			new_instructions[0] = make_instruction_pushl();
+			new_instructions[0]->arg1 = make_argument_label("$format");
+			new_lines[0] = make_line_instruction(new_instructions[0],NULL);
+
+			new_instructions[1] = make_instruction_call();
+			new_instructions[1]->arg1 = make_argument_label("printf");
+			new_lines[1] = make_line_instruction(new_instructions[1],NULL);
+
+			for(i = 0; i < number_of_instructions; i++){
+				append_element(ir_lines,new_lines[i]);	
+			}
 			break;
 		default:
 			break;
@@ -129,11 +145,34 @@ void IR_builder_variable ( VAR *var) {
 }
 
 void IR_builder_expression ( EXPRES *exp) {
-
+	switch(exp->kind){
+		case term_E_K:
+			IR_builder_term(exp->value.term);
+			break;
+		default:
+			break;
+	}
 }
 
 void IR_builder_term ( TERM *term) {
+	IR_INSTRUCTION **new_instructions; // note: using arrays here
+	IR_LINE **new_lines; // note: using arrays here
+	int number_of_instructions;
+	switch(term->kind){
+		case num_T_K:
+			new_instructions = (IR_INSTRUCTION **) malloc(
+							sizeof(IR_INSTRUCTION)*1);
+			new_lines = (IR_LINE **) malloc(sizeof(IR_INSTRUCTION) * 1);
 
+			// have to movl num const to temp
+			new_instructions[0] = make_instruction_movl();
+			new_instructions[0]->arg1 = make_argument_register();
+			new_lines[0] = make_line_instruction(new_instructions[0],NULL);
+
+			break;
+		default:
+			break;
+	}
 }
 
 void IR_builder_act_list ( ACT_LIST *actlst) {
