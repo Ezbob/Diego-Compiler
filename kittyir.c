@@ -2,7 +2,9 @@
 #include "irInstructions.h"
 #include <stdio.h>
 #include <stdlib.h>
+#define NEW_TEMPORARY_ID (current_temporary++)
 
+static int current_temporary = 0;
 static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
 
@@ -18,8 +20,20 @@ linked_list *IR_build() {
     IR_LINE *main_label = make_line_label("main");
     append_element(ir_lines, main_label);
 
+    // make new stack frame
+    IR_shift_to_new_frame();
+
+    append_element(ir_lines,make_line_empty());
+
+    // recursive run-through the AST
 	IR_builder_body(_main_);
 
+	append_element(ir_lines,make_line_empty());
+
+	// shift back to old frame
+	IR_shift_to_old_frame();
+
+	// make "ret"
 	IR_LINE *ret_line = make_line_instruction(make_instruction_ret(),NULL);
 	append_element(ir_lines,ret_line);
 	return ir_lines;
@@ -88,6 +102,7 @@ void IR_builder_statement ( STATEMENT *st) {
 			new_instruction->arg1 = make_argument_label("printf");
 			new_line = make_line_instruction(new_instruction,NULL);
 
+			//preppend_element(ir_lines,make_instruction_string())
 			append_element(ir_lines,new_line);
 			break;
 		default:
@@ -122,6 +137,59 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
 }
+
+void IR_shift_to_new_frame (){
+	IR_LINE **new_lines;
+	int i;
+	new_lines = (IR_LINE **) malloc(sizeof(IR_LINE) * 2);
+	new_lines[0] = make_line_instruction(make_instruction_pushl(),NULL);
+	new_lines[1] = make_line_instruction(make_instruction_movl(),NULL);
+
+	new_lines[0]->instruction->arg1 = make_argument_register();
+	new_lines[0]->instruction->arg1->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[0]->instruction->arg1->value.reg->value.registerName = ebp;
+
+	new_lines[1]->instruction->arg1 = make_argument_register();
+	new_lines[1]->instruction->arg2 = make_argument_register();
+	new_lines[1]->instruction->arg1->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[1]->instruction->arg2->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[1]->instruction->arg1->value.reg->value.registerName = esp;
+	new_lines[1]->instruction->arg2->value.reg->value.registerName = ebp;
+
+	for(i = 0; i < 2; i++){
+		append_element(ir_lines, new_lines[i]);
+	}
+}
+
+void IR_shift_to_old_frame (){
+	IR_LINE **new_lines;
+	int i;
+	new_lines = (IR_LINE **) malloc(sizeof(IR_LINE) * 2);
+	new_lines[0] = make_line_instruction(make_instruction_popl(),NULL);
+	new_lines[1] = make_line_instruction(make_instruction_movl(),NULL);
+
+	new_lines[0]->instruction->arg1 = make_argument_register();
+	new_lines[0]->instruction->arg1->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[0]->instruction->arg1->value.reg->value.registerName = ebp;
+
+	new_lines[1]->instruction->arg1 = make_argument_register();
+	new_lines[1]->instruction->arg2 = make_argument_register();
+	new_lines[1]->instruction->arg1->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[1]->instruction->arg2->value.reg = 
+										make_temp_register(NEW_TEMPORARY_ID);
+	new_lines[1]->instruction->arg1->value.reg->value.registerName = ebp;
+	new_lines[1]->instruction->arg2->value.reg->value.registerName = esp;
+
+	for(i = 1; i >= 0; i--){
+		append_element(ir_lines, new_lines[i]);
+	}	
+}
+
 
 void IR_pretty_printer ( linked_list *line_list ) {
 	linked_list *temp;
@@ -170,12 +238,26 @@ void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr ) {
 			printf("\n");
 			break;
 		case pushl:
+			printf("\t pushl ");
+			IR_pretty_printer_arguments(instr->arg1);
+			printf("\n");
 			break;
 		case popl:
+			printf("\t popl ");
+			IR_pretty_printer_arguments(instr->arg1);
+			printf("\n");
 			break;
 		case addl:
+			printf("\t addl ");
+			IR_pretty_printer_arguments(instr->arg1);
+			IR_pretty_printer_arguments(instr->arg2);
+			printf("\n");
 			break;
 		case subl:
+			printf("\t subl ");
+			IR_pretty_printer_arguments(instr->arg1);
+			IR_pretty_printer_arguments(instr->arg2);
+			printf("\n");
 			break;
 		case ret:
 			printf("\t ret \n");
@@ -205,28 +287,28 @@ void IR_pretty_printer_temp (TEMP *tmp) {
 		case register_temp:
 			switch(tmp->value.registerName){
 				case eax:
-				printf("eax ");
+				printf("%%eax ");
 				break;
 				case ebx:
-				printf("ebx ");
+				printf("%%ebx ");
 				break;
 				case ecx:
-				printf("ecx ");
+				printf("%%ecx ");
 				break;
 				case edx:
-				printf("edx ");
+				printf("%%edx ");
 				break;
 				case ebp:
-				printf("ebp ");
+				printf("%%ebp ");
 				break;
 				case esi:
-				printf("esi ");
+				printf("%%esi ");
 				break;
 				case edi:
-				printf("edi ");
+				printf("%%edi ");
 				break;
 				case esp:
-				printf("esp ");
+				printf("%%esp ");
 				break;
 			}
 		break;

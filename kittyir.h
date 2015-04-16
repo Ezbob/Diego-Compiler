@@ -61,6 +61,11 @@ void IR_builder_expression ( EXPRES *exp);
 void IR_builder_term ( TERM *term);
 void IR_builder_act_list ( ACT_LIST *actlst);
 void IR_builder_expression_list ( EXP_LIST *explst);
-void IR_pretty_printer_instruction ( IR_INSTRUCTION *);
-void IR_pretty_printer ( linked_list *);
+void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr );
+void IR_pretty_printer_arguments (ARGUMENT *arg);
+void IR_pretty_printer_temp (TEMP *tmp);
+
+void IR_shift_to_new_frame ();
+void IR_shift_to_old_frame ();
+
 #endif
