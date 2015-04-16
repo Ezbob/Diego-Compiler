@@ -107,6 +107,15 @@ IR_INSTRUCTION *make_instruction_string() {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_ret() {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = ret;
+	new_instruction->arg1 = NULL;
+	new_instruction->arg2 = NULL;
+	return new_instruction;	
+}
+
 ARGUMENT *make_argument_address() {
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));

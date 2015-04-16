@@ -15,6 +15,7 @@ IR_INSTRUCTION *make_instruction_addl();
 IR_INSTRUCTION *make_instruction_subl();
 IR_INSTRUCTION *make_instruction_globl();
 IR_INSTRUCTION *make_instruction_string();
+IR_INSTRUCTION *make_instruction_ret();
 
 ARGUMENT *make_argument_address();
 ARGUMENT *make_argument_register();

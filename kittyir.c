@@ -18,8 +18,10 @@ linked_list *IR_build() {
     IR_LINE *main_label = make_line_label("main");
     append_element(ir_lines, main_label);
 
-
 	IR_builder_body(_main_);
+
+	IR_LINE *ret_line = make_line_instruction(make_instruction_ret(),NULL);
+	append_element(ir_lines,ret_line);
 	return ir_lines;
 }
 
@@ -157,9 +159,15 @@ void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr ) {
 			printf("%s\n", instr->arg1->value.label);
 			break;
 		case movl:
+			printf("\t movl ");
+			IR_pretty_printer_arguments(instr->arg1);
+			IR_pretty_printer_arguments(instr->arg2);
+			printf("\n");
 			break;
 		case call:
-			printf("\t call %s\n", instr->arg1->value.label);
+			printf("\t call ");
+			IR_pretty_printer_arguments(instr->arg1);
+			printf("\n");
 			break;
 		case pushl:
 			break;
@@ -170,6 +178,63 @@ void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr ) {
 		case subl:
 			break;
 		case ret:
+			printf("\t ret \n");
 			break;
+	}
+}
+
+void IR_pretty_printer_arguments (ARGUMENT *arg) {
+	switch(arg->kind){
+		case address_arg:
+			// TODO
+		break;
+		case register_arg:
+			IR_pretty_printer_temp(arg->value.reg);
+		break;
+		case label_arg:
+			printf("%s ", arg->value.label);
+		break;
+		case constant_arg:
+			printf("%i ", arg->value.intConst);
+		break;
+	}
+}
+
+void IR_pretty_printer_temp (TEMP *tmp) {
+	switch(tmp->kind){
+		case register_temp:
+			switch(tmp->value.registerName){
+				case eax:
+				printf("eax ");
+				break;
+				case ebx:
+				printf("ebx ");
+				break;
+				case ecx:
+				printf("ecx ");
+				break;
+				case edx:
+				printf("edx ");
+				break;
+				case ebp:
+				printf("ebp ");
+				break;
+				case esi:
+				printf("esi ");
+				break;
+				case edi:
+				printf("edi ");
+				break;
+				case esp:
+				printf("esp ");
+				break;
+			}
+		break;
+		case virtual_temp:
+		// TODO
+		break;
+		case spilled_temp:
+		// TODO
+		break;
 	}
 }
