@@ -6,7 +6,7 @@
 #include "../symbol/symbol.h"
 #include "../parserscanner/kittytree.h"
 
-void collect(BODY *body);
+void collect(BODY *body, SYMBOLTABLE *symboltable);
 void collect_function ( FUNC *function, SYMBOLTABLE *st);
 void collect_head ( HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st);
 void collect_body ( BODY *body, SYMBOLTABLE *st);

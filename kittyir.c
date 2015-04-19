@@ -5,43 +5,31 @@
 #define NEW_TEMPORARY_ID (current_temporary++)
 
 static int current_temporary = 0;
+static int current_label = 0;
+static int current_instruction = 0;
 static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
 
+ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
+
+void initRegisters(){
+	eax = make_argument_register(r_eax, "eax");
+	ebx = make_argument_register(r_ebx, "ebx");
+	ecx = make_argument_register(r_ecx, "ecx");
+	edx = make_argument_register(r_edx, "edx");
+	edi = make_argument_register(r_edi, "edi");
+	esi = make_argument_register(r_esi, "esi");
+	ebp = make_argument_register(r_ebp, "ebp");
+	esp = make_argument_register(r_esp, "esp");
+}
 linked_list *IR_build() {
 	ir_lines = initialize_list();
-	// make ".string "%d\n" "
-	IR_INSTRUCTION *print_format = make_instruction_string();
-	print_format->arg1 = make_argument_label("\"%d\\n\"");
-	IR_LINE *print_format_line = make_line_instruction(print_format,"format");
-	append_element(ir_lines,print_format_line);
-	append_element(ir_lines,make_line_empty());
+	initRegisters();
 
-	// make ".globl main" directive
-	IR_INSTRUCTION *globl_directive = make_instruction_globl();
-	globl_directive->arg1 = make_argument_label("_main");
-	IR_LINE *globl_line = make_line_instruction(globl_directive,NULL);
-	append_element(ir_lines, globl_line);
-    // make "main:" label line
-    IR_LINE *main_label = make_line_label("_main");
-    append_element(ir_lines, main_label);
-
-    // make new stack frame
-    IR_shift_to_new_frame();
-
-    append_element(ir_lines,make_line_empty());
-
-    // recursive run-through the AST
 	IR_builder_body(_main_);
 
-	append_element(ir_lines,make_line_empty());
+	IR_printer(ir_lines);
 
-	// shift back to old frame
-	IR_shift_to_old_frame();
-
-	// make "ret"
-	IR_LINE *ret_line = make_line_instruction(make_instruction_ret(),NULL);
-	append_element(ir_lines,ret_line);
 	return ir_lines;
 }
 
@@ -100,76 +88,216 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 }
 
 void IR_builder_statement ( STATEMENT *st) {
-	IR_INSTRUCTION **new_instructions; // note: using arrays here
-	IR_LINE **new_lines; // note: using arrays here
-	int number_of_instructions;
-	int i;
-	switch(st->kind) {
-		case print_S_K:
-			// the printf call
-			number_of_instructions = 2;
-			new_instructions = (IR_INSTRUCTION **) 
-					malloc(sizeof(IR_INSTRUCTION) * number_of_instructions);
-			new_lines = (IR_INSTRUCTION **)
-					malloc(sizeof(IR_LINE) * number_of_instructions);
+	ARGUMENT *returnvalue;
+	ARGUMENT *arg1;
+	ARGUMENT *arg2;
 
-			IR_builder_expression(st->value.exp);
+	switch(st->kind){
 
-			new_instructions[0] = make_instruction_pushl();
-			new_instructions[0]->arg1 = make_argument_label("$format");
-			new_lines[0] = make_line_instruction(new_instructions[0],NULL);
-
-			new_instructions[1] = make_instruction_call();
-			new_instructions[1]->arg1 = make_argument_label("printf");
-			new_lines[1] = make_line_instruction(new_instructions[1],NULL);
-
-			for(i = 0; i < number_of_instructions; i++){
-				append_element(ir_lines,new_lines[i]);	
-			}
+		case return_S_K:	
+			returnvalue = IR_builder_expression(st->value.exp);
+			IR_INSTRUCTION *movl = make_instruction_movl(returnvalue, eax);
+			append_element(ir_lines, movl);
+			IR_INSTRUCTION *ret = make_instruction_ret();
+			calleeRestore();
+			append_element(ir_lines, ret);
 			break;
+
+		case print_S_K:
+
+			switch(st->value.exp->symboltype->type){
+
+				case SYMBOL_INT:
+					calleeSave();
+					//Push arguments for print then form for print
+					arg1 = IR_builder_expression(st->value.exp);
+					callerSave();
+
+					IR_INSTRUCTION *params = make_instruction_pushl(arg1, NULL);
+					append_element(ir_lines, params);
+					ARGUMENT *arg3 = make_argument_label("$fromNumber");
+					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+					append_element(ir_lines, pushform);
+
+					arg2 = make_argument_label("printf");
+					IR_INSTRUCTION *call = make_instruction_call(arg1, arg2);
+					append_element(ir_lines, call);
+
+					moveStackpointer(2);
+
+					callerRestore();
+					calleeRestore();
+					break;
+
+				case SYMBOL_BOOL:
+					break;
+
+				default:
+					break;
+			}
 		default:
 			break;
 	}
 } 
 
-void IR_builder_opt_length ( OPT_LENGTH *oplen) {
-
+ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
+	return IR_builder_expression(oplen->value.exp);
 }
 
 void IR_builder_opt_else ( OPT_ELSE *opel) {
 
 }
 
-void IR_builder_variable ( VAR *var) {
+ARGUMENT *IR_builder_variable ( VAR *var) {
+
+	ARGUMENT *arg = NEW(ARGUMENT);
+	return arg;
 
 }
 
-void IR_builder_expression ( EXPRES *exp) {
+ARGUMENT *IR_builder_expression ( EXPRES *exp) {
+	ARGUMENT *argLeft;
+	ARGUMENT *argRight;
+	IR_INSTRUCTION *instr;
+	IR_INSTRUCTION *edxsave;
+	IR_INSTRUCTION *edxrestore;
+
+	if(exp->kind != term_E_K){
+		argLeft = IR_builder_expression(exp->value.sides.left);
+		argRight = IR_builder_expression(exp->value.sides.right);
+	}
+
 	switch(exp->kind){
 		case term_E_K:
-			IR_builder_term(exp->value.term);
+			return IR_builder_term(exp->value.term);
 			break;
-		default:
+
+		case plus_E_K:
+			instr = make_instruction_addl(argLeft, argRight);
+			append_element(ir_lines, instr);
+			return argRight; 
+			break;
+
+		case minus_E_K:
+			instr = make_instruction_subl(argLeft, argRight);
+			append_element(ir_lines, instr);
+			return argRight; 
+			break;
+
+		case times_E_K:
+			instr = make_instruction_mul(argLeft, argRight);
+			append_element(ir_lines, instr);
+			return argRight;
+			break;
+
+		case divide_E_K:
+			edxsave = make_instruction_pushl(edx, NULL); //Saving edx register
+			append_element(ir_lines, edxsave);
+
+			instr = make_instruction_xor(edx, edx); //Clear edx for DIV
+			append_element(ir_lines, instr);
+
+			IR_INSTRUCTION *instr1 = make_instruction_movl(argLeft, eax);
+			append_element(ir_lines, instr1);
+
+			IR_INSTRUCTION*instr2 = make_instruction_div(argRight, NULL);
+			append_element(ir_lines, instr2);
+
+			IR_INSTRUCTION *instr3 = make_instruction_movl(eax, argLeft);
+			append_element(ir_lines, instr3);
+
+			edxrestore = make_instruction_popl(edx, NULL);
+			append_element(ir_lines, edxrestore); //Restoring edx register
+
+			return argLeft;
+			break;
+
+		case booleq_E_K:
+
+
+			break;
+		case boolneq_E_K:
+			break;
+		case boolgreater_E_K:
+			break;
+		case boolless_E_K:
+			break;
+		case boolleq_E_K:
+			break;
+		case boolgeq_E_K:
+			break;
+		case booland_E_K:
+			break;
+		case boolor_E_K:
 			break;
 	}
+
+	return argLeft;
+
 }
 
-void IR_builder_term ( TERM *term) {
-	IR_INSTRUCTION **new_instructions; // note: using arrays here
-	IR_LINE **new_lines; // note: using arrays here
-	int number_of_instructions;
+ARGUMENT *IR_builder_term ( TERM *term) {
+
+	ARGUMENT *arg1;
+	ARGUMENT *arg2;
+	IR_INSTRUCTION *instr;
+
 	switch(term->kind){
 		case num_T_K:
-			new_instructions = (IR_INSTRUCTION **) malloc(
-							sizeof(IR_INSTRUCTION)*1);
-			new_lines = (IR_LINE **) malloc(sizeof(IR_INSTRUCTION) * 1);
-
-			// have to movl num const to temp
-			new_instructions[0] = make_instruction_movl();
-			new_instructions[0]->arg1 = make_argument_register();
-			new_lines[0] = make_line_instruction(new_instructions[0],NULL);
-
+			arg1 = make_argument_constant(term->value.intconst);
+			arg2 = make_argument_tempregister(current_temporary++);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
+			return arg2; //Return arg2 to keep track of temps
 			break;
+
+		case boolTrue_T_K:
+			arg1 = make_argument_constant(1);
+			arg2 = make_argument_tempregister(current_temporary++);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
+			return arg2; //Return arg2 to keep track of temps
+			break;
+			break;
+
+		case boolFalse_T_K:
+			arg1 = make_argument_constant(0);
+			arg2 = make_argument_tempregister(current_temporary++);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
+			return arg2; //Return arg2 to keep track of temps
+			break;
+
+		case null_T_K:
+			arg1 = make_argument_constant(0);
+			arg2 = make_argument_tempregister(current_temporary++);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
+			return arg2; //Return arg2 to keep track of temps
+			break;
+
+		case expresPipes_T_K:
+			break;
+
+		case expresParent_T_K:
+			arg1 = IR_builder_expression(term->value.exp);
+			return arg1;
+			break;
+
+		case termBang_T_K:
+			break;
+
+		case var_T_K:
+			arg1 = IR_builder_variable(term->value.var);
+			arg2 = make_argument_tempregister(current_temporary++);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
+			return arg2; //Return arg2 to keep track of temps			
+			break;
+
+		case actList_T_K:
+			break;
+
 		default:
 			break;
 	}
@@ -183,6 +311,162 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 
 }
 
+
+void callerSave(){
+
+	IR_INSTRUCTION *instr1 = make_instruction_pushl(ecx, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_pushl(edx, NULL);
+	append_element(ir_lines, instr1);
+	append_element(ir_lines, instr2);
+
+
+}
+
+void callerRestore(){
+
+	IR_INSTRUCTION *instr1 = make_instruction_popl(edx, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(ecx, NULL);
+	append_element(ir_lines, instr1);
+	append_element(ir_lines, instr2);
+
+}
+
+void calleeSave(){
+
+	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
+	IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
+	append_element(ir_lines, instr1);
+	append_element(ir_lines, instr2);
+	append_element(ir_lines, instr3);
+}
+
+void calleeRestore(){
+
+	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
+	IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
+	append_element(ir_lines, instr3);
+	append_element(ir_lines, instr2);
+	append_element(ir_lines, instr1);
+
+}
+
+void moveStackpointer(int i){
+
+	ARGUMENT *arg = make_argument_constant(i*4);
+	IR_INSTRUCTION *instr = make_instruction_addl(arg, esp);
+	append_element(ir_lines, instr); 
+
+
+}
+
+void IR_printer(linked_list *ir_lines){
+
+	linked_list *temp;
+	temp = ir_lines->next;
+	IR_INSTRUCTION *instr_to_print;
+
+	while(temp != ir_lines){
+
+		instr_to_print = (IR_INSTRUCTION *) temp->data;
+
+		switch(instr_to_print->op_code){
+
+			case popl:
+				printf("\t%s", "popl ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
+
+			case pushl:
+				printf("\t%s", "pushl ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
+
+			case ret:
+				printf("\t%s\t\n", "ret");
+				break;
+
+			case movl:
+				printf("\t%s", "movl ");
+				IR_print_arguments(instr_to_print->arg1); 
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+				break;
+
+			case addl:
+				printf("\t%s", "addl ");
+				IR_print_arguments(instr_to_print->arg1); 
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+				break;
+
+			case subl:
+				printf("\t%s", "subl ");
+				IR_print_arguments(instr_to_print->arg1); 
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+				break;
+
+			case xor:
+				printf("\t%s", "XOR ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+
+			case divl:
+				printf("\t%s", "DIV ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+
+			case call:
+				printf("\t%s", "call ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+			default:
+				break;
+		}
+
+		temp = temp->next;
+	}
+}
+
+
+void IR_print_arguments(ARGUMENT *arg){
+
+	switch(arg->kind){
+
+		case constant_arg:
+			printf("$%d", arg->intConst);
+			break;
+
+		case register_arg:
+			printf("%s", "%");
+			printf("%s", arg->charConst);
+			break;
+
+		case tempreg_arg:
+			printf("%s", "%");
+			printf("%s%i", "temp", arg->tempid);
+			break;
+
+		case label_arg:
+			printf("%s", arg->label);
+			break;
+
+		default:
+			break;
+	}
+
+}
+/*
+	
 void IR_shift_to_new_frame (){
 	IR_LINE **new_lines;
 	int i;
@@ -365,3 +649,4 @@ void IR_pretty_printer_temp (TEMP *tmp) {
 		break;
 	}
 }
+*/

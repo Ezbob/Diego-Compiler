@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <malloc.h>
 
 void *Malloc(unsigned n){ 
 	void *p;

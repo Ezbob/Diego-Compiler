@@ -20,9 +20,12 @@
 
 int lineno = 1;
 struct BODY *_main_;
+struct SYMBOLTABLE *globalTable;
 
 int main( void )
 {
+
+	globalTable = initSymbolTable();
 	switch ( yyparse() ){
 		case PARSE_ERROR:
 			fprintf(stderr, "Error: Parse error detected\n");
@@ -33,13 +36,17 @@ int main( void )
 			return FAILURE;
 			break;
 		case PARSE_SUCCESS:
+			//begin_weed(_main_);
+			collect(_main_, globalTable);
+			printer_body(_main_);
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");
 			return FAILURE;
 			break;
 	}
-	IR_pretty_printer( IR_build() );
+	//IR_pretty_printer( 
+	IR_build();// );
 
 	return SUCCESS;
 }
