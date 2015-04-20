@@ -4,14 +4,13 @@
 
 void begin_check(BODY *main);
 
-int check_expression ( EXPRES *);
+void check_expression ( EXPRES *);
 int check_term ( TERM *);
 
 
 void check_function(FUNC *);
 void check_head (HEAD *);
 void check_body (BODY *);
-//void check_tail (TAIL *);
 void check_type ( TYPE *);
 void check_par_decl_list ( PAR_DECL_LIST *);
 void check_var_decl_list ( VAR_DECL_LIST *);

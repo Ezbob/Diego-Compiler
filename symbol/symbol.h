@@ -5,22 +5,37 @@
 
 typedef struct SYMBOLTYPE {
   int visited;
-  enum { SYMBOL_FUNCTION, SYMBOL_INT, SYMBOL_BOOL, SYMBOL_ID, SYMBOL_RECORD, 
-    SYMBOL_ARRAY, SYMBOL_NULL, SYMBOL_UNKNOWN } type;
-  union { 
-		struct TYPE *array;
-		struct TYPE *declaration_type;
-		struct TYPE *return_type;
-		struct FUNCTION *func;
-	    } value;
+  enum {    SYMBOL_FUNCTION, 
+        SYMBOL_INT, 
+        SYMBOL_BOOL, 
+        SYMBOL_ID, 
+        SYMBOL_RECORD, 
+        SYMBOL_ARRAY, 
+        SYMBOL_NULL, 
+        SYMBOL_UNKNOWN } type;
+  union {
+    struct TYPE *array;
+    struct TYPE *declaration_type;
+    struct TYPE *return_type;
+    struct FUNCTION *func;
+    struct VAR_DECL_LIST *parameters;
+    int arguments;
+      } value;
 }SYMBOLTYPE;
 
 
 typedef struct SYMBOL {
   char *name;
   int value;
+  int noArguments;
   SYMBOLTYPE *symboltype;
   struct SYMBOL *next;
+  struct PAR_DECL_LIST *parameters;
+  struct FUNCTION *func;
+  struct TYPE *declarationtype;
+  struct TYPE *returntype;
+  struct TYPE *array;
+  struct TYPE *realtype;
 } SYMBOL;
 
 typedef struct SYMBOLTABLE {

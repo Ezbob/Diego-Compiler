@@ -73,6 +73,7 @@ typedef struct FUNC {
 
 typedef struct HEAD {
 	int lineno;
+	int arguments;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
 	struct { char *id; 
@@ -164,7 +165,7 @@ typedef struct STATEMENT_LIST
 	enum { statement_SL_K, compound_SL_K } kind;
 	union {
 		struct {struct STATEMENT *statement;
-			struct STATEMENT_LIST *statement_list; } compoundSL;
+					  struct STATEMENT_LIST *statement_list; } compoundSL;
 		struct STATEMENT *statement;
 	} value;
 } STATEMENT_LIST;
@@ -183,12 +184,13 @@ typedef struct STATEMENT
 		struct STATEMENT_LIST *statement_list;
 		struct {struct EXPRES *exp; FUNC *function; } returnS;
 		struct {struct VAR *variable; struct EXPRES *exp; } assignS;
-		struct {struct VAR *variable; struct OPT_LENGTH *opt_length; } 
-																allocateS;
+		struct {struct VAR *variable; 
+						struct OPT_LENGTH *opt_length; } allocateS;
 		struct {struct EXPRES *exp; 
-				struct STATEMENT *statement;
-				struct OPT_ELSE *opt_else; } ifbranchS;
-		struct {struct EXPRES *exp;struct STATEMENT *statement; } whileS;
+					  struct STATEMENT *statement;
+					  struct OPT_ELSE *opt_else; } ifbranchS;
+		struct {struct EXPRES *exp;
+						struct STATEMENT *statement; } whileS;
 	} value;
 } STATEMENT;
 

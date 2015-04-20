@@ -1,4 +1,5 @@
 #include "kittytype.h"
+#include "../parserscanner/kittytree.h"
 #include <stdio.h>
 
 /*
@@ -8,18 +9,15 @@
 
 void collect(BODY *main, SYMBOLTABLE *symboltable){
 
-	//Initializing the main symbol table
-	SYMBOLTABLE *main_table = symboltable;
-
 	//Start collecting
-	collect_body(main, main_table);
+	collect_body(main, symboltable);
 
 }
 
 
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
-	
+
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st);
 
@@ -28,10 +26,9 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 	 */
 	collect_head(function->functionF.head, scope, st);
 	collect_body(function->functionF.body, scope);
-
-	function->symboltype = function->functionF.head->symboltype;
+	dumpSymbolTable(st);
 	dumpSymbolTable(scope);
-	
+	function->symboltype = function->functionF.head->symboltype;
 
 }
 
@@ -39,23 +36,30 @@ void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 
 	header->symboltable = st;
 	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
+	SYMBOL *symbol;
 	symboltype->type = SYMBOL_FUNCTION;
-	putSymbol(st, header->headH.id, 0, symboltype);		
-	header->symboltype = symboltype;	
 	
-	collect_par_decl_list(header->headH.pdeclist, scope);
-	collect_type(header->headH.returntype, st);	
+	header->symboltype = symboltype;
 
-	printf("Return type: %s\n", header->headH.returntype->value.idconst);
-	symboltype->value.return_type = header->headH.returntype;	
+	int noArguments = 0;
+	noArguments = collect_par_decl_list(header->headH.pdeclist, scope);
+	header->arguments = noArguments;
+	symbol = putSymbol(st, header->headH.id, 0, symboltype);
+	symbol->parameters = header->headH.pdeclist;
+	symbol->returntype = header->headH.returntype;
+	symbol->noArguments = noArguments;
+	collect_type(header->headH.returntype, st);
+
+	symboltype->value.return_type = header->headH.returntype;
+
 }
 
 void collect_body (BODY *body, SYMBOLTABLE *st){
-	
+
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
-	
+
 }
 
 void collect_type ( TYPE *type, SYMBOLTABLE *st){
@@ -67,60 +71,57 @@ void collect_type ( TYPE *type, SYMBOLTABLE *st){
 		case id_TY_K:
 			symboltype->type = SYMBOL_ID;
 			type->symboltype = symboltype;
-			type->value.idconst = "ID";
 			break;
 
-		case int_TY_K:		
+		case int_TY_K:
 			symboltype->type = SYMBOL_INT;
 			type->symboltype = symboltype;
-			type->value.idconst = "INT";
 			break;
 
 		case bool_TY_K:
 			symboltype->type = SYMBOL_BOOL;
 			type->symboltype = symboltype;
-			type->value.idconst = "BOOL";
 			break;
 
 		case arrayof_TY_K:
 			symboltype->type = SYMBOL_ARRAY;
 			type->symboltype = symboltype;
-			collect_type(type->value.type, st);			
-			type->symboltype->value.array = type->value.type;
-			type->value.idconst = "ARRAY";
+			collect_type(type->value.type, st);
+			//type->symboltype->value.array = type->value.type;
 			break;
 
 		case recordof_TY_K:
 			symboltype->type = SYMBOL_RECORD;
 			type->symboltype = symboltype;
 			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st));
-			type->value.idconst = "RECORD";
 			break;
 	}
 }
-	
-void collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
+
+int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
 
 	pdecl->symboltable = st;
-
+	int arguments = 0;
 	switch(pdecl->kind){
 		case varType_PDL_K:
-			collect_var_decl_list(pdecl->value.var_decl_list, st);
+			arguments += collect_var_decl_list(pdecl->value.var_decl_list, st);
 			break;
 
 		case empty_PDL_K:
+			return 0;
 			break;
 
 	}
+	return arguments;
 }
 
-void collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
+int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 
 	vdecl->symboltable = st;
-
+	int no = 1;
 	switch(vdecl->kind){
 		case comma_VDL_K:
-			collect_var_decl_list(vdecl->value.commaVDL.var_decl_list, st);
+			no += collect_var_decl_list(vdecl->value.commaVDL.var_decl_list, st);
 			collect_var_type(vdecl->value.commaVDL.var_type, st);
 			break;
 
@@ -128,13 +129,20 @@ void collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 			collect_var_type(vdecl->value.var_type, st);
 			break;
 	}
+
+	return no;
 }
 
 void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 	vtype->symboltable = st;
 	collect_type(vtype->type, st);
-	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
 
+	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
+	if(vtype->symbol == NULL){
+		fprintf(stderr, "%s\n", "Fejl");
+		exit(1);
+	}
+	vtype->symbol->realtype = vtype->type;
 
 }
 
@@ -144,7 +152,7 @@ void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ){
 
 	switch(dlst->kind){
 		case compound_DL_K:
-			collect_decl_list(dlst->value.compoundDL.decl_list, st);		
+			collect_decl_list(dlst->value.compoundDL.decl_list, st);
 			collect_declaration(dlst->value.compoundDL.declaration, st);
 			break;
 
@@ -157,27 +165,22 @@ void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ){
 void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ){
 
 	decl->symboltable = st;
-	SYMBOLTYPE *symbol;
+	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
 	SYMBOL *test;
 
 	switch(decl->kind){
 		case typeassign_D_K:
-			symbol = NEW(SYMBOLTYPE);
-			//symbol->type = SYMBOL_ID;
-
+			symboltype->type = SYMBOL_ID;
 			collect_type(decl->value.typedeclID.type, st);
 
-			printf("TYPE OF DECL TYPE: %s\n", decl->value.typedeclID.type->value.idconst);
+			symboltype = decl->value.typedeclID.type->symboltype;
+			symboltype->value.declaration_type = decl->value.typedeclID.type;
 
-			symbol = decl->value.typedeclID.type->symboltype;			
-			symbol->value.declaration_type = decl->value.typedeclID.type;
-
-
-			if((test = putSymbol(st, decl->value.typedeclID.id, 0, symbol)) == NULL ){
+			if((test = putSymbol(st, decl->value.typedeclID.id, 0, symboltype)) == NULL ){
 				fprintf(stderr, "fejl\n");
 			}
 
-
+			test->declarationtype = decl->value.typedeclID.type;
 
 			break;
 
@@ -193,14 +196,14 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ){
 
 void collect_statement_list ( STATEMENT_LIST *slst, SYMBOLTABLE *st ){
 
-	slst->symboltable = st;	
+	slst->symboltable = st;
 
 	switch(slst->kind){
 		case statement_SL_K:
 			collect_statement(slst->value.statement, st);
 			break;
 
-		case compound_SL_K: 
+		case compound_SL_K:
 			collect_statement_list(slst->value.compoundSL.statement_list, st);
 			collect_statement(slst->value.compoundSL.statement, st);
 			break;
@@ -213,7 +216,7 @@ void collect_statement ( STATEMENT *stm, SYMBOLTABLE *st ){
 
 	switch(stm->kind){
 		case return_S_K:
-			collect_expression(stm->value.returnS.exp, st); 	
+			collect_expression(stm->value.returnS.exp, st);
 			break;
 
 		case print_S_K:
@@ -243,9 +246,9 @@ void collect_statement ( STATEMENT *stm, SYMBOLTABLE *st ){
 
 		case statement_list_S_K:
 			collect_statement_list(stm->value.statement_list, st);
-			break; 
+			break;
 	}
-} 
+}
 
 void collect_opt_length ( OPT_LENGTH *oplen, SYMBOLTABLE *st ){
 
@@ -278,7 +281,7 @@ void collect_opt_else ( OPT_ELSE *opel, SYMBOLTABLE *st ){
 void collect_variable ( VAR *var, SYMBOLTABLE *st ){
 
 	var->symboltable = st;
-	
+
 	switch(var->kind){
 		case id_V_K:
 			break;
@@ -413,8 +416,8 @@ void collect_term ( TERM *term, SYMBOLTABLE *st ){
 
 void collect_act_list ( ACT_LIST *actlst, SYMBOLTABLE *st){
 
-	actlst->symboltable = st;	
-	
+	actlst->symboltable = st;
+
 	switch(actlst->kind){
 		case explist_AL_K:
 			collect_expression_list(actlst->value.exp_list, st);

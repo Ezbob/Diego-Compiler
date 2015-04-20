@@ -99,7 +99,6 @@
 %%
 
 program	: body { _main_ = $1;}
-		| /* empty */ 
 		;
 
 func 	: head body tail { if(strcmp($1->headH.id,$3->id) == 0)

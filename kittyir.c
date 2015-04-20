@@ -148,6 +148,10 @@ void IR_builder_statement ( STATEMENT *st) {
 					printf("%s\n", "DEFAULT CASE EXP");
 					break;
 			}
+
+		case ifbranch_S_K:
+
+			break;
 		default:
 			break;
 	}

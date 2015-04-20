@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -pedantic -g -lstdc++
+CFLAGS = -std=c99 -Wall -Wextra -pedantic -g 
 OUTPUTFILE = kitty
 B3PATH = typechecker
 B2PATH = parserscanner

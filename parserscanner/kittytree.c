@@ -18,9 +18,10 @@ FUNC *make_FUNC_structure(HEAD *head, BODY *body, TAIL *tail){
 }
 
 HEAD *make_HEAD_header(char *id, PAR_DECL_LIST *pdeclist, TYPE *returntype ){
-	
+
 	HEAD *head = NEW(HEAD);
 	head->lineno = lineno;
+	head->arguments = 0;
 	head->headH.id = id;
 	head->headH.pdeclist = pdeclist;
 	head->headH.returntype = returntype;
@@ -50,7 +51,7 @@ TAIL *make_TAIL_functail(char *id) {
 	return tail;
 
 }
-	
+
 
 /*Expression constructor */
 EXPRES *make_EXPRESS_term(TERM *Tterm){
@@ -665,7 +666,6 @@ TYPE *make_TYPE_int(){
 	int_type->lineno = lineno;
 	int_type->kind = int_TY_K;
 	int_type->value.typeconst = NEW_SHORT_STR;
-	sprintf(int_type->value.typeconst,"INT");
 
 	return int_type;
 
@@ -677,7 +677,6 @@ TYPE *make_TYPE_bool(){
 	bool_type->lineno = lineno;
 	bool_type->kind = bool_TY_K;
 	bool_type->value.typeconst = NEW_SHORT_STR;
-	sprintf(bool_type->value.typeconst,"BOOL");
 
 	return bool_type;
 

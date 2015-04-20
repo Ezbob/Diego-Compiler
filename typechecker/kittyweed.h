@@ -18,7 +18,7 @@ void weed_error_report(const char*,int);
  through the tree. We need so many because we got 
  a lot of different types
  */
-void begin_weed(BODY *body);
+BODY *begin_weed(BODY *body);
 FUNC *weed_function(FUNC *);
 BODY *weed_body(BODY *);
 DECL_LIST *weed_decl_list(DECL_LIST *);

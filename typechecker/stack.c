@@ -1,11 +1,6 @@
-/*
- *          File: stack.c
- *        Author: Robert I. Pitts <rip@cs.bu.edu>
- * Last Modified: March 7, 2000
- *         Topic: Stack - Array Implementation
+/*  
+ * Based on the implementation of Robert I. Pitts
  * ----------------------------------------------------------------
- *
- * This is an array implementation of a character stack.
  */
 
 #include <stdio.h>
@@ -15,7 +10,7 @@
 
 /************************ Function Definitions **********************/
 
-stackT *StackInit(int maxSize)
+stackT *funcStackInit(int maxSize)
 {
 
   /* Allocate a new array to hold the contents. */
@@ -33,7 +28,7 @@ stackT *StackInit(int maxSize)
   return the_stack;
 }
 
-void StackDestroy(stackT *stackP)
+void funcStackDestroy(stackT *stackP)
 {
   stackT *stack = stackP;
   stack->maxSize = 0;
@@ -42,7 +37,7 @@ void StackDestroy(stackT *stackP)
   free(stack);
 }
 
-void StackPush(stackT *stackP, FUNC *element)
+void funcStackPush(stackT *stackP, FUNC *element)
 {
 
   /* Put information in array; update top. */
@@ -56,7 +51,7 @@ void StackPush(stackT *stackP, FUNC *element)
 
 }
 
-FUNC *StackPop(stackT *stackP)
+FUNC *funcStackPop(stackT *stackP)
 {
 	if (StackIsEmpty(stackP)) {
 	  fprintf(stderr, "Can't pop element from stack: stack is empty.\n");
