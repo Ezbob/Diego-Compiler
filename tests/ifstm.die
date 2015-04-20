@@ -1,0 +1,2 @@
+if (a==b) then write 42;
+else write 43;

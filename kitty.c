@@ -36,7 +36,7 @@ int main( void )
 			return FAILURE;
 			break;
 		case PARSE_SUCCESS:
-			//begin_weed(_main_);
+			begin_weed(_main_);
 			collect(_main_, globalTable);
 			printer_body(_main_);
 			break;

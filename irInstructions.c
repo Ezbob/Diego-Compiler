@@ -44,6 +44,33 @@ IR_INSTRUCTION *make_instruction_movl(ARGUMENT *arg1, ARGUMENT *arg2) {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_cmp(ARGUMENT *arg1, ARGUMENT *arg2) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = cmp;
+	new_instruction->arg1 = arg1;
+	new_instruction->arg2 = arg2;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_jne(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = jne;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_jmp(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = jmp;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
 IR_INSTRUCTION *make_instruction_call(ARGUMENT *arg1, ARGUMENT *arg2) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));

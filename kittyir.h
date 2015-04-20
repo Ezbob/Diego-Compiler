@@ -3,6 +3,8 @@
 #include "dlinkedlist.h"
 #include "parserscanner/kittytree.h"
 
+#define MAXLABELSIZE 10
+
 typedef enum ARGUMENTTYPE {
 	REGISTER, TEMP, VIRTUAL, SPILLED, STATICLINK, INT
 } ARGUMENTTYPE;
@@ -14,7 +16,7 @@ typedef enum REGISTERS {
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, mul } op_code; 
+	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, mul, cmp, jne, jmp } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
@@ -57,6 +59,8 @@ void callerSave();
 void callerRestore();
 void calleeSave();
 void calleeRestore();
+void calleeStart();
+void calleeEnd();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);
 void IR_printer(linked_list *ir_lines);

@@ -489,7 +489,7 @@ int check_term ( TERM *term){
 			VAR_DECL_LIST *functionParameters = symbol->parameters->value.var_decl_list;
 
 
-			while( callParameters != NULL && functionParameters != NULL){
+			while( callParameters != NULL && functionParameters != NULL && count < symbol->noArguments){
 				
 				if(callParameters->kind == commalist_EL_K &&
 				   functionParameters->kind == comma_VDL_K){
@@ -509,7 +509,7 @@ int check_term ( TERM *term){
 				count++;
 			}
 
-			if(count-1 != symbol->noArguments ){
+			if(count != symbol->noArguments ){
 				check_error_report("Wrong no. of parameters", term->lineno);
 			}
 
