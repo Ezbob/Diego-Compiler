@@ -6,10 +6,10 @@
  */
 
 
-void collect(BODY *main){
+void collect(BODY *main, SYMBOLTABLE *symboltable){
 
 	//Initializing the main symbol table
-	SYMBOLTABLE *main_table = initSymbolTable();
+	SYMBOLTABLE *main_table = symboltable;
 
 	//Start collecting
 	collect_body(main, main_table);

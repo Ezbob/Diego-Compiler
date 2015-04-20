@@ -26,6 +26,19 @@ linked_list *IR_build() {
 	ir_lines = initialize_list();
 	initRegisters();
 
+	// make ".string "%d\n" "
+	buildForm("formNUM:", ".string \"%d\\n\" ");
+
+	// make ".globl main" directive
+	ARGUMENT *global_label = make_argument_label(".globl main");
+	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
+	append_element(ir_lines, globl_directive);
+
+    // make "main:" label line
+	ARGUMENT *main_label = make_argument_label("main:");
+	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
+	append_element(ir_lines, globl_main);
+
 	IR_builder_body(_main_);
 
 	IR_printer(ir_lines);
@@ -104,7 +117,6 @@ void IR_builder_statement ( STATEMENT *st) {
 			break;
 
 		case print_S_K:
-
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_INT:
@@ -115,7 +127,7 @@ void IR_builder_statement ( STATEMENT *st) {
 
 					IR_INSTRUCTION *params = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, params);
-					ARGUMENT *arg3 = make_argument_label("$fromNumber");
+					ARGUMENT *arg3 = make_argument_label("$formNUM");
 					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 					append_element(ir_lines, pushform);
 
@@ -133,6 +145,7 @@ void IR_builder_statement ( STATEMENT *st) {
 					break;
 
 				default:
+					printf("%s\n", "DEFAULT CASE EXP");
 					break;
 			}
 		default:
@@ -358,6 +371,17 @@ void moveStackpointer(int i){
 	IR_INSTRUCTION *instr = make_instruction_addl(arg, esp);
 	append_element(ir_lines, instr); 
 
+}
+
+void buildForm(char *name, char *actual){
+
+	ARGUMENT *arg1 = make_argument_label(name);
+	IR_INSTRUCTION *instr1 = make_instruction_globl(arg1, NULL);
+	append_element(ir_lines, instr1);
+
+	ARGUMENT *arg2 = make_argument_label(actual);
+	IR_INSTRUCTION *instr2 = make_instruction_string(arg2);
+	append_element(ir_lines, instr2);
 
 }
 
@@ -419,16 +443,30 @@ void IR_printer(linked_list *ir_lines){
 				printf(", ");
 				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
+				break;
 
 			case divl:
 				printf("\t%s", "DIV ");
 				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
+				break;
 
 			case call:
 				printf("\t%s", "call ");
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
+				break;
+
+			case globl:
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
+
+			case string:
+				printf("\t");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n\n");
+				break;
 			default:
 				break;
 		}
