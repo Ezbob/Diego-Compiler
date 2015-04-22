@@ -38,6 +38,7 @@ int main( void )
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
 			collect(_main_, globalTable);
+			//begin_check(_main_);
 			printer_body(_main_);
 			break;
 		default:

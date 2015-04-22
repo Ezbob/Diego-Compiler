@@ -11,9 +11,19 @@ static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
+
 char truelabelstring[MAXLABELSIZE];
 char falselabelstring[MAXLABELSIZE];
 char endlabelstring[MAXLABELSIZE];
+char booltruelabel[MAXLABELSIZE];
+char boolendlabel[MAXLABELSIZE];
+char elselabel[MAXLABELSIZE];
+char endiflabel[MAXLABELSIZE];
+char orOKlabel[MAXLABELSIZE];
+char orEndlabel[MAXLABELSIZE];
+char andFalselabel[MAXLABELSIZE];
+char andEndlabel[MAXLABELSIZE];
+
 
 void initRegisters(){
 	eax = make_argument_register(r_eax, "eax");
@@ -46,11 +56,9 @@ linked_list *IR_build() {
 
 	IR_builder_body(_main_);
 
-	IR_printer(ir_lines);
-
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	append_element(ir_lines, ret);
-
+	IR_printer(ir_lines);
 	return ir_lines;
 }
 
@@ -82,6 +90,19 @@ void IR_builder_decl_list ( DECL_LIST *dlst) {
 
 void IR_builder_declaration ( DECLARATION *decl) {
 
+	switch(decl->kind){
+
+		case typeassign_D_K:
+			break;
+
+		case func_D_K:
+			IR_builder_function(decl->value.function);
+			break;
+
+		case var_D_K:
+			break; 
+	}
+
 }
 
 void IR_builder_statement_list ( STATEMENT_LIST *slst) {
@@ -99,6 +120,8 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 }
 
 void IR_builder_statement ( STATEMENT *st) {
+	int tmp = 0; 
+
 	ARGUMENT *returnvalue;
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
@@ -194,47 +217,80 @@ void IR_builder_statement ( STATEMENT *st) {
 					break;
 
 				default:
-					printf("%s\n", "DEFAULT CASE EXP");
+					printf("%s\n", "DEFAULT CASE PRINT");
 					break;
 			}
 			break;
 
 		case assign_S_K:
+			
+
 			break;
 
 		case ifbranch_S_K:
+			tmp = current_label;
+			current_label++;
 
-			sprintf(truelabelstring, "true%d", current_label);
-			truearg = make_argument_label(truelabelstring);
-			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
+			arg1 = IR_builder_expression(st->value.ifbranchS.exp);
 
-			sprintf(falselabelstring, "else%d", current_label);
-			falsearg = make_argument_label(falselabelstring);
+			sprintf(elselabel, "else%d", tmp);
+			falsearg = make_argument_label(elselabel);
 			IR_INSTRUCTION *falselabel = make_instruction_globl(falsearg, NULL);
 
-
-			sprintf(endlabelstring, "end%d", current_label);
+			sprintf(endlabelstring, "endIf%d", tmp);
 			endarg = make_argument_label(endlabelstring);
 			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
-			arg1 = IR_builder_expression(st->value.ifbranchS.exp);
+
 			compare = make_argument_constant(1); //Compare with true
 			IR_INSTRUCTION *cmpinstr = make_instruction_cmp(arg1, compare);
 			append_element(ir_lines ,cmpinstr);
-			IR_INSTRUCTION *jneinstr = make_instruction_jne(falselabelstring);
+
+			IR_INSTRUCTION *jneinstr = make_instruction_jne(elselabel);
 			append_element(ir_lines, jneinstr);
+
 			IR_builder_statement(st->value.ifbranchS.statement);
 			IR_INSTRUCTION *jmpend = make_instruction_jmp(endlabelstring);
+
+			append_element(ir_lines, jmpend);
 			append_element(ir_lines, falselabel);
-			IR_builder_opt_else(st->value.ifbranchS.opt_else);
-			
+
+			if(st->value.ifbranchS.opt_else->value.statement != NULL){
+				IR_builder_statement(st->value.ifbranchS.opt_else->value.statement);
+			}
 			append_element(ir_lines, endlabel);
-
 			break;
 
-
-		default:
-			printf("%s\n", "DEFAULT CASE EXP2");
+		case allocate_S_K:
 			break;
+
+		case while_S_K:
+			sprintf(truelabelstring, "whileStart%d", current_label);
+			truearg = make_argument_label(truelabelstring);
+			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
+
+			sprintf(endlabelstring, "whileEnd%d", current_label);
+			endarg = make_argument_label(endlabelstring);
+			IR_INSTRUCTION *whileend = make_instruction_globl(endarg, NULL);
+			append_element(ir_lines, truelabel);
+
+			arg1 = IR_builder_expression(st->value.whileS.exp);
+			compare = make_argument_constant(1); //Compare with true
+			IR_INSTRUCTION *cmpinst = make_instruction_cmp(arg1, compare);
+			append_element(ir_lines, cmpinst);
+			IR_INSTRUCTION *jneinst = make_instruction_jne(endlabelstring);
+			append_element(ir_lines, jneinst);			
+
+			IR_builder_statement(st->value.whileS.statement);
+			IR_INSTRUCTION *jmpstart = make_instruction_jmp(truelabelstring);
+			append_element(ir_lines, jmpstart);
+			append_element(ir_lines, whileend);
+			current_label++;
+			break;
+
+		case statement_list_S_K:
+			IR_builder_statement_list(st->value.statement_list);
+			break;
+
 	}
 } 
 
@@ -242,23 +298,23 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
 	return IR_builder_expression(oplen->value.exp);
 }
 
-void IR_builder_opt_else ( OPT_ELSE *opel) {
-
-}
 
 ARGUMENT *IR_builder_variable ( VAR *var) {
 
-	ARGUMENT *arg = NEW(ARGUMENT);
+	ARGUMENT *arg = make_argument_constant(1);
 	return arg;
 
 }
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp) {
+	int tmp = 0;
+
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *truearg;
 	ARGUMENT *falsearg;
 	ARGUMENT *endarg;
+	ARGUMENT *result;
 	IR_INSTRUCTION *instr;
 	IR_INSTRUCTION *edxsave;
 	IR_INSTRUCTION *edxrestore;
@@ -314,38 +370,145 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			break;
 
 		case booleq_E_K:
-			/*truearg = make_argument_label(NULL);
-			sprintf(truearg->label,"%s%d","true", current_label++);
+		case boolneq_E_K:
+		case boolgreater_E_K:
+		case boolless_E_K:
+		case boolleq_E_K:
+		case boolgeq_E_K:
+			result = make_argument_tempregister(current_temporary++);
+			tmp = current_label;
+			current_label++;
+
+			sprintf(booltruelabel, "true%d", tmp);
+			truearg = make_argument_label(booltruelabel);
 			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
 
-			falsearg = make_argument_label(NULL);
-			sprintf(truearg->label,"%s%d","false", current_label++);
-			IR_INSTRUCTION *falselabel = make_instruction_globl(falsearg, NULL);
-
-			truearg = make_argument_label(NULL);
-			sprintf(truearg->label,"%s%d","end", current_label++);
+			sprintf(boolendlabel, "end%d", tmp);
+			endarg = make_argument_label(boolendlabel);
 			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
 
-			append_element(ir_lines, truearg);
-			append_element(ir_lines, falsearg);
-			append_element(ir_lines, endarg);
-*/
-			argLeft = make_argument_constant(1);
-			return argLeft;
-			break;
-		case boolneq_E_K:
-			break;
-		case boolgreater_E_K:
-			break;
-		case boolless_E_K:
-			break;
-		case boolleq_E_K:
-			break;
-		case boolgeq_E_K:
+			instr = make_instruction_cmp(argLeft, argRight);
+			append_element(ir_lines, instr);
+
+			IR_INSTRUCTION *truejmp;
+
+			switch(exp->kind){
+				case booleq_E_K:
+					truejmp = make_instruction_je(booltruelabel);
+					break;
+
+				case boolneq_E_K:
+					truejmp = make_instruction_jne(booltruelabel);
+					break;
+
+				case boolgreater_E_K:
+					truejmp = make_instruction_jl(booltruelabel);
+					break;
+
+				case boolless_E_K:
+					truejmp = make_instruction_jg(booltruelabel);
+					break;
+
+				case boolleq_E_K:
+					truejmp = make_instruction_JGE(booltruelabel);
+					break;
+
+				case boolgeq_E_K:
+					truejmp = make_instruction_JLE(booltruelabel);
+					break;
+			}
+
+			append_element(ir_lines, truejmp);
+
+			//false
+			IR_INSTRUCTION *falsesave = make_instruction_movl(make_argument_constant(0), result);
+			append_element(ir_lines, falsesave);
+
+			IR_INSTRUCTION *endjmp = make_instruction_je(boolendlabel);
+			append_element(ir_lines, endjmp);
+
+			//true
+			append_element(ir_lines, truelabel);
+			IR_INSTRUCTION *truesave = make_instruction_movl(make_argument_constant(1), result);
+			append_element(ir_lines, truesave);
+
+			append_element(ir_lines, endlabel);
+			return result;
 			break;
 		case booland_E_K:
+			current_label++;
+
+			sprintf(andFalselabel, "ANDfalse%d", tmp);
+			falsearg = make_argument_label(andFalselabel);
+			IR_INSTRUCTION *andFalseinstr = make_instruction_globl(falsearg, NULL);
+
+			sprintf(andEndlabel, "ANDend%d", tmp);
+			endarg = make_argument_label(andEndlabel);
+			IR_INSTRUCTION *andEndinstr = make_instruction_globl(endarg, NULL);
+
+			result = make_argument_tempregister(current_temporary++);
+
+			ARGUMENT *cmpARG = make_argument_constant(1);
+
+			IR_INSTRUCTION *cmp1 = make_instruction_cmp(argLeft, cmpARG);
+			append_element(ir_lines, cmp1);
+
+			IR_INSTRUCTION *jmpfalse = make_instruction_jne(andFalselabel);
+			append_element(ir_lines, jmpfalse);
+
+			IR_INSTRUCTION *cmp2 = make_instruction_cmp(argRight, cmpARG);
+			append_element(ir_lines, cmp2);
+			append_element(ir_lines, jmpfalse);
+
+			IR_INSTRUCTION *trueand = make_instruction_movl(make_argument_constant(1), result);
+			append_element(ir_lines, trueand);
+
+			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
+
+			append_element(ir_lines, andEndinstr);
+			IR_INSTRUCTION *falseand = make_instruction_movl(make_argument_constant(0), result);
+
+			append_element(ir_lines, andEndinstr);
+
 			break;
 		case boolor_E_K:
+			tmp = current_label;
+			current_label++;
+
+			sprintf(orOKlabel, "ORtrue%d", tmp);
+			truearg = make_argument_label(orOKlabel);
+			IR_INSTRUCTION *oroklabel = make_instruction_globl(truearg, NULL);
+
+			sprintf(orEndlabel, "ORend%d", tmp);
+			endarg = make_argument_label(orEndlabel);
+			IR_INSTRUCTION *orendlabel = make_instruction_globl(endarg, NULL);
+
+			result = make_argument_tempregister(current_temporary++);
+
+			ARGUMENT *cmporARG = make_argument_constant(1);
+
+			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(argLeft, cmpARG);
+			append_element(ir_lines, cmp1);
+
+			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKlabel);
+			append_element(ir_lines, jmpOK);
+
+			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(argRight, cmpARG);
+			append_element(ir_lines, cmp2);
+			append_element(ir_lines, jmpOK);
+
+			IR_INSTRUCTION *orfalsesave = make_instruction_movl(make_argument_constant(0), result);
+			append_element(ir_lines, orfalsesave);
+
+			IR_INSTRUCTION *jmpend = make_instruction_jmp(orEndlabel);
+
+			append_element(ir_lines, oroklabel);
+
+			IR_INSTRUCTION *ortruesave = make_instruction_movl(make_argument_constant(1), result);
+			append_element(ir_lines, ortruesave);
+
+			append_element(ir_lines, orendlabel);
+
 			break;
 	}
 
@@ -426,6 +589,15 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
+	if(explst == NULL){
+		return;
+	}
+
+	if(explst->kind == commalist_EL_K){
+		IR_builder_expression_list(explst->value.commaEL.explist);
+	}
+
+	IR_builder_expression(explst->value.exp);
 }
 
 
@@ -532,7 +704,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case ret:
-				printf("\t%s\t\n", "ret");
+				printf("\t%s\n", "ret");
 				break;
 
 			case movl:
@@ -596,12 +768,26 @@ void IR_printer(linked_list *ir_lines){
 				printf("%s", ", ");
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
+				break;
 
 			case jne:
 				printf("\t%s", "jne ");
 				printf("%s", instr_to_print->label);
 				printf("\n");
 				break;
+
+			case jmp:
+				printf("\t%s", "jmp ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
+			case je:
+				printf("\t%s", "je ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
 			default:
 				break;
 		}

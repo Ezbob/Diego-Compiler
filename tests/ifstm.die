@@ -1,2 +1,5 @@
 if (a==b) then write 42;
-else write 43;
+else a=2;
+
+if (c==d) then write 1;
+else c=2;

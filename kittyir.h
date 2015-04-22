@@ -3,7 +3,7 @@
 #include "dlinkedlist.h"
 #include "parserscanner/kittytree.h"
 
-#define MAXLABELSIZE 10
+#define MAXLABELSIZE 20
 
 typedef enum ARGUMENTTYPE {
 	REGISTER, TEMP, VIRTUAL, SPILLED, STATICLINK, INT
@@ -16,7 +16,8 @@ typedef enum REGISTERS {
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, mul, cmp, jne, jmp } op_code; 
+	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, mul, cmp, jne, jmp, je,
+		   JGE, JLE, jl, jg } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
@@ -43,7 +44,6 @@ linked_list *IR_build();
 void IR_builder_function(FUNC *func);
 void IR_builder_head (HEAD *header);
 void IR_builder_body (BODY *body);
-void IR_builder_tail (TAIL *tail);
 void IR_builder_type ( TYPE *type);
 void IR_builder_par_decl_list ( PAR_DECL_LIST *pdecl);
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl);
@@ -52,7 +52,6 @@ void IR_builder_decl_list ( DECL_LIST *dlst);
 void IR_builder_declaration ( DECLARATION *decl);
 void IR_builder_statement_list ( STATEMENT_LIST *slst);
 void IR_builder_statement ( STATEMENT *st);
-void IR_builder_opt_else ( OPT_ELSE *opel);
 void IR_builder_act_list ( ACT_LIST *actlst);
 void IR_builder_expression_list ( EXP_LIST *explst);
 void callerSave();

@@ -71,6 +71,51 @@ IR_INSTRUCTION *make_instruction_jmp(char *c) {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_JGE(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = JGE;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_JLE(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = JLE;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_jl(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = jl;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_jg(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = jg;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_je(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = jmp;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
 IR_INSTRUCTION *make_instruction_call(ARGUMENT *arg1, ARGUMENT *arg2) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
