@@ -5,7 +5,7 @@
 /*
  * Collecting types
  */
-
+extern SYMBOLTABLE *loltable;
 
 void collect(BODY *main, SYMBOLTABLE *symboltable){
 
@@ -20,14 +20,11 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st);
-
 	/* The head does not belong to the next scope but the current
 	 * so the head type must be put in current scopes symboltable
 	 */
 	collect_head(function->functionF.head, scope, st);
 	collect_body(function->functionF.body, scope);
-	dumpSymbolTable(st);
-	dumpSymbolTable(scope);
 	function->symboltype = function->functionF.head->symboltype;
 
 }
@@ -116,7 +113,6 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
 }
 
 int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
-
 	vdecl->symboltable = st;
 	int no = 1;
 	switch(vdecl->kind){
@@ -139,10 +135,10 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 
 	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
 	if(vtype->symbol == NULL){
-		fprintf(stderr, "%s\n", "Fejl");
+		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 		exit(1);
 	}
-	vtype->symbol->realtype = vtype->type;
+		vtype->symbol->realtype = vtype->type;
 
 }
 

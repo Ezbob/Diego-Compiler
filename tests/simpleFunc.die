@@ -1,0 +1,7 @@
+func func1(a : int, b : int) : int
+
+	return 1;
+
+end func1
+
+write 1;

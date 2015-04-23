@@ -40,7 +40,7 @@ typedef struct ARGUMENT {
 /*
  * stores all IR code in a linked_list
  */
-linked_list *IR_build();
+linked_list *IR_build(SYMBOLTABLE *);
 void IR_builder_function(FUNC *func);
 void IR_builder_head (HEAD *header);
 void IR_builder_body (BODY *body);
@@ -63,6 +63,7 @@ void calleeEnd();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);
 void IR_printer(linked_list *ir_lines);
+void buildForm(char *name, char *actual);
 
 ARGUMENT *IR_builder_variable ( VAR *var);
 ARGUMENT *IR_builder_expression ( EXPRES *exp);

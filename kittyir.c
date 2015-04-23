@@ -2,13 +2,15 @@
 #include "irInstructions.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "kitty.c"
 #define NEW_TEMPORARY_ID (current_temporary++)
 
 static int current_temporary = 0;
 static int current_label = 0;
-static int current_instruction = 0;
+//static int current_instruction = 0;
 static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
+extern SYMBOLTABLE *globalTable;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
@@ -35,9 +37,12 @@ void initRegisters(){
 	ebp = make_argument_register(r_ebp, "ebp");
 	esp = make_argument_register(r_esp, "esp");
 }
-linked_list *IR_build() {
+linked_list *IR_build(SYMBOLTABLE *symboltable) {
 	ir_lines = initialize_list();
 	initRegisters();
+
+	globalTable = symboltable;
+
 
 	// make ".string "%d\n" "
 	buildForm("formNUM:", ".string \"%d\\n\" ");
@@ -61,30 +66,65 @@ linked_list *IR_build() {
 	IR_printer(ir_lines);
 	return ir_lines;
 }
-
+//TODO
 void IR_builder_function(FUNC *func) {
+
+
+	IR_builder_head(func->functionF.head);
+	IR_builder_body(func->functionF.body);
 
 }
 
 void IR_builder_head (HEAD *header) {
 
-}
+	SYMBOL *symbol;
+	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
+	int count = 0;
+	VAR_DECL_LIST *vars = header->headH.pdeclist->value.var_decl_list;
 
+	int offset = -1; //offset neg
+	dumpSymbolTable(header->headH.pdeclist->symboltable);
+	while(count < args->noArguments){
+		VAR_TYPE *lol = vars->value.var_type;
+		char *lol2 = lol->id;
+		printf("%s\n", lol2);
+		printf("%p\n", (void *) lol->id);
+		if(globalTable != NULL || vars->value.var_type != NULL){
+			symbol = getSymbol(header->headH.pdeclist->symboltable, lol->id);
+			symbol->offset = offset;
+			offset = offset - 1;
+			vars = vars->value.commaVDL.var_decl_list;
+			dumpSymbol(symbol);
+			count++;
+		}
+	}
+}
+//TODO
 void IR_builder_body (BODY *body) {
+
+	IR_builder_decl_list(body->decl_list);
 	IR_builder_statement_list(body->statement_list);
 }
 
 
-void IR_builder_par_decl_list ( PAR_DECL_LIST *pdecl) {
+void IR_builder_par_decl_list ( PAR_DECL_LIST __attribute__((__unused__)) *pdecl) {
+
+	return;
 
 }
 
-void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
+void IR_builder_var_decl_list ( VAR_DECL_LIST __attribute__((__unused__)) *vdecl) {
+
+	return;
 
 }
 
 
 void IR_builder_decl_list ( DECL_LIST *dlst) {
+
+	if(dlst->kind != empty_DL_K){
+		IR_builder_declaration(dlst->value.compoundDL.declaration);
+	}
 
 }
 
@@ -118,7 +158,7 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 			break;
 	}
 }
-
+//Missing allocate, assign, print(records and arrays)
 void IR_builder_statement ( STATEMENT *st) {
 	int tmp = 0; 
 
@@ -132,8 +172,8 @@ void IR_builder_statement ( STATEMENT *st) {
 
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
-	IR_INSTRUCTION *instr1;
-	IR_INSTRUCTION *instr2;
+	//IR_INSTRUCTION *instr1;
+	//IR_INSTRUCTION *instr2;
 
 	switch(st->kind){
 
@@ -223,7 +263,7 @@ void IR_builder_statement ( STATEMENT *st) {
 			break;
 
 		case assign_S_K:
-			
+
 
 			break;
 
@@ -298,8 +338,8 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
 	return IR_builder_expression(oplen->value.exp);
 }
 
-
-ARGUMENT *IR_builder_variable ( VAR *var) {
+//TODO
+ARGUMENT *IR_builder_variable ( VAR __attribute__((__unused__)) *var) {
 
 	ARGUMENT *arg = make_argument_constant(1);
 	return arg;
@@ -416,6 +456,9 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 				case boolgeq_E_K:
 					truejmp = make_instruction_JLE(booltruelabel);
 					break;
+
+				default:
+					return argRight;
 			}
 
 			append_element(ir_lines, truejmp);
@@ -435,7 +478,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			append_element(ir_lines, endlabel);
 			return result;
 			break;
-		case booland_E_K:
+		case booland_E_K: //NEEDS WORK
 			current_label++;
 
 			sprintf(andFalselabel, "ANDfalse%d", tmp);
@@ -464,14 +507,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			append_element(ir_lines, trueand);
 
 			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
+			append_element(ir_lines, andjmpend);
 
-			append_element(ir_lines, andEndinstr);
+			append_element(ir_lines, andFalseinstr);
 			IR_INSTRUCTION *falseand = make_instruction_movl(make_argument_constant(0), result);
+			append_element(ir_lines, falseand);
 
 			append_element(ir_lines, andEndinstr);
 
 			break;
-		case boolor_E_K:
+		case boolor_E_K://NEEDS WORK
 			tmp = current_label;
 			current_label++;
 
@@ -487,21 +532,21 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			ARGUMENT *cmporARG = make_argument_constant(1);
 
-			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(argLeft, cmpARG);
-			append_element(ir_lines, cmp1);
+			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(argLeft, cmporARG);
+			append_element(ir_lines, cmpor1);
 
 			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKlabel);
 			append_element(ir_lines, jmpOK);
 
-			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(argRight, cmpARG);
-			append_element(ir_lines, cmp2);
+			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(argRight, cmporARG);
+			append_element(ir_lines, cmpor2);
 			append_element(ir_lines, jmpOK);
 
 			IR_INSTRUCTION *orfalsesave = make_instruction_movl(make_argument_constant(0), result);
 			append_element(ir_lines, orfalsesave);
 
 			IR_INSTRUCTION *jmpend = make_instruction_jmp(orEndlabel);
-
+			append_element(ir_lines, jmpend);
 			append_element(ir_lines, oroklabel);
 
 			IR_INSTRUCTION *ortruesave = make_instruction_movl(make_argument_constant(1), result);
@@ -515,7 +560,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 	return argLeft;
 
 }
-
+//Missing Function calls, ABS, BANG
 ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *arg1;
@@ -581,9 +626,13 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 		default:
 			break;
 	}
+
+	return arg2;
 }
 
-void IR_builder_act_list ( ACT_LIST *actlst) {
+void IR_builder_act_list ( ACT_LIST __attribute__((__unused__)) *actlst) {
+
+	return;
 
 }
 

@@ -401,7 +401,8 @@ VAR_TYPE *make_VAR_TYPE_id( char *id, TYPE *type ){
 
 	VAR_TYPE *var_type = NEW(VAR_TYPE);
 	var_type->lineno = lineno;
-	var_type->id = id;
+	var_type->id = calloc(strlen(id)+1,sizeof(char));
+	strcpy(var_type->id, id);
 	var_type->type = type;
 
 	return var_type;

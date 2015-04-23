@@ -186,35 +186,35 @@ void dumpSymbol(SYMBOL *symbol){
 				
 			switch(symbol->symboltype->type){
 				case SYMBOL_FUNCTION:
-					printf( "FUNCTION (%s , %i) ", symbol->name, symbol->value);
+					printf( "FUNCTION (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 	
 				case SYMBOL_INT:
-					printf( "INT (%s , %i) ", symbol->name, symbol->value);
+					printf( "INT (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				case SYMBOL_BOOL:
-					printf( "BOOL (%s , %i) ", symbol->name, symbol->value);
+					printf( "BOOL (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				case SYMBOL_ID:
-					printf( "IDENTIFIER (%s , %i) ", symbol->name, symbol->value);
+					printf( "IDENTIFIER (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				case SYMBOL_RECORD:
-					printf( "RECORD (%s , %i) ", symbol->name, symbol->value);
+					printf( "RECORD (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				case SYMBOL_ARRAY:
-					printf( "ARRAY (%s , %i )", symbol->name, symbol->value);
+					printf( "ARRAY (%s , %i, %i)", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				case SYMBOL_NULL:
-					printf( "NULL (%s , %i) ", symbol->name, symbol->value);
+					printf( "NULL (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 				default:
-					printf( "UNKNOWN (%s , %i) ", symbol->name, symbol->value);
+					printf( "UNKNOWN (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
 					break;
 
 			}

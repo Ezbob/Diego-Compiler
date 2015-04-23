@@ -22,6 +22,7 @@ int lineno = 1;
 struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
 
+
 int main( void )
 {
 
@@ -38,16 +39,17 @@ int main( void )
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
 			collect(_main_, globalTable);
-			//begin_check(_main_);
+			begin_check(_main_);
 			printer_body(_main_);
+			IR_build(globalTable);
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");
 			return FAILURE;
 			break;
 	}
-	//IR_pretty_printer( 
-	IR_build();// );
+
+	
 
 	return SUCCESS;
 }
