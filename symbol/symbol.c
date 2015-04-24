@@ -4,8 +4,6 @@
 #include "symbol.h"
 #include "../parserscanner/kittytree.h"
 
-static char *type_def[HASH_SIZE];
-
 //Computes the hash values
 int Hash(char *str){
 	int i;

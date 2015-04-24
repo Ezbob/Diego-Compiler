@@ -2,12 +2,10 @@
 #include "irInstructions.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "kitty.c"
-#define NEW_TEMPORARY_ID (current_temporary++)
 
 static int current_temporary = 0;
 static int current_label = 0;
-//static int current_instruction = 0;
+
 static linked_list *ir_lines; // linked list of ir_lines
 extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
@@ -37,6 +35,7 @@ void initRegisters(){
 	ebp = make_argument_register(r_ebp, "ebp");
 	esp = make_argument_register(r_esp, "esp");
 }
+
 linked_list *IR_build(SYMBOLTABLE *symboltable) {
 	ir_lines = initialize_list();
 	initRegisters();
@@ -66,6 +65,7 @@ linked_list *IR_build(SYMBOLTABLE *symboltable) {
 	IR_printer(ir_lines);
 	return ir_lines;
 }
+
 //TODO
 void IR_builder_function(FUNC *func) {
 
@@ -99,6 +99,7 @@ void IR_builder_head (HEAD *header) {
 		}
 	}
 }
+
 //TODO
 void IR_builder_body (BODY *body) {
 
@@ -158,6 +159,7 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 			break;
 	}
 }
+
 //Missing allocate, assign, print(records and arrays)
 void IR_builder_statement ( STATEMENT *st) {
 	int tmp = 0; 
@@ -172,8 +174,6 @@ void IR_builder_statement ( STATEMENT *st) {
 
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
-	//IR_INSTRUCTION *instr1;
-	//IR_INSTRUCTION *instr2;
 
 	switch(st->kind){
 
