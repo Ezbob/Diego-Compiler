@@ -6,7 +6,9 @@
 static int current_temporary = 0;
 static int current_label = 0;
 
-static linked_list *ir_lines; // linked list of ir_lines
+static linked_list *ir_lines; // plug IR code in here
+static linked_stack *stackframe; // generate a stackframe
+
 extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
 
@@ -23,7 +25,6 @@ char orOKlabel[MAXLABELSIZE];
 char orEndlabel[MAXLABELSIZE];
 char andFalselabel[MAXLABELSIZE];
 char andEndlabel[MAXLABELSIZE];
-
 
 void initRegisters(){
 	eax = make_argument_register(r_eax, "eax");
