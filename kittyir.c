@@ -253,7 +253,6 @@ void IR_builder_statement ( STATEMENT *st) {
 
 					//move stackpointer and basepointer
 					calleeEnd();
-
 					break;
 
 				default:
@@ -560,6 +559,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 	return argLeft;
 
 }
+
 //Missing Function calls, ABS, BANG
 ARGUMENT *IR_builder_term ( TERM *term) {
 
@@ -574,7 +574,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
-			break;
 
 		case boolTrue_T_K:
 			arg1 = make_argument_constant(1);
@@ -582,8 +581,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
-			break;
-			break;
 
 		case boolFalse_T_K:
 			arg1 = make_argument_constant(0);
@@ -591,7 +588,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
-			break;
 
 		case null_T_K:
 			arg1 = make_argument_constant(0);
@@ -599,18 +595,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
-			break;
-
-		case expresPipes_T_K:
-			break;
 
 		case expresParent_T_K:
 			arg1 = IR_builder_expression(term->value.exp);
 			return arg1;
-			break;
-
-		case termBang_T_K:
-			break;
 
 		case var_T_K:
 			arg1 = IR_builder_variable(term->value.var);
@@ -618,23 +606,15 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps			
-			break;
-
-		case actList_T_K:
-			break;
 
 		default:
 			break;
 	}
 
-	return arg2;
+	return NULL;
 }
 
-void IR_builder_act_list ( ACT_LIST __attribute__((__unused__)) *actlst) {
-
-	return;
-
-}
+// TODO function // void IR_builder_act_list ( ACT_LIST *actlst) { }
 
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
@@ -656,7 +636,6 @@ void callerSave(){
 	IR_INSTRUCTION *instr2 = make_instruction_pushl(edx, NULL);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
-
 
 }
 
@@ -871,190 +850,4 @@ void IR_print_arguments(ARGUMENT *arg){
 		default:
 			break;
 	}
-
 }
-/*
-	
-void IR_shift_to_new_frame (){
-	IR_LINE **new_lines;
-	int i;
-	new_lines = (IR_LINE **) malloc(sizeof(IR_LINE) * 2);
-	new_lines[0] = make_line_instruction(make_instruction_pushl(),NULL);
-	new_lines[1] = make_line_instruction(make_instruction_movl(),NULL);
-
-	new_lines[0]->instruction->arg1 = make_argument_register();
-	new_lines[0]->instruction->arg1->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[0]->instruction->arg1->value.reg->value.registerName = ebp;
-
-	new_lines[1]->instruction->arg1 = make_argument_register();
-	new_lines[1]->instruction->arg2 = make_argument_register();
-	new_lines[1]->instruction->arg1->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[1]->instruction->arg2->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[1]->instruction->arg1->value.reg->value.registerName = esp;
-	new_lines[1]->instruction->arg2->value.reg->value.registerName = ebp;
-
-	for(i = 0; i < 2; i++){
-		append_element(ir_lines, new_lines[i]);
-	}
-}
-
-void IR_shift_to_old_frame (){
-	IR_LINE **new_lines;
-	int i;
-	new_lines = (IR_LINE **) malloc(sizeof(IR_LINE) * 2);
-	new_lines[0] = make_line_instruction(make_instruction_popl(),NULL);
-	new_lines[1] = make_line_instruction(make_instruction_movl(),NULL);
-
-	new_lines[0]->instruction->arg1 = make_argument_register();
-	new_lines[0]->instruction->arg1->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[0]->instruction->arg1->value.reg->value.registerName = ebp;
-
-	new_lines[1]->instruction->arg1 = make_argument_register();
-	new_lines[1]->instruction->arg2 = make_argument_register();
-	new_lines[1]->instruction->arg1->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[1]->instruction->arg2->value.reg = 
-										make_temp_register(NEW_TEMPORARY_ID);
-	new_lines[1]->instruction->arg1->value.reg->value.registerName = ebp;
-	new_lines[1]->instruction->arg2->value.reg->value.registerName = esp;
-
-	for(i = 1; i >= 0; i--){
-		append_element(ir_lines, new_lines[i]);
-	}	
-}
-
-
-void IR_pretty_printer ( linked_list *line_list ) {
-	linked_list *temp;
-	IR_LINE *line_to_print;
-
-	temp = line_list->next;
-	while(temp != line_list){
-		line_to_print = (IR_LINE *) temp->data;
-
-		switch(line_to_print->kind){
-			case empty_line:
-				printf("\n");
-				break;
-			case label_line:
-				printf("%s:\n", line_to_print->label );
-				break;
-			case instruction_line:
-				if(line_to_print->label != NULL){
-					printf("%s: ", line_to_print->label);
-				}
-				IR_pretty_printer_instruction(line_to_print->instruction);
-				break;
-		}
-
-		temp = temp->next;
-	}
-}
-
-void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr ) {
-	switch(instr->op_code){
-		case globl:
-			printf(".globl %s\n", instr->arg1->value.label);
-			break;
-		case string:
-			printf(".string %s\n", instr->arg1->value.label);
-			break;
-		case movl:
-			printf("\t movl ");
-			IR_pretty_printer_arguments(instr->arg1);
-			IR_pretty_printer_arguments(instr->arg2);
-			printf("\n");
-			break;
-		case call:
-			printf("\t call ");
-			IR_pretty_printer_arguments(instr->arg1);
-			printf("\n");
-			break;
-		case pushl:
-			printf("\t pushl ");
-			IR_pretty_printer_arguments(instr->arg1);
-			printf("\n");
-			break;
-		case popl:
-			printf("\t popl ");
-			IR_pretty_printer_arguments(instr->arg1);
-			printf("\n");
-			break;
-		case addl:
-			printf("\t addl ");
-			IR_pretty_printer_arguments(instr->arg1);
-			IR_pretty_printer_arguments(instr->arg2);
-			printf("\n");
-			break;
-		case subl:
-			printf("\t subl ");
-			IR_pretty_printer_arguments(instr->arg1);
-			IR_pretty_printer_arguments(instr->arg2);
-			printf("\n");
-			break;
-		case ret:
-			printf("\t ret \n");
-			break;
-	}
-}
-
-void IR_pretty_printer_arguments (ARGUMENT *arg) {
-	switch(arg->kind){
-		case address_arg:
-			// TODO
-		break;
-		case register_arg:
-			IR_pretty_printer_temp(arg->value.reg);
-		break;
-		case label_arg:
-			printf("%s ", arg->value.label);
-		break;
-		case constant_arg:
-			printf("%i ", arg->value.intConst);
-		break;
-	}
-}
-
-void IR_pretty_printer_temp (TEMP *tmp) {
-	switch(tmp->kind){
-		case register_temp:
-			switch(tmp->value.registerName){
-				case eax:
-				printf("%%eax ");
-				break;
-				case ebx:
-				printf("%%ebx ");
-				break;
-				case ecx:
-				printf("%%ecx ");
-				break;
-				case edx:
-				printf("%%edx ");
-				break;
-				case ebp:
-				printf("%%ebp ");
-				break;
-				case esi:
-				printf("%%esi ");
-				break;
-				case edi:
-				printf("%%edi ");
-				break;
-				case esp:
-				printf("%%esp ");
-				break;
-			}
-		break;
-		case virtual_temp:
-		// TODO
-		break;
-		case spilled_temp:
-		// TODO
-		break;
-	}
-}
-*/

@@ -7,7 +7,6 @@ void begin_check(BODY *main);
 void check_expression ( EXPRES *);
 int check_term ( TERM *);
 
-
 void check_function(FUNC *);
 void check_head (HEAD *);
 void check_body (BODY *);
@@ -21,7 +20,6 @@ void check_statement ( STATEMENT *);
 void check_opt_length ( OPT_LENGTH *);
 void check_opt_else ( OPT_ELSE *);
 void check_variable ( VAR *);
-
 
 void check_act_list ( ACT_LIST *);
 void check_expression_list ( EXP_LIST *);

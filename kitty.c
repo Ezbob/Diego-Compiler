@@ -23,8 +23,7 @@ struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
 
 
-int main( void )
-{
+int main( void ) {
 
 	globalTable = initSymbolTable();
 	switch ( yyparse() ){
@@ -48,8 +47,6 @@ int main( void )
 			return FAILURE;
 			break;
 	}
-
-	
 
 	return SUCCESS;
 }
