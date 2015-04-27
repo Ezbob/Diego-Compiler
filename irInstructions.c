@@ -77,7 +77,7 @@ IR_INSTRUCTION *make_instruction_jg(char *c) {
 IR_INSTRUCTION *make_instruction_je(char *c) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
-	new_instruction->op_code = jmp;
+	new_instruction->op_code = je;
 	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
 	new_instruction->label = c;
 	return new_instruction;
@@ -138,10 +138,10 @@ IR_INSTRUCTION *make_instruction_div(ARGUMENT *arg1, ARGUMENT *arg2) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_mul(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_imul(ARGUMENT *arg1, ARGUMENT *arg2) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
-	new_instruction->op_code = mul;
+	new_instruction->op_code = imul;
 	new_instruction->arg1 = arg1;
 	new_instruction->arg2 = arg2;
 	return new_instruction;

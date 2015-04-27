@@ -7,9 +7,9 @@
 static int current_temporary = 0;
 static int current_label = 0;
 static int function_label = 0;
+static int local_variable_size = 0;
 
 static linked_list *ir_lines; // plug IR code in here
-static linked_stack *stackframe; // generate a stackframe
 
 extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
@@ -41,7 +41,7 @@ void initRegisters(){
 }
 
 int getNextLabel(){
-
+	
 	return current_label++;
 }
 
@@ -63,7 +63,30 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
 	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
 
-	IR_builder_body(_main_);
+	IR_builder_decl_list(_main_->decl_list);
+
+	// make ".globl main" directive
+	ARGUMENT *global_label = make_argument_label(".globl main");
+	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
+	append_element(ir_lines, globl_directive);
+
+	// make "main:" label line
+	ARGUMENT *main_label = make_argument_label("main:");
+	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
+	append_element(ir_lines, globl_main);
+
+	calleeStart();
+	calleeSave();
+
+	localVariableAllocation();
+
+	callerSave();
+
+	IR_builder_statement_list(_main_->statement_list);
+
+	calleeRestore();
+	callerRestore();
+	calleeEnd();
 
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	append_element(ir_lines, ret);
@@ -129,19 +152,27 @@ void IR_builder_head (HEAD *header) {
 //TODO
 void IR_builder_body (BODY *body) {
 
-	IR_builder_decl_list(body->decl_list);
+	IR_INSTRUCTION *allocation_instr;
 
-	// make ".globl main" directive
-	ARGUMENT *global_label = make_argument_label(".globl main");
-	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
-	append_element(ir_lines, globl_directive);
+ 
+ 	IR_builder_decl_list(body->decl_list);
 
-    // make "main:" label line
-	ARGUMENT *main_label = make_argument_label("main:");
-	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
-	append_element(ir_lines, globl_main);
+	//move stackpointer and basepointer
+	calleeStart();
+
+	/* adding allocation of local variables, this is by convention 
+	a subtration */
+	allocation_instr = make_instruction_subl(esp,
+	make_argument_constant(local_variable_size));
+	local_variable_size = 0;
+	append_element(ir_lines, allocation_instr); 
 
 	IR_builder_statement_list(body->statement_list);
+
+	//move stackpointer and basepointer
+	calleeEnd();
+	IR_INSTRUCTION *ret = make_instruction_ret();
+	append_element(ir_lines, ret);
 
 }
 
@@ -157,6 +188,20 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST __attribute__((__unused__)) *vdecl
 	return;
 
 }
+ void IR_builder_var_type ( VAR_TYPE * vtype ){
+	switch(vtype->type->kind){ // note: switching on type kind
+		case int_TY_K:
+			local_variable_size += 4; // 4 bytes
+			break;
+ 
+		case bool_TY_K:
+			local_variable_size += 4; // maybe too large
+			break;
+
+		default: // TODO: need to decide size of other types
+			break;
+	}
+ }
 
 
 void IR_builder_decl_list ( DECL_LIST *dlst) {
@@ -219,9 +264,8 @@ void IR_builder_statement ( STATEMENT *st) {
 			returnvalue = IR_builder_expression(st->value.exp);
 			IR_INSTRUCTION *movl = make_instruction_movl(returnvalue, eax);
 			append_element(ir_lines, movl);
-			IR_INSTRUCTION *ret = make_instruction_ret();
 			calleeRestore();
-			append_element(ir_lines, ret);
+			
 			break;
 
 		case print_S_K:
@@ -230,8 +274,6 @@ void IR_builder_statement ( STATEMENT *st) {
 
 				case SYMBOL_INT:
 
-					//move stackpointer and basepointer
-					calleeStart();
 					calleeSave();
 					//Push arguments for print then form for print
 					arg1 = IR_builder_expression(st->value.exp);
@@ -253,15 +295,11 @@ void IR_builder_statement ( STATEMENT *st) {
 					callerRestore();
 					calleeRestore();
 
-					//move stackpointer and basepointer
-					calleeEnd();
-
 					break;
 
 				case SYMBOL_BOOL:
 
 					//move stackpointer and basepointer
-					calleeStart();
 
 					calleeSave();
 					//Push arguments for print then form for print
@@ -291,8 +329,6 @@ void IR_builder_statement ( STATEMENT *st) {
 					callerRestore();
 					calleeRestore();
 
-					//move stackpointer and basepointer
-					calleeEnd();
 					break;
 
 				default:
@@ -302,7 +338,10 @@ void IR_builder_statement ( STATEMENT *st) {
 			break;
 
 		case assign_S_K:
+			arg1 = IR_builder_expression(st->value.assignS.exp);
 
+			IR_INSTRUCTION *Save = make_instruction_pushl(arg1, NULL);
+			append_element(ir_lines, Save);
 
 			break;
 
@@ -425,7 +464,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			break;
 
 		case times_E_K:
-			instr = make_instruction_mul(argLeft, argRight);
+			instr = make_instruction_imul(argLeft, argRight);
 			append_element(ir_lines, instr);
 			return argRight;
 			break;
@@ -609,7 +648,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	IR_INSTRUCTION *instr;
-	ACT_LIST *funcparams;
 	SYMBOL *symbol;
 	int params;
 
@@ -658,7 +696,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			//oprette static link?
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 			params = 0;
-			EXPRES *par;
 
 			while(params < symbol->noArguments){
 
@@ -708,6 +745,22 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 	IR_builder_expression(explst->value.exp);
 }
 
+/* Adding allocation of local variables, this is by convention 
+ *	a subtration of the stack pointer 
+ */
+void localVariableAllocation() {
+	if (local_variable_size > 0){
+	append_element(
+		ir_lines, 
+		make_instruction_subl(
+			make_argument_constant(local_variable_size),
+			esp
+		)
+	); 
+
+	local_variable_size = 0; // reset the size counting	
+	}
+}
 
 void callerSave(){
 
@@ -837,6 +890,14 @@ void IR_printer(linked_list *ir_lines){
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
 				break;
+
+			case imul:
+				printf("\t%s", "imul ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+				break;				
 
 			case xor:
 				printf("\t%s", "XOR ");

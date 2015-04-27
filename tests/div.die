@@ -1,1 +1,6 @@
-return 4/2;
+var a : int, b : int;
+
+a = 4;
+b = 2;
+
+write a/b;

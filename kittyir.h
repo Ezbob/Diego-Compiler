@@ -17,7 +17,7 @@ typedef enum REGISTERS {
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, mul, cmp, jne, jmp, je,
+	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, imul, cmp, jne, jmp, je,
 		   JGE, JLE, jl, jg } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
@@ -62,6 +62,7 @@ void calleeRestore();
 void calleeStart();
 void calleeEnd();
 int getNextLabel();
+void localVariableAllocation();
 int getNextFunction();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);

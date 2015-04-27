@@ -1,3 +1,37 @@
 var a: int;
 a = 10;
 write a + 20;
+
+formNUM:
+	.string "%d\n" 
+
+formTRUE:
+	.string "TRUE\n" 
+
+formFALSE:
+	.string "FALSE\n" 
+
+.globl main
+main:
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %ebx
+	pushl %esi
+	pushl %edi
+	movl $1, %ecx
+	movl $20, %edx
+	addl %ecx, %edx
+	pushl %ecx
+	pushl %edx
+	pushl %edx
+	pushl $formNUM
+	call printf
+	addl $8, %esp
+	popl %edx
+	popl %ecx
+	popl %edi
+	popl %esi
+	popl %ebx
+	movl %ebp, %esp
+	popl %ebp
+	ret
