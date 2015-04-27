@@ -16,17 +16,6 @@ extern SYMBOLTABLE *globalTable;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
-//char truelabelstring[MAXLABELSIZE];
-//char falselabelstring[MAXLABELSIZE];
-//char endlabelstring[MAXLABELSIZE];
-//char booltruelabel[MAXLABELSIZE];
-//char boolendlabel[MAXLABELSIZE];
-//char elselabel[MAXLABELSIZE];
-//char endiflabel[MAXLABELSIZE];
-//char orOKlabel[MAXLABELSIZE];
-//char orEndlabel[MAXLABELSIZE];
-//char andFalselabel[MAXLABELSIZE];
-//char andEndlabel[MAXLABELSIZE];
 char functionlabel[MAXLABELSIZE];
 
 void initRegisters(){
@@ -370,7 +359,7 @@ void IR_builder_statement ( STATEMENT *st) {
 			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
 
 			compare = make_argument_constant(1); //Compare with true
-			IR_INSTRUCTION *cmpinstr = make_instruction_cmp(arg1, compare);
+			IR_INSTRUCTION *cmpinstr = make_instruction_cmp(compare, arg1);
 			append_element(ir_lines ,cmpinstr);
 
 			IR_INSTRUCTION *jneinstr = make_instruction_jne(elselabel);
@@ -410,7 +399,7 @@ void IR_builder_statement ( STATEMENT *st) {
 
 			arg1 = IR_builder_expression(st->value.whileS.exp);
 			compare = make_argument_constant(1); //Compare with true
-			IR_INSTRUCTION *cmpinst = make_instruction_cmp(arg1, compare);
+			IR_INSTRUCTION *cmpinst = make_instruction_cmp(compare, arg1);
 			append_element(ir_lines, cmpinst);
 			IR_INSTRUCTION *jneinst = make_instruction_jne(endwhilestring);
 			append_element(ir_lines, jneinst);			
@@ -479,7 +468,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			break;
 
 		case minus_E_K:
-			instr = make_instruction_subl(argLeft, argRight);
+			instr = make_instruction_subl(argRight, argLeft);
 			append_element(ir_lines, instr);
 			return argRight; 
 			break;
@@ -602,13 +591,13 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			ARGUMENT *cmpARG = make_argument_constant(1);
 
-			IR_INSTRUCTION *cmp1 = make_instruction_cmp(argLeft, cmpARG);
+			IR_INSTRUCTION *cmp1 = make_instruction_cmp(cmpARG, argLeft);
 			append_element(ir_lines, cmp1);
 
 			IR_INSTRUCTION *jmpfalse = make_instruction_jne(andFalselabel);
 			append_element(ir_lines, jmpfalse);
 
-			IR_INSTRUCTION *cmp2 = make_instruction_cmp(argRight, cmpARG);
+			IR_INSTRUCTION *cmp2 = make_instruction_cmp(cmpARG, argRight);
 			append_element(ir_lines, cmp2);
 			append_element(ir_lines, jmpfalse);
 
@@ -643,13 +632,13 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			ARGUMENT *cmporARG = make_argument_constant(1);
 
-			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(argLeft, cmporARG);
+			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(cmporARG, argLeft);
 			append_element(ir_lines, cmpor1);
 
 			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKlabel);
 			append_element(ir_lines, jmpOK);
 
-			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(argRight, cmporARG);
+			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(cmporARG, argRight);
 			append_element(ir_lines, cmpor2);
 			append_element(ir_lines, jmpOK);
 

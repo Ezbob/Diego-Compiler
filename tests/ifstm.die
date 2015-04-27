@@ -1,5 +1,95 @@
-if (a==b) then write 42;
-else a=2;
+formNUM::
+	.string "%d\n" 
 
-if (c==d) then write 1;
-else c=2;
+formTRUE::
+	.string "TRUE\n" 
+
+formFALSE::
+	.string "FALSE\n" 
+
+func0:
+	pushl %ebp
+	movl %esp, %ebp
+	movl 8(%ebp), %ebx
+	movl $0, %ecx
+	cmp %ebx, %ecx
+	je booOPtrue1
+	movl $0, %edx
+	jmp boolOPend1
+booOPtrue1:
+	movl $1, %edx
+boolOPend1:
+	movl 8(%ebp), %ebx
+	movl $1, %eax
+	cmp %ebx, %eax
+	je booOPtrue2
+	movl $0, %eax
+	jmp boolOPend2
+booOPtrue2:
+	movl $1, %eax
+boolOPend2:
+	cmp %edx, $1
+	je ORtrue3
+	cmp %eax, $1
+	je ORtrue3
+	movl $0, %eax
+	jmp ORend3
+ORtrue3:
+	movl $1, %eax
+ORend3:
+	cmp %edx, $1
+	jne else0
+	movl $1, %ebx
+	movl %ebx, %eax
+	popl %edi
+	popl %esi
+	popl %ebx
+	jmp endIf0
+else0:
+	movl 8(%ebp), %ebx
+	movl 8(%ebp), %ecx
+	movl $1, %edx
+	subl %ecx, %edx
+	pushl %edx
+	call func0
+	addl $4, %esp
+	popl %edx
+	popl %ecx
+	imul %ebx, %eax
+	movl %eax, %eax
+	popl %edi
+	popl %esi
+	popl %ebx
+endIf0:
+	movl %ebp, %esp
+	popl %ebp
+	ret
+.globl main:
+main:
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %ebx
+	pushl %esi
+	pushl %edi
+	pushl %ecx
+	pushl %edx
+	movl $5, %ebx
+	pushl %ebx
+	call func0
+	addl $4, %esp
+	popl %edx
+	popl %ecx
+	pushl %ecx
+	pushl %edx
+	pushl %eax
+	pushl $formNUM
+	call printf
+	addl $8, %esp
+	popl %edi
+	popl %esi
+	popl %ebx
+	popl %edx
+	popl %ecx
+	movl %ebp, %esp
+	popl %ebp
+	ret
