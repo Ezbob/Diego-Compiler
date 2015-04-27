@@ -159,13 +159,7 @@ void IR_builder_body (BODY *body) {
 
 	//move stackpointer and basepointer
 	calleeStart();
-
-	/* adding allocation of local variables, this is by convention 
-	a subtration */
-	allocation_instr = make_instruction_subl(esp,
-	make_argument_constant(local_variable_size));
-	local_variable_size = 0;
-	append_element(ir_lines, allocation_instr); 
+	localVariableAllocation();
 
 	IR_builder_statement_list(body->statement_list);
 
@@ -177,17 +171,25 @@ void IR_builder_body (BODY *body) {
 }
 
 
-void IR_builder_par_decl_list ( PAR_DECL_LIST __attribute__((__unused__)) *pdecl) {
+void IR_builder_par_decl_list ( PAR_DECL_LIST *pdecl) {
 
 	return;
 
 }
 
-void IR_builder_var_decl_list ( VAR_DECL_LIST __attribute__((__unused__)) *vdecl) {
-
-	return;
-
+void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
+	switch(vdecl->kind){
+		case comma_VDL_K:
+			IR_builder_var_decl_list(vdecl->value.commaVDL.var_decl_list);
+			IR_builder_var_type(vdecl->value.commaVDL.var_type);
+			break;
+		case var_VDL_typeK:
+			IR_builder_var_type(vdecl->value.var_type);
+			break;
+	}
+	
 }
+
  void IR_builder_var_type ( VAR_TYPE * vtype ){
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
@@ -206,14 +208,18 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST __attribute__((__unused__)) *vdecl
 
 void IR_builder_decl_list ( DECL_LIST *dlst) {
 
-	if(dlst->kind != empty_DL_K){
-		IR_builder_declaration(dlst->value.compoundDL.declaration);
+	switch(dlst->kind){
+		case compound_DL_K:
+			IR_builder_decl_list(dlst->value.compoundDL.decl_list);
+			IR_builder_declaration(dlst->value.compoundDL.declaration);
+			break;
+		case empty_DL_K:
+			break;
 	}
 
 }
 
 void IR_builder_declaration ( DECLARATION *decl) {
-
 	switch(decl->kind){
 
 		case typeassign_D_K:
@@ -224,6 +230,7 @@ void IR_builder_declaration ( DECLARATION *decl) {
 			break;
 
 		case var_D_K:
+			IR_builder_var_decl_list(decl->value.var_decl_list);
 			break; 
 	}
 
@@ -437,7 +444,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		printf("%s\n", "ERROR");
 		//LAV INTCODE EXIT
 	}
-	printf("%d\n", symbol->offset);
 	ARGUMENT *arg = make_argument_address(4*(symbol->offset));
 	return arg;
 
@@ -721,18 +727,20 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 			params = 0;
 
-			while(params < symbol->noArguments){
+			EXP_LIST *args = term->value.actlistT.actlist->value.exp_list;
 
-				if(term->value.actlistT.actlist->value.exp_list->kind == exp_EL_K){
-					arg1 = IR_builder_expression(term->value.actlistT.actlist->value.exp_list->value.exp);
+			while(params < symbol->noArguments && args != NULL){
+
+				if(args->kind == exp_EL_K){
+					arg1 = IR_builder_expression(args->value.exp);
 					instr = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, instr);
-				} else {
-					arg1 = IR_builder_expression(term->value.actlistT.actlist->value.exp_list->value.commaEL.exp);
+				} else if(args->kind == commalist_EL_K) {
+					arg1 = IR_builder_expression(args->value.commaEL.exp);
 					instr = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, instr);
 				}
-
+				args = args->value.commaEL.explist;
 				params++;
 			}
 
@@ -774,14 +782,13 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
  */
 void localVariableAllocation() {
 	if (local_variable_size > 0){
-	append_element(
-		ir_lines, 
-		make_instruction_subl(
-			make_argument_constant(local_variable_size),
-			esp
-		)
-	); 
-
+		append_element(
+			ir_lines, 
+			make_instruction_subl(
+				make_argument_constant(local_variable_size),
+				esp
+			)
+		); 
 	local_variable_size = 0; // reset the size counting	
 	}
 }
@@ -862,17 +869,7 @@ void buildForm(char *name, char *actual){
 	append_element(ir_lines, instr2);
 
 }
-/*
-char *incrementLabel(char *lname,int count) {
-	if (str != NULL){
-		char *result = calloc(strlen(lname)+2,sizeof(char));
-		strncpy(result,name,strlen(result));
-		result[strlen(lname)] = count;
-		return result;
-	}
-	return NULL;
-}
-*/
+
 void IR_printer(linked_list *ir_lines){
 
 	linked_list *temp;
