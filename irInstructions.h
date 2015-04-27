@@ -25,7 +25,7 @@ IR_INSTRUCTION *make_instruction_string(ARGUMENT *arg1);
 IR_INSTRUCTION *make_instruction_ret();
 
 
-ARGUMENT *make_argument_address();
+ARGUMENT *make_argument_address(int i);
 ARGUMENT *make_argument_register(REGISTERS reg, char *name);
 ARGUMENT *make_argument_label(char *);
 ARGUMENT *make_argument_constant(int i);

@@ -182,10 +182,11 @@ IR_INSTRUCTION *make_instruction_ret() {
 	return new_instruction;	
 }
 
-ARGUMENT *make_argument_address() {
+ARGUMENT *make_argument_address(int i) {
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
 	new_argument->kind = address_arg;
+	new_argument->intConst = i;
 	return new_argument;
 }
 
