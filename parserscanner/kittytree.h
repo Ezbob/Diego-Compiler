@@ -125,7 +125,7 @@ typedef struct VAR_TYPE {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOL *symbol;
-	char* id;
+	char *id;
 	struct TYPE *type;
 } VAR_TYPE;
 

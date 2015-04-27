@@ -1,10 +1,12 @@
 #include "kittyir.h"
 #include "irInstructions.h"
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 static int current_temporary = 0;
 static int current_label = 0;
+static int function_label = 0;
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_stack *stackframe; // generate a stackframe
@@ -25,6 +27,7 @@ char orOKlabel[MAXLABELSIZE];
 char orEndlabel[MAXLABELSIZE];
 char andFalselabel[MAXLABELSIZE];
 char andEndlabel[MAXLABELSIZE];
+char functionlabel[MAXLABELSIZE];
 
 void initRegisters(){
 	eax = make_argument_register(r_eax, "eax");
@@ -37,27 +40,28 @@ void initRegisters(){
 	esp = make_argument_register(r_esp, "esp");
 }
 
-linked_list *IR_build(SYMBOLTABLE *symboltable) {
+int getNextLabel(){
+
+	return current_label++;
+}
+
+int getNextFunction(){
+
+	return function_label++;
+}
+
+linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
+	fprintf(stderr, "%s\n", "Initializing intermediate code generation");
 	ir_lines = initialize_list();
 	initRegisters();
 
 	globalTable = symboltable;
-
+	_main_ = program;
 
 	// make ".string "%d\n" "
 	buildForm("formNUM:", ".string \"%d\\n\" ");
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
 	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
-
-	// make ".globl main" directive
-	ARGUMENT *global_label = make_argument_label(".globl main");
-	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
-	append_element(ir_lines, globl_directive);
-
-    // make "main:" label line
-	ARGUMENT *main_label = make_argument_label("main:");
-	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
-	append_element(ir_lines, globl_main);
 
 	IR_builder_body(_main_);
 
@@ -70,33 +74,54 @@ linked_list *IR_build(SYMBOLTABLE *symboltable) {
 //TODO
 void IR_builder_function(FUNC *func) {
 
+	SYMBOL *symbol = getSymbol(globalTable, func->functionF.head->headH.id);
+	sprintf(functionlabel, "func%d", getNextFunction());
+	strcpy(symbol->uniquename, functionlabel);
+
+	sprintf(functionlabel, "%s:", functionlabel);
+
+	ARGUMENT *func_label = make_argument_label(functionlabel);
+	IR_INSTRUCTION *func_main = make_instruction_globl(func_label, NULL);
+	append_element(ir_lines, func_main);
 
 	IR_builder_head(func->functionF.head);
 	IR_builder_body(func->functionF.body);
 
 }
 
+
+//TODO sæt ordenligt offset OBS reverse vars
 void IR_builder_head (HEAD *header) {
 
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
-	int count = 0;
-	VAR_DECL_LIST *vars = header->headH.pdeclist->value.var_decl_list;
 
-	int offset = -1; //offset neg
-	dumpSymbolTable(header->headH.pdeclist->symboltable);
+	int count = 0;
+	int offset = -1; //offset neg for stack
+
+	VAR_DECL_LIST *vars = header->headH.pdeclist->value.var_decl_list;
+	
 	while(count < args->noArguments){
-		VAR_TYPE *lol = vars->value.var_type;
-		char *lol2 = lol->id;
-		printf("%s\n", lol2);
-		printf("%p\n", (void *) lol->id);
+
 		if(globalTable != NULL || vars->value.var_type != NULL){
-			symbol = getSymbol(header->headH.pdeclist->symboltable, lol->id);
+		
+			if (vars->kind == comma_VDL_K) {
+				symbol = getSymbol(header->headH.pdeclist->symboltable, vars->value.commaVDL.var_type->id);
+			} else {
+				symbol = getSymbol(header->headH.pdeclist->symboltable, vars->value.var_type->id);
+			}
+
+			if(symbol == NULL){
+				fprintf(stderr, "%s\n", "Variable not found in symboltable");
+				exit(1);
+			}
+
 			symbol->offset = offset;
 			offset = offset - 1;
 			vars = vars->value.commaVDL.var_decl_list;
-			dumpSymbol(symbol);
 			count++;
+		} else {
+			break;
 		}
 	}
 }
@@ -105,7 +130,19 @@ void IR_builder_head (HEAD *header) {
 void IR_builder_body (BODY *body) {
 
 	IR_builder_decl_list(body->decl_list);
+
+	// make ".globl main" directive
+	ARGUMENT *global_label = make_argument_label(".globl main");
+	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
+	append_element(ir_lines, globl_directive);
+
+    // make "main:" label line
+	ARGUMENT *main_label = make_argument_label("main:");
+	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
+	append_element(ir_lines, globl_main);
+
 	IR_builder_statement_list(body->statement_list);
+
 }
 
 
@@ -188,16 +225,17 @@ void IR_builder_statement ( STATEMENT *st) {
 			break;
 
 		case print_S_K:
+
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_INT:
 
 					//move stackpointer and basepointer
 					calleeStart();
-
 					calleeSave();
 					//Push arguments for print then form for print
 					arg1 = IR_builder_expression(st->value.exp);
+
 					callerSave();
 
 					params = make_instruction_pushl(arg1, NULL);
@@ -221,6 +259,7 @@ void IR_builder_statement ( STATEMENT *st) {
 					break;
 
 				case SYMBOL_BOOL:
+
 					//move stackpointer and basepointer
 					calleeStart();
 
@@ -268,17 +307,17 @@ void IR_builder_statement ( STATEMENT *st) {
 			break;
 
 		case ifbranch_S_K:
-			tmp = current_label;
-			current_label++;
+			tmp = getNextLabel();
 
 			arg1 = IR_builder_expression(st->value.ifbranchS.exp);
 
-			sprintf(elselabel, "else%d", tmp);
-			falsearg = make_argument_label(elselabel);
-			IR_INSTRUCTION *falselabel = make_instruction_globl(falsearg, NULL);
+			sprintf(elselabel, "else%d:", tmp);
+			sprintf(endlabelstring, "endIf%d:", tmp);
 
-			sprintf(endlabelstring, "endIf%d", tmp);
+			falsearg = make_argument_label(elselabel);
 			endarg = make_argument_label(endlabelstring);
+
+			IR_INSTRUCTION *falselabel = make_instruction_globl(falsearg, NULL);
 			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
 
 			compare = make_argument_constant(1); //Compare with true
@@ -290,25 +329,26 @@ void IR_builder_statement ( STATEMENT *st) {
 
 			IR_builder_statement(st->value.ifbranchS.statement);
 			IR_INSTRUCTION *jmpend = make_instruction_jmp(endlabelstring);
-
 			append_element(ir_lines, jmpend);
-			append_element(ir_lines, falselabel);
 
 			if(st->value.ifbranchS.opt_else->value.statement != NULL){
+				append_element(ir_lines, falselabel);
 				IR_builder_statement(st->value.ifbranchS.opt_else->value.statement);
 			}
+			
 			append_element(ir_lines, endlabel);
+
 			break;
 
 		case allocate_S_K:
 			break;
 
 		case while_S_K:
-			sprintf(truelabelstring, "whileStart%d", current_label);
+			sprintf(truelabelstring, "whileStart%d:", current_label);
 			truearg = make_argument_label(truelabelstring);
 			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
 
-			sprintf(endlabelstring, "whileEnd%d", current_label);
+			sprintf(endlabelstring, "whileEnd%d:", current_label);
 			endarg = make_argument_label(endlabelstring);
 			IR_INSTRUCTION *whileend = make_instruction_globl(endarg, NULL);
 			append_element(ir_lines, truelabel);
@@ -330,6 +370,9 @@ void IR_builder_statement ( STATEMENT *st) {
 		case statement_list_S_K:
 			IR_builder_statement_list(st->value.statement_list);
 			break;
+
+		default:
+			printf("%s\n", "GOT NOTHING");
 
 	}
 } 
@@ -416,14 +459,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 		case boolleq_E_K:
 		case boolgeq_E_K:
 			result = make_argument_tempregister(current_temporary++);
-			tmp = current_label;
-			current_label++;
+			tmp = getNextLabel();
 
-			sprintf(booltruelabel, "true%d", tmp);
+
+			sprintf(booltruelabel, "booOPtrue%d:", tmp);
 			truearg = make_argument_label(booltruelabel);
 			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
 
-			sprintf(boolendlabel, "end%d", tmp);
+			sprintf(boolendlabel, "boolOPend%d:", tmp);
 			endarg = make_argument_label(boolendlabel);
 			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
 
@@ -478,14 +521,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			append_element(ir_lines, endlabel);
 			return result;
 			break;
-		case booland_E_K: //NEEDS WORK
-			current_label++;
+		case booland_E_K:
+			tmp = getNextLabel();
 
-			sprintf(andFalselabel, "ANDfalse%d", tmp);
+			sprintf(andFalselabel, "ANDfalse%d:", tmp);
 			falsearg = make_argument_label(andFalselabel);
 			IR_INSTRUCTION *andFalseinstr = make_instruction_globl(falsearg, NULL);
 
-			sprintf(andEndlabel, "ANDend%d", tmp);
+			sprintf(andEndlabel, "ANDend%d:", tmp);
 			endarg = make_argument_label(andEndlabel);
 			IR_INSTRUCTION *andEndinstr = make_instruction_globl(endarg, NULL);
 
@@ -517,14 +560,13 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			break;
 		case boolor_E_K://NEEDS WORK
-			tmp = current_label;
-			current_label++;
+			tmp = getNextLabel();
 
-			sprintf(orOKlabel, "ORtrue%d", tmp);
+			sprintf(orOKlabel, "ORtrue%d:", tmp);
 			truearg = make_argument_label(orOKlabel);
 			IR_INSTRUCTION *oroklabel = make_instruction_globl(truearg, NULL);
 
-			sprintf(orEndlabel, "ORend%d", tmp);
+			sprintf(orEndlabel, "ORend%d:", tmp);
 			endarg = make_argument_label(orEndlabel);
 			IR_INSTRUCTION *orendlabel = make_instruction_globl(endarg, NULL);
 
@@ -567,6 +609,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	IR_INSTRUCTION *instr;
+	ACT_LIST *funcparams;
+	SYMBOL *symbol;
+	int params;
 
 	switch(term->kind){
 		case num_T_K:
@@ -607,6 +652,39 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			instr = make_instruction_movl(arg1, arg2);
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps			
+
+		case actList_T_K:
+
+			//oprette static link?
+			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
+			params = 0;
+			EXPRES *par;
+
+			while(params < symbol->noArguments){
+
+				if(term->value.actlistT.actlist->value.exp_list->kind == exp_EL_K){
+					arg1 = IR_builder_expression(term->value.actlistT.actlist->value.exp_list->value.exp);
+					instr = make_instruction_pushl(arg1, NULL);
+					append_element(ir_lines, instr);
+				} else {
+					arg1 = IR_builder_expression(term->value.actlistT.actlist->value.exp_list->value.commaEL.exp);
+					instr = make_instruction_pushl(arg1, NULL);
+					append_element(ir_lines, instr);
+				}
+
+				params++;
+			}
+
+			arg2 = make_argument_label(symbol->uniquename);
+			IR_INSTRUCTION *call = make_instruction_call(NULL, arg2);
+			append_element(ir_lines, call);
+
+			moveStackpointer(symbol->noArguments);
+
+			callerRestore();
+			return arg2 = make_argument_tempregister(current_temporary++);
+
+
 
 		default:
 			break;
@@ -769,7 +847,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case divl:
-				printf("\t%s", "DIV ");
+				printf("\t%s", "IDIV ");
 				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;

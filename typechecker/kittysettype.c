@@ -94,8 +94,6 @@ void set_type ( TYPE *type ) {
 		case id_TY_K:
 			tmp = getSymbol(type->symboltable, type->value.idconst);
 
-f
-
 			if(tmp->symboltype->type == SYMBOL_INT){
 				type->kind = int_TY_K;
 				type->symboltype->type = SYMBOL_INT;

@@ -7,7 +7,7 @@
  * vide pop, peek, and push functionality
 **/
 
-struct linked_stack {
+typedef struct linked_stack {
 	linked_list *elements; 
 	int size; 
 } linked_stack;

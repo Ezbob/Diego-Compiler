@@ -6,6 +6,6 @@
 #include "parserscanner/kittytree.h"
 
 
-void begin_typecheck( BODY *body );
+void begin_typecheck( BODY *body, SYMBOLTABLE *symboltable);
 
 #endif

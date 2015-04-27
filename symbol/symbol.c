@@ -66,11 +66,12 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 			"Error: Cannot allocate memory for new symbol \n");
 		return NULL;		
 	}
-
+	PutSymbol->name = calloc(strlen(name)+1,sizeof(char));
 	PutSymbol->name = name;
 	PutSymbol->value = value;
 	PutSymbol->next = NULL;
 	PutSymbol->symboltype = symbolT;
+	PutSymbol->uniquename = calloc(11,sizeof(char));
 
 	Placeholder = t->table[HashValue]; 
 	if (Placeholder != NULL){ // has a SYMBOL in field 

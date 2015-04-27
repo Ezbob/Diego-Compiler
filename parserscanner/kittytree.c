@@ -415,7 +415,8 @@ VAR *make_VAR_id(char *id){
 	VAR *nid = NEW(VAR);
 	nid->lineno = lineno;
 	nid->kind = id_V_K;
-	nid->value.id = id;
+	nid->value.id = calloc(strlen(id)+1,sizeof(char));
+	strcpy(nid->value.id, id);
 
 	return nid;
 

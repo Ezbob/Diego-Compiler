@@ -4,9 +4,9 @@
 #include "kittytypecheck.h"
 #include "symbol/symbol.h"
 
-void begin_typecheck( BODY *body ){
+void begin_typecheck( BODY *body, SYMBOLTABLE *symboltable ){
 
-	SYMBOLTABLE *symboltable = initSymbolTable();
+	fprintf(stderr, "%s\n", "Initializing type checking phase");
 
 	collect(body, symboltable);
 	begin_set(body);

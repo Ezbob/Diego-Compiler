@@ -21,6 +21,7 @@ void weed_error_report(const char* errorMsg, int lineno){
 
 BODY *begin_weed(BODY *body){
 
+	fprintf(stderr, "%s\n", "Initializing weeding phase");
 	/*
 	 * Using a stack to keep track of functions,
 	 * need this to attach to statements to make  

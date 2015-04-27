@@ -138,7 +138,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 		exit(1);
 	}
-		vtype->symbol->realtype = vtype->type;
+	vtype->symbol->realtype = vtype->type;
 
 }
 

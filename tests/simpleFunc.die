@@ -1,7 +1,7 @@
-func func1(a : int, b : int) : int
+func func1(a : int) : int
 
 	return 1;
 
 end func1
 
-write 1;
+write func1(1);

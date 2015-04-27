@@ -1,6 +1,7 @@
 #ifndef KITTY_EMITTER_H
 #define KITTY_EMITTER_H 
 #include "dlinkedlist.h"
+#include "dlinkedstack.h"
 #include "parserscanner/kittytree.h"
 
 #define MAXLABELSIZE 20
@@ -40,7 +41,7 @@ typedef struct ARGUMENT {
 /*
  * stores all IR code in a linked_list
  */
-linked_list *IR_build(SYMBOLTABLE *);
+linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable);
 void IR_builder_function(FUNC *func);
 void IR_builder_head (HEAD *header);
 void IR_builder_body (BODY *body);
@@ -60,6 +61,8 @@ void calleeSave();
 void calleeRestore();
 void calleeStart();
 void calleeEnd();
+int getNextLabel();
+int getNextFunction();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);
 void IR_printer(linked_list *ir_lines);

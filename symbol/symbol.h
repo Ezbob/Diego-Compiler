@@ -36,6 +36,7 @@ typedef struct SYMBOL {
   struct TYPE *returntype;
   struct TYPE *array;
   struct TYPE *realtype;
+  char *uniquename;
   int offset;
 } SYMBOL;
 

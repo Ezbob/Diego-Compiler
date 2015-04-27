@@ -5,6 +5,7 @@
 #include "typechecker/kittytype.h"
 #include "typechecker/kittycheck.h"
 #include "typechecker/kittyprinter.h"
+#include "typechecker/kittysettype.h"
 #include "symbol/symbol.h"
 #include "kittyir.h"
 
@@ -28,6 +29,7 @@ struct SYMBOLTABLE *globalTable;
 int main( void ) {
 
 	globalTable = initSymbolTable();
+	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){
 		case PARSE_ERROR:
 			fprintf(stderr, "Error: Parse error detected\n");
@@ -40,9 +42,10 @@ int main( void ) {
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
 			collect(_main_, globalTable);
+			//begin_set(_main_);
 			begin_check(_main_);
 			printer_body(_main_);
-			IR_build(globalTable);
+			IR_build(_main_, globalTable);
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");

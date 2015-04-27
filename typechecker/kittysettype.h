@@ -1,6 +1,6 @@
 #ifndef __KITTY_SETTYPE_H
 #define __KITTY_SETTYPE_H
-#include "parserscanner/kittytree.h"
+#include "../parserscanner/kittytree.h"
 #include "kittytype.h"
 
 void begin_set( BODY *body );
