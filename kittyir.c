@@ -48,9 +48,9 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	_main_ = program;
 
 	// make ".string "%d\n" "
-	buildForm("formNUM:", ".string \"%d\\n\" ");
-	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
-	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
+	buildForm("formNUM", ".string \"%d\\n\" ");
+	buildForm("formTRUE", ".string \"TRUE\\n\" ");
+	buildForm("formFALSE", ".string \"FALSE\\n\" ");
 
 	IR_builder_decl_list(_main_->decl_list);
 
@@ -140,9 +140,6 @@ void IR_builder_head (HEAD *header) {
 
 //TODO
 void IR_builder_body (BODY *body) {
-
-	IR_INSTRUCTION *allocation_instr;
-
  
  	IR_builder_decl_list(body->decl_list);
 
@@ -159,12 +156,11 @@ void IR_builder_body (BODY *body) {
 
 }
 
-
+/*
 void IR_builder_par_decl_list ( PAR_DECL_LIST *pdecl) {
-
 	return;
-
 }
+*/
 
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	switch(vdecl->kind){
@@ -387,6 +383,7 @@ void IR_builder_statement ( STATEMENT *st) {
 
 			char *truewhilestring = calloc(32,sizeof(char));
 			char *endwhilestring = calloc(32,sizeof(char));
+			endlabelstring = calloc(32,sizeof(char));
 
 			sprintf(truewhilestring, "whileStart%d", current_label);
 			truearg = make_argument_label(truewhilestring);
