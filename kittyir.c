@@ -145,6 +145,7 @@ void IR_builder_body (BODY *body) {
 
 	//move stackpointer and basepointer
 	calleeStart();
+	calleeSave();
 	localVariableAllocation();
 
 	IR_builder_statement_list(body->statement_list);
@@ -710,9 +711,11 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			//function paramerters are useless after function call
 			moveStackpointer(symbol->noArguments);
 
-			callerRestore();
-
-			return eax; // by convention eax holds return values
+			//Handle return value as it can sit in eax
+			ARGUMENT *returnarg = make_argument_tempregister(current_temporary++);
+			IR_INSTRUCTION *savereturn = make_instruction_movl(eax, returnarg);
+			append_element(ir_lines, savereturn);
+			return returnarg; // by convention eax holds return values
 
 		default:
 			break;
@@ -791,20 +794,20 @@ void calleeEnd(){
 void calleeSave(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
-	IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
+	//IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
+	//IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
 	append_element(ir_lines, instr1);
-	append_element(ir_lines, instr2);
-	append_element(ir_lines, instr3);
+	//append_element(ir_lines, instr2);
+	//append_element(ir_lines, instr3);
 }
 
 void calleeRestore(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
-	IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
-	append_element(ir_lines, instr3);
-	append_element(ir_lines, instr2);
+	//IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
+	//IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
+	//append_element(ir_lines, instr3);
+	//append_element(ir_lines, instr2);
 	append_element(ir_lines, instr1);
 
 }
