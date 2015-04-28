@@ -77,6 +77,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	callerRestore();
 	calleeEnd();
 
+	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	append_element(ir_lines, ret);
 	IR_printer(ir_lines);
@@ -152,6 +153,7 @@ void IR_builder_body (BODY *body) {
 
 	//move stackpointer and basepointer
 	calleeEnd();
+	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	append_element(ir_lines, ret);
 
@@ -224,8 +226,8 @@ void IR_builder_declaration ( DECLARATION *decl) {
 void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 	switch(slst->kind) {
 		case compound_SL_K:
-			IR_builder_statement(slst->value.compoundSL.statement);
 			IR_builder_statement_list(slst->value.compoundSL.statement_list);
+			IR_builder_statement(slst->value.compoundSL.statement);
 			break;
 		case statement_SL_K:
 			IR_builder_statement(slst->value.statement);
@@ -302,12 +304,32 @@ void IR_builder_statement ( STATEMENT *st) {
 			}
 			break;
 
-		case assign_S_K:
+		case assign_S_K: // todo with local variables
 			arg1 = IR_builder_expression(st->value.assignS.exp);
 
-			IR_INSTRUCTION *Save = make_instruction_pushl(arg1, NULL);
-			append_element(ir_lines, Save);
+			SYMBOL *symbol = getSymbol(st->symboltable,st->value
+				.assignS.variable->value.id);
+			if(symbol == NULL){
+				printf("%s\n", "ERROR");
+				//INSERT INTCODE EXIT
+			}
 
+			if( local_variable_size >= 4 && symbol != NULL ) { 
+			// perhaps this needs a local var enum
+				symbol->offset = -1 * (local_variable_size / 4);
+				local_variable_size -= 4; 
+			}
+			
+			append_element(
+				ir_lines, 
+				make_instruction_movl (
+					arg1, 
+					make_argument_address ( 
+						symbol->offset * 4
+					)
+				)
+			);
+			
 			break;
 
 		case ifbranch_S_K:
@@ -403,6 +425,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		printf("%s\n", "ERROR");
 		//LAV INTCODE EXIT
 	}
+	
 	ARGUMENT *arg = make_argument_address(4*(symbol->offset));
 	return arg;
 
@@ -427,27 +450,23 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 	}
 
 	switch(exp->kind){
-		case term_E_K:
+		case term_E_K: 
 			return IR_builder_term(exp->value.term);
-			break;
 
 		case plus_E_K:
 			instr = make_instruction_addl(argLeft, argRight);
 			append_element(ir_lines, instr);
 			return argRight; 
-			break;
 
 		case minus_E_K:
 			instr = make_instruction_subl(argRight, argLeft);
 			append_element(ir_lines, instr);
 			return argRight; 
-			break;
 
 		case times_E_K:
 			instr = make_instruction_imul(argLeft, argRight);
 			append_element(ir_lines, instr);
 			return argRight;
-			break;
 
 		case divide_E_K:
 			edxsave = make_instruction_pushl(edx, NULL); //Saving edx register
@@ -469,7 +488,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			append_element(ir_lines, edxrestore); //Restoring edx register
 
 			return argLeft;
-			break;
 
 		case booleq_E_K:
 		case boolneq_E_K:
@@ -655,14 +673,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
 
-		case boolFalse_T_K:
-			arg1 = make_argument_constant(0);
-			arg2 = make_argument_tempregister(current_temporary++);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2; //Return arg2 to keep track of temps
-
 		case null_T_K:
+		case boolFalse_T_K:
 			arg1 = make_argument_constant(0);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -749,7 +761,7 @@ void localVariableAllocation() {
 				esp
 			)
 		); 
-	local_variable_size = 0; // reset the size counting	
+	 // reset the size counting	?
 	}
 }
 

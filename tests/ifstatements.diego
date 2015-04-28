@@ -2,9 +2,8 @@ func testIF () : int
 	var b : int;
 	var a : int;
 	var c : bool;
-
-
 	a = 4;
+	b = 2;
 
 	#c = (d);
 	#e = (42);

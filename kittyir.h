@@ -17,8 +17,9 @@ typedef enum REGISTERS {
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { globl, mainmet, string, movl, call, pushl, popl, addl, subl, ret, xor, divl, imul, cmp, jne, jmp, je,
-		   JGE, JLE, jl, jg } op_code; 
+	enum { globl, mainmet, string, movl, call, pushl, popl, addl, 
+		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
+		JGE, JLE, jl, jg } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
@@ -29,12 +30,13 @@ typedef struct IR_INSTRUCTION {
 typedef struct ARGUMENT {
 	int tempid;
 	ARGUMENTTYPE type;
-	enum { address_arg, register_arg, label_arg, constant_arg, tempreg_arg } kind;
+	enum { address_arg, register_arg, label_arg, 
+		constant_arg, tempreg_arg } kind;
 	char *label;
 	int intConst;
 	REGISTERS reg;
 	char *charConst;
-	void *address;
+	void *address; // for use in local vars
 } ARGUMENT;
 
 
