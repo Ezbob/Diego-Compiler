@@ -206,7 +206,6 @@ void IR_builder_decl_list ( DECL_LIST *dlst) {
 
 void IR_builder_declaration ( DECLARATION *decl) {
 	switch(decl->kind){
-
 		case typeassign_D_K:
 			break;
 
@@ -276,20 +275,18 @@ void IR_builder_statement ( STATEMENT *st) {
 					params = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, params);
 
-					if(st->value.exp->value.term->kind == num_T_K){
-						ARGUMENT *arg3 = make_argument_label("$formNUM");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
-						append_element(ir_lines, pushform);
-
-					} else if(st->value.exp->value.term->kind == boolTrue_T_K){
+					if(st->value.exp->value.term->kind == boolTrue_T_K){
 						ARGUMENT *arg3 = make_argument_label("$formTRUE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
-
 					} else if(st->value.exp->value.term->kind == boolFalse_T_K){
 						ARGUMENT *arg3 = make_argument_label("$formFALSE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);						
+					} else {
+						ARGUMENT *arg3 = make_argument_label("$formNUM");
+						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						append_element(ir_lines, pushform);
 					}
 
 					arg2 = make_argument_label("printf");
@@ -713,19 +710,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			//function paramerters are useless after function call
 			moveStackpointer(symbol->noArguments);
 
-			// make a new temp reg
-			arg2 = make_argument_tempregister(current_temporary++);
-
-			// move return value from eax to a temp reg
-			append_element(ir_lines, 
-					make_instruction_movl(
-						eax,
-						arg2
-						)
-				);
 			callerRestore();
 
-			return arg2;
+			return eax; // by convention eax holds return values
 
 		default:
 			break;
