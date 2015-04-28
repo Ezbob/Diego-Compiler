@@ -267,8 +267,6 @@ void IR_builder_statement ( STATEMENT *st) {
 				case SYMBOL_INT:
 				case SYMBOL_BOOL:
 
-					//move stackpointer and basepointer
-
 					//Push arguments for print then form for print
 					arg1 = IR_builder_expression(st->value.exp);
 					callerSave();
