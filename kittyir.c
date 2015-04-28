@@ -686,7 +686,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case actList_T_K:
 
-			//oprette static link?
+			// static link ?
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 			params = 0;
 
@@ -713,10 +713,19 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			//function paramerters are useless after function call
 			moveStackpointer(symbol->noArguments);
 
+			// make a new temp reg
+			arg2 = make_argument_tempregister(current_temporary++);
+
+			// move return value from eax to a temp reg
+			append_element(ir_lines, 
+					make_instruction_movl(
+						eax,
+						arg2
+						)
+				);
 			callerRestore();
-			return arg2 = make_argument_tempregister(current_temporary++);
 
-
+			return arg2;
 
 		default:
 			break;

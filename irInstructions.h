@@ -14,7 +14,7 @@ IR_INSTRUCTION *make_instruction_jg(char *);
 IR_INSTRUCTION *make_instruction_jl(char *);
 IR_INSTRUCTION *make_instruction_JGE(char *);
 IR_INSTRUCTION *make_instruction_JLE(char *);
-IR_INSTRUCTION *make_instruction_popl();
+IR_INSTRUCTION *make_instruction_popl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_addl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_subl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_xor(ARGUMENT *arg1, ARGUMENT *arg2);
