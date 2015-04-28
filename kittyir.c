@@ -265,43 +265,23 @@ void IR_builder_statement ( STATEMENT *st) {
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_INT:
-
-					//calleeSave();
-					//Push arguments for print then form for print
-					arg1 = IR_builder_expression(st->value.exp);
-
-					callerSave();
-
-					params = make_instruction_pushl(arg1, NULL);
-					append_element(ir_lines, params);
-					ARGUMENT *arg3 = make_argument_label("$formNUM");
-					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
-					append_element(ir_lines, pushform);
-
-					arg2 = make_argument_label("printf");
-					call = make_instruction_call(arg1, arg2);
-					append_element(ir_lines, call);
-
-					moveStackpointer(2);
-
-					//callerRestore();
-					//calleeRestore();
-
-					break;
-
 				case SYMBOL_BOOL:
 
 					//move stackpointer and basepointer
 
-					calleeSave();
 					//Push arguments for print then form for print
 					arg1 = IR_builder_expression(st->value.exp);
 					callerSave();
 
-					IR_INSTRUCTION *params = make_instruction_pushl(arg1, NULL);
+					params = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, params);
 
-					if(st->value.exp->value.term->kind == boolTrue_T_K){
+					if(st->value.exp->value.term->kind == num_T_K){
+						ARGUMENT *arg3 = make_argument_label("$formNUM");
+						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						append_element(ir_lines, pushform);
+
+					} else if(st->value.exp->value.term->kind == boolTrue_T_K){
 						ARGUMENT *arg3 = make_argument_label("$formTRUE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
@@ -313,13 +293,10 @@ void IR_builder_statement ( STATEMENT *st) {
 					}
 
 					arg2 = make_argument_label("printf");
-					IR_INSTRUCTION *call = make_instruction_call(arg1, arg2);
+					call = make_instruction_call(arg1, arg2);
 					append_element(ir_lines, call);
 
 					moveStackpointer(2);
-
-					callerRestore();
-					calleeRestore();
 
 					break;
 
