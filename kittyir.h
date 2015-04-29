@@ -5,6 +5,7 @@
 #include "parserscanner/kittytree.h"
 
 #define MAXLABELSIZE 20
+#define INSTRUCTIONNUM 0
 
 typedef enum ARGUMENTTYPE {
 	REGISTER, TEMP, VIRTUAL, SPILLED, STATICLINK, INT
@@ -40,6 +41,19 @@ typedef struct ARGUMENT {
 } ARGUMENT;
 
 
+typedef struct SECTION {
+	char *sectionName;
+	int temps;
+	struct SYMBOLTABLE *symboltable;
+	struct SECTION *nextSection;
+	struct SECTION *prevSection;
+	struct IR_INSTRUCTION *first;
+	struct IR_INSTRUCTION *last;
+	struct LIVENESS *root;
+	struct LIVENESS *tail;
+} SECTION;
+
+
 /*
  * stores all IR code in a linked_list
  */
@@ -64,7 +78,7 @@ void calleeRestore();
 void calleeStart();
 void calleeEnd();
 int getNextLabel();
-void localVariableAllocation();
+IR_INSTRUCTION *localVariableAllocation();
 int getNextFunction();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);

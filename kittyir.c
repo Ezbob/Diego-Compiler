@@ -13,6 +13,7 @@ static linked_list *ir_lines; // plug IR code in here
 
 extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
+extern SECTION *mainSection;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
@@ -52,6 +53,12 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	buildForm("formTRUE", ".string \"TRUE\\n\" ");
 	buildForm("formFALSE", ".string \"FALSE\\n\" ");
 
+	mainSection = NEW(SECTION);
+	mainSection->symboltable = globalTable;
+	mainSection->temps = globalTable->temps;
+	mainSection->sectionName = calloc(32,sizeof(char));
+	sprintf(mainSection->sectionName, "%s", "main");
+	SECTION *tmp2 = mainSection;
 	IR_builder_decl_list(_main_->decl_list);
 
 	// make ".globl main" directive
@@ -62,6 +69,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	// make "main:" label line
 	ARGUMENT *main_label = make_argument_label("main");
 	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
+	mainSection->first = globl_main;
 	append_element(ir_lines, globl_main);
 
 	calleeStart();
@@ -72,15 +80,19 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	callerSave();
 
 	IR_builder_statement_list(_main_->statement_list);
-
+	
 	calleeRestore();
 	callerRestore();
 	calleeEnd();
 
 	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
+	mainSection->last = ret;
+
 	append_element(ir_lines, ret);
+	mainSection = tmp2;
 	IR_printer(ir_lines);
+	
 	return ir_lines;
 }
 
@@ -93,13 +105,31 @@ void IR_builder_function(FUNC *func) {
 
 	sprintf(functionlabel, "%s", functionlabel);
 
+	//Switching scope begins new section
+	SECTION *temp = mainSection;
+	while(mainSection->nextSection != NULL){
+		mainSection = mainSection->nextSection;
+	}
+
+	mainSection->nextSection = NEW(SECTION);
+	mainSection->nextSection->prevSection = mainSection;
+	mainSection = mainSection->nextSection;
+	mainSection->symboltable = globalTable;
+	mainSection->sectionName = calloc(32,sizeof(char));
+	sprintf(mainSection->sectionName, "%s", functionlabel);
+
 	ARGUMENT *func_label = make_argument_label(functionlabel);
 	IR_INSTRUCTION *func_main = make_instruction_globl(func_label, NULL);
+	printf("%p\n", (void *) func_main);
+	mainSection->first = func_main;
 	append_element(ir_lines, func_main);
 
+	
 	IR_builder_head(func->functionF.head);
 	IR_builder_body(func->functionF.body);
 
+	//Section is done, restore old section
+	mainSection = temp;
 }
 
 
@@ -108,7 +138,7 @@ void IR_builder_head (HEAD *header) {
 
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
-
+	mainSection->temps = args->noArguments;
 	int count = 0;
 	int offset = 2; 
 
@@ -147,14 +177,18 @@ void IR_builder_body (BODY *body) {
 	//move stackpointer and basepointer
 	calleeStart();
 	calleeSave();
+	printf("%p\n", (void *) mainSection->first);
 	localVariableAllocation();
 
 	IR_builder_statement_list(body->statement_list);
+
 
 	//move stackpointer and basepointer
 	calleeEnd();
 	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
+	mainSection->last = ret;
+	printf("%p\n", (void *) ret);
 	append_element(ir_lines, ret);
 
 }
@@ -808,17 +842,16 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 /* Adding allocation of local variables, this is by convention 
  *	a subtration of the stack pointer 
  */
-void localVariableAllocation() {
+IR_INSTRUCTION *localVariableAllocation() {
 	if (local_variable_size > 0){
-		append_element(
-			ir_lines, 
-			make_instruction_subl(
+		IR_INSTRUCTION *instr = make_instruction_subl(
 				make_argument_constant(local_variable_size),
-				esp
-			)
-		); 
+				esp);
+		append_element(ir_lines, instr);
+		return instr; 
 	 // reset the size counting	?
 	}
+	return NULL;
 }
 
 void callerSave(){
@@ -1036,7 +1069,6 @@ void IR_printer(linked_list *ir_lines){
 			default:
 				break;
 		}
-
 		temp = temp->next;
 	}
 }
