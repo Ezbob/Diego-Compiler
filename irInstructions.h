@@ -7,6 +7,8 @@ IR_INSTRUCTION *make_instruction_movl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_cmp(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_call(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_pushl(ARGUMENT *arg1, ARGUMENT *arg2);
+IR_INSTRUCTION *make_instruction_notl(ARGUMENT *arg1);
+IR_INSTRUCTION *make_instruction_negl(ARGUMENT *arg1);
 IR_INSTRUCTION *make_instruction_jmp(char *);
 IR_INSTRUCTION *make_instruction_jne(char *);
 IR_INSTRUCTION *make_instruction_je(char *);

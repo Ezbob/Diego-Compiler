@@ -500,7 +500,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			char *booltruelabel = calloc(32,sizeof(char));
 			char *boolendlabel = calloc(32,sizeof(char));
 
-
 			sprintf(booltruelabel, "booOPtrue%d", current_label);
 			truearg = make_argument_label(booltruelabel);
 			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
@@ -727,6 +726,35 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element(ir_lines, savereturn);
 			return returnarg; // by convention eax holds return values
 
+		case termBang_T_K:
+			arg1 = IR_builder_term(term->value.term);
+			arg2 = make_argument_tempregister(current_temporary++);
+			IR_INSTRUCTION *neg = make_instruction_notl(arg1);
+			append_element(ir_lines, neg);
+			instr1 = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr1);
+			return arg2;
+
+		case expresPipes_T_K:
+			char *pipeEnd = calloc(32,sizeof(char));
+			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
+			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
+			IR_INSTRUCTION *pipeLabel = make_instruction_globl(pipeArg);
+
+			arg1 = IR_builder_expression(term->value.exp);
+			if(term->symboltype->type == SYMBOL_INT){
+				//2 cases, positive numbers and negative numbers
+				ARGUMENT *pipeCMPArg = make_argument_constant(0);
+
+				IR_INSTRUCTION *pipeCMP = make_instruction_cmp(pipeCMPArg, arg1);
+				append_element(ir_lines, pipeCMP);
+				IR_INSTRUCTION *pipeEndJmp = make_instruction_JGE(pipeEnd);
+				append_element(ir_lines, pipeEndJmp);
+				IR_INSTRUCTION *negl = make_instruction_negl(arg1);
+				append_element(ir_lines, negl);
+				append_element(pipeLabel);
+				return arg1;
+			} //Missing array length
 		default:
 			break;
 	}
@@ -903,7 +931,7 @@ void IR_printer(linked_list *ir_lines){
 				break;				
 
 			case xor:
-				printf("\t%s", "xor ");
+				printf("\t%s", "xorl ");
 				IR_print_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_print_arguments(instr_to_print->arg1);
@@ -956,6 +984,18 @@ void IR_printer(linked_list *ir_lines){
 			case je:
 				printf("\t%s", "je ");
 				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
+			case notl:
+				printf("\t%s", "notl ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
+
+			case negl:
+				printf("\t%s", "negl ");
+				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
 

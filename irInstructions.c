@@ -29,6 +29,22 @@ IR_INSTRUCTION *make_instruction_jne(char *c) {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_notl(ARGUMENT *arg1) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = notl;
+	new_instruction->arg1 = arg1
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_negl(ARGUMENT *arg1) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = negl;
+	new_instruction->arg1 = arg1
+	return new_instruction;
+}
+
 IR_INSTRUCTION *make_instruction_jmp(char *c) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
