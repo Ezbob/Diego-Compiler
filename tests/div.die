@@ -1,6 +1,6 @@
 var a : int, b : int;
 
 a = 4;
-b = 2;
+b = 0;
 
 write a/b;

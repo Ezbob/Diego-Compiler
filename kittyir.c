@@ -469,6 +469,34 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			return argRight;
 
 		case divide_E_K:
+			tmp = getNextLabel();
+
+			char *zeroden = calloc(32,sizeof(char));
+			sprintf(zeroden, "zeroDen%d", tmp);
+			ARGUMENT *zerodenarg = make_argument_label(zeroden);
+			IR_INSTRUCTION *zerodenlabel = make_instruction_globl(zerodenarg, NULL);
+
+			ARGUMENT *zeroArg = make_argument_constant(0);
+
+			IR_INSTRUCTION *cmpvszero = make_instruction_cmp(zeroArg, argRight);
+			append_element(ir_lines, cmpvszero);
+
+			IR_INSTRUCTION *notzero = make_instruction_jne(zeroden);
+			append_element(ir_lines, notzero);
+
+			ARGUMENT *exitARG1 = make_argument_constant(3);
+			IR_INSTRUCTION *moveExitArg1 = make_instruction_movl(exitARG1, ebx);
+			append_element(ir_lines, moveExitArg1);
+
+			ARGUMENT *exitARG2 = make_argument_constant(1);
+			IR_INSTRUCTION *moveExitArg2 = make_instruction_movl(exitARG2, eax);
+			append_element(ir_lines, moveExitArg2);
+
+			IR_INSTRUCTION *sysexit = make_instruction_intcode("0x80");
+			append_element(ir_lines, sysexit);
+
+			append_element(ir_lines, zerodenlabel);
+
 			edxsave = make_instruction_pushl(edx, NULL); //Saving edx register
 			append_element(ir_lines, edxsave);
 
@@ -998,6 +1026,12 @@ void IR_printer(linked_list *ir_lines){
 				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
+
+			case intcode:
+				printf("\t%s", "INT ");
+				printf("$%s", instr_to_print->label);
+				printf("\n");
+				break;				
 
 			default:
 				break;

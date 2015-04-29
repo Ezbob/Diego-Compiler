@@ -14,8 +14,6 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 
 }
 
-
-
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
 	/*Variables only lives in function, so new scope*/
@@ -41,6 +39,7 @@ void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 	int noArguments = 0;
 	noArguments = collect_par_decl_list(header->headH.pdeclist, scope);
 	header->arguments = noArguments;
+	scope->temps = noArguments;
 	symbol = putSymbol(st, header->headH.id, 0, symboltype);
 	symbol->parameters = header->headH.pdeclist;
 	symbol->returntype = header->headH.returntype;
@@ -56,7 +55,8 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
-
+	dumpSymbolTable(st);
+	printf("%s: %d\n", "SYMBOLTABLE CONTAINS", st->temps);
 }
 
 void collect_type ( TYPE *type, SYMBOLTABLE *st){
@@ -138,6 +138,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 		exit(1);
 	}
+	st->temps++;
 	vtype->symbol->realtype = vtype->type;
 
 }

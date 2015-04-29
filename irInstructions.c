@@ -29,6 +29,15 @@ IR_INSTRUCTION *make_instruction_jne(char *c) {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_intcode(char *c) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->op_code = intcode;
+	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
+	new_instruction->label = c;
+	return new_instruction;
+}
+
 IR_INSTRUCTION *make_instruction_notl(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
