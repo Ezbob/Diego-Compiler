@@ -648,7 +648,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 }
 
-//Missing Function calls, ABS, BANG
 ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *arg1;
@@ -731,15 +730,16 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			arg2 = make_argument_tempregister(current_temporary++);
 			IR_INSTRUCTION *neg = make_instruction_notl(arg1);
 			append_element(ir_lines, neg);
-			instr1 = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr1);
+			instr = make_instruction_movl(arg1, arg2);
+			append_element(ir_lines, instr);
 			return arg2;
 
 		case expresPipes_T_K:
+			params = 0;
 			char *pipeEnd = calloc(32,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
 			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
-			IR_INSTRUCTION *pipeLabel = make_instruction_globl(pipeArg);
+			IR_INSTRUCTION *pipeLabel = make_instruction_globl(pipeArg, NULL);
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
@@ -752,7 +752,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element(ir_lines, pipeEndJmp);
 				IR_INSTRUCTION *negl = make_instruction_negl(arg1);
 				append_element(ir_lines, negl);
-				append_element(pipeLabel);
+				append_element(ir_lines, pipeLabel);
 				return arg1;
 			} //Missing array length
 		default:
