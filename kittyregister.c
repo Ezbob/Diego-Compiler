@@ -41,37 +41,24 @@ void liveness_analysis(){
 			temp = temp->next;
 		}
 
-		//Liveness
 		LIVENESS *root = NEW(LIVENESS);
 		LIVENESS *liveNext = root;
 		root->prev = NULL;
 
 		while(temp != code && (nextinstr = (IR_INSTRUCTION *) temp->data) != mainSection->last){
-			//Analyse
 			analyseUseDef(liveNext, next);
-			//liveNext->id = next->id;
 
-			//chain
 			temp = temp->next;
 			next = (IR_INSTRUCTION *) temp->data;
 			liveNext->next = NEW(LIVENESS);
 
-			//set this one to the next's prev
 			liveNext->next->prev = liveNext;
-			//goto next
 			liveNext = liveNext->next;
 		}
 
 		//While stops before last instruction so we need to do the last
 		analyseUseDef(liveNext, next);
-/*
-		//find successors
-		analyseSucc(root, globalLivenessList->start);
 
-		//use end of list
-		analyseInOut(liveNext);
-*/
-		//attach root and end of Liveness list
 		mainSection->root = root;
 		mainSection->tail = liveNext;
 
@@ -140,7 +127,6 @@ void analyseUseDef(LIVENESS *line, IR_INSTRUCTION *inst){
 				}
 			break;
 		}
-	//}
 }
 
 
