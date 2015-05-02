@@ -50,9 +50,9 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	_main_ = program;
 
 	// make ".string "%d\n" "
-	buildForm("formNUM", ".string \"%d\\n\" ");
-	buildForm("formTRUE", ".string \"TRUE\\n\" ");
-	buildForm("formFALSE", ".string \"FALSE\\n\" ");
+	buildForm("formNUM:", ".string \"%d\\n\" ");
+	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
+	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
 
 	mainSection = NEW(SECTION);
 	mainSection->symboltable = globalTable;
@@ -952,7 +952,6 @@ void basic_assign(linked_list *ir_lines){
 	linked_list *save;
 	temp = ir_lines->next;
 	ARGUMENT *reg;
-	ARGUMENT *cmp;
 	IR_INSTRUCTION *instr1;
 	IR_INSTRUCTION *instr2;
 
@@ -1153,7 +1152,7 @@ void IR_printer(linked_list *ir_lines){
 
 			case globl:
 				IR_print_arguments(instr_to_print->arg1);
-				printf(":\n");
+				printf("\n");
 				break;
 
 			case label:
