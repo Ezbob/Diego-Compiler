@@ -1,6 +1,10 @@
 func func1(a : int) : int
+	
+	var b : int;
 
-	return 1;
+	b = a;
+
+	return b;
 
 end func1
 

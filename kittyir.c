@@ -125,7 +125,7 @@ void IR_builder_function(FUNC *func) {
 
 	ARGUMENT *func_label = make_argument_label(functionlabel);
 	IR_INSTRUCTION *func_main = make_instruction_label(func_label, NULL);
-	printf("%p\n", (void *) func_main);
+
 	mainSection->first = func_main;
 	append_element(ir_lines, func_main);
 
@@ -460,10 +460,6 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol = getSymbol(var->symboltable, var->value.id);
-	if(symbol == NULL){
-		printf("%s\n", "ERROR");
-		//LAV INTCODE EXIT
-	}
 	
 	ARGUMENT *arg = make_argument_address(4*(symbol->offset));
 	return arg;
@@ -498,7 +494,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			return argRight; 
 
 		case minus_E_K:
-			instr = make_instruction_subl(argRight, argLeft);
+			instr = make_instruction_subl( argRight, argLeft);
 			append_element(ir_lines, instr);
 			return argLeft; 
 
@@ -587,7 +583,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			endarg = make_argument_label(boolendlabel);
 			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
 
-			instr = make_instruction_cmp(argLeft, argRight);
+			instr = make_instruction_cmp( argRight, argLeft);
 			append_element(ir_lines, instr);
 
 			IR_INSTRUCTION *truejmp;
@@ -910,20 +906,20 @@ void calleeEnd(){
 void calleeSave(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx, NULL);
-	//IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
-	//IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
+	IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
 	append_element(ir_lines, instr1);
-	//append_element(ir_lines, instr2);
-	//append_element(ir_lines, instr3);
+	append_element(ir_lines, instr2);
+	append_element(ir_lines, instr3);
 }
 
 void calleeRestore(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx, NULL);
-	//IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
-	//IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
-	//append_element(ir_lines, instr3);
-	//append_element(ir_lines, instr2);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
+	IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
+	append_element(ir_lines, instr3);
+	append_element(ir_lines, instr2);
 	append_element(ir_lines, instr1);
 
 }
@@ -951,7 +947,7 @@ void buildForm(char *name, char *actual){
 //Very basic register allocation, round robin style
 void basic_assign(linked_list *ir_lines){
 
-	int count = 0;
+	int count = 1;
 	linked_list *temp;
 	linked_list *save;
 	temp = ir_lines->next;
@@ -988,8 +984,8 @@ void basic_assign(linked_list *ir_lines){
 				}
 				temp = temp->next;
 			} 
-			if(++count > 3){
-				count = 0;
+			if(++count > 5){
+				count = 1;
 			}
 			instr1->arg1 = reg;
 			temp = save;
@@ -1019,8 +1015,8 @@ void basic_assign(linked_list *ir_lines){
 				}
 				temp = temp->next;
 			} 
-			if(++count > 3){
-				count = 0;
+			if(++count > 5){
+				count = 1;
 			}
 			instr1->arg2 = reg;
 			temp = save;
@@ -1047,14 +1043,14 @@ ARGUMENT *get_register(int n){
 		case 3:
 			return edx;
 		break;
-		/*case 4:
+		case 4:
 			return esi;
 		break;
 		case 5:
 			return edi;
-		break;*/
+		break;
 		default:
-			if(n < 0 || n > 3){
+			if(n < 0 || n > 5){
 				return NULL;
 			}
 		break;

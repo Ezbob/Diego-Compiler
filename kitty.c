@@ -51,10 +51,7 @@ int main( void ) {
 			begin_check(_main_);
 			printer_body(_main_);
 			ir_codes = IR_build(_main_, globalTable);
-			if(mainSection == NULL){
-				printf("%s\n", "BAD");
-			}
-			begin_register(ir_codes);
+			//begin_register(ir_codes);
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");
