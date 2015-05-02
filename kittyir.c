@@ -4,10 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static int current_temporary = 0;
+static int current_temporary = 1;
 static int current_label = 0;
 static int function_label = 0;
 static int local_variable_size = 0;
+static int instructionnumber = 0;
 
 static linked_list *ir_lines; // plug IR code in here
 
@@ -68,7 +69,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	// make "main:" label line
 	ARGUMENT *main_label = make_argument_label("main");
-	IR_INSTRUCTION *globl_main = make_instruction_globl(main_label, NULL);
+	IR_INSTRUCTION *globl_main = make_instruction_label(main_label, NULL);
 	mainSection->first = globl_main;
 	append_element(ir_lines, globl_main);
 
@@ -91,6 +92,10 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	append_element(ir_lines, ret);
 	mainSection = tmp2;
+	linked_list *save = ir_lines;
+	assign_instructionnumber(ir_lines);
+	basic_assign(ir_lines);
+	ir_lines = save;
 	IR_printer(ir_lines);
 	
 	return ir_lines;
@@ -119,7 +124,7 @@ void IR_builder_function(FUNC *func) {
 	sprintf(mainSection->sectionName, "%s", functionlabel);
 
 	ARGUMENT *func_label = make_argument_label(functionlabel);
-	IR_INSTRUCTION *func_main = make_instruction_globl(func_label, NULL);
+	IR_INSTRUCTION *func_main = make_instruction_label(func_label, NULL);
 	printf("%p\n", (void *) func_main);
 	mainSection->first = func_main;
 	append_element(ir_lines, func_main);
@@ -177,7 +182,7 @@ void IR_builder_body (BODY *body) {
 	//move stackpointer and basepointer
 	calleeStart();
 	calleeSave();
-	printf("%p\n", (void *) mainSection->first);
+
 	localVariableAllocation();
 
 	IR_builder_statement_list(body->statement_list);
@@ -188,7 +193,7 @@ void IR_builder_body (BODY *body) {
 	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	mainSection->last = ret;
-	printf("%p\n", (void *) ret);
+
 	append_element(ir_lines, ret);
 
 }
@@ -380,8 +385,8 @@ void IR_builder_statement ( STATEMENT *st) {
 			falsearg = make_argument_label(elselabel);
 			endarg = make_argument_label(endlabelstring);
 
-			IR_INSTRUCTION *falselabel = make_instruction_globl(falsearg, NULL);
-			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
+			IR_INSTRUCTION *falselabel = make_instruction_label(falsearg, NULL);
+			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
 
 			compare = make_argument_constant(1); //Compare with true
 			IR_INSTRUCTION *cmpinstr = make_instruction_cmp(compare, arg1);
@@ -416,11 +421,11 @@ void IR_builder_statement ( STATEMENT *st) {
 
 			sprintf(truewhilestring, "whileStart%d", current_label);
 			truearg = make_argument_label(truewhilestring);
-			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
+			IR_INSTRUCTION *truelabel = make_instruction_label(truearg, NULL);
 
 			sprintf(endlabelstring, "whileEnd%d", current_label);
 			endarg = make_argument_label(endlabelstring);
-			IR_INSTRUCTION *whileend = make_instruction_globl(endarg, NULL);
+			IR_INSTRUCTION *whileend = make_instruction_label(endarg, NULL);
 			append_element(ir_lines, truelabel);
 
 			arg1 = IR_builder_expression(st->value.whileS.exp);
@@ -495,7 +500,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 		case minus_E_K:
 			instr = make_instruction_subl(argRight, argLeft);
 			append_element(ir_lines, instr);
-			return argRight; 
+			return argLeft; 
 
 		case times_E_K:
 			instr = make_instruction_imul(argLeft, argRight);
@@ -508,7 +513,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			char *zeroden = calloc(32,sizeof(char));
 			sprintf(zeroden, "zeroDen%d", tmp);
 			ARGUMENT *zerodenarg = make_argument_label(zeroden);
-			IR_INSTRUCTION *zerodenlabel = make_instruction_globl(zerodenarg, NULL);
+			IR_INSTRUCTION *zerodenlabel = make_instruction_label(zerodenarg, NULL);
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
@@ -531,6 +536,15 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			append_element(ir_lines, zerodenlabel);
 
+			//HACK -------------------------
+
+			IR_INSTRUCTION *hack1 = make_instruction_pushl(ebx, NULL);
+			append_element(ir_lines, hack1);
+
+			IR_INSTRUCTION *hack2 = make_instruction_movl(argRight, ebx);
+			append_element(ir_lines, hack2);
+
+			//------------------------------
 			edxsave = make_instruction_pushl(edx, NULL); //Saving edx register
 			append_element(ir_lines, edxsave);
 
@@ -540,11 +554,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 			IR_INSTRUCTION *instr1 = make_instruction_movl(argLeft, eax);
 			append_element(ir_lines, instr1);
 
-			IR_INSTRUCTION*instr2 = make_instruction_div(argRight, NULL);
+			IR_INSTRUCTION*instr2 = make_instruction_div(ebx, NULL);
 			append_element(ir_lines, instr2);
 
 			IR_INSTRUCTION *instr3 = make_instruction_movl(eax, argLeft);
 			append_element(ir_lines, instr3);
+
+			IR_INSTRUCTION *hack3 = make_instruction_popl(ebx, NULL);
+			append_element(ir_lines, hack3);
 
 			edxrestore = make_instruction_popl(edx, NULL);
 			append_element(ir_lines, edxrestore); //Restoring edx register
@@ -564,11 +581,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			sprintf(booltruelabel, "booOPtrue%d", current_label);
 			truearg = make_argument_label(booltruelabel);
-			IR_INSTRUCTION *truelabel = make_instruction_globl(truearg, NULL);
+			IR_INSTRUCTION *truelabel = make_instruction_label(truearg, NULL);
 
 			sprintf(boolendlabel, "boolOPend%d", current_label);
 			endarg = make_argument_label(boolendlabel);
-			IR_INSTRUCTION *endlabel = make_instruction_globl(endarg, NULL);
+			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
 
 			instr = make_instruction_cmp(argLeft, argRight);
 			append_element(ir_lines, instr);
@@ -630,11 +647,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			sprintf(andFalselabel, "ANDfalse%d", tmp);
 			falsearg = make_argument_label(andFalselabel);
-			IR_INSTRUCTION *andFalseinstr = make_instruction_globl(falsearg, NULL);
+			IR_INSTRUCTION *andFalseinstr = make_instruction_label(falsearg, NULL);
 
 			sprintf(andEndlabel, "ANDend%d", tmp);
 			endarg = make_argument_label(andEndlabel);
-			IR_INSTRUCTION *andEndinstr = make_instruction_globl(endarg, NULL);
+			IR_INSTRUCTION *andEndinstr = make_instruction_label(endarg, NULL);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -671,11 +688,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp) {
 
 			sprintf(orOKlabel, "ORtrue%d", tmp);
 			truearg = make_argument_label(orOKlabel);
-			IR_INSTRUCTION *oroklabel = make_instruction_globl(truearg, NULL);
+			IR_INSTRUCTION *oroklabel = make_instruction_label(truearg, NULL);
 
 			sprintf(orEndlabel, "ORend%d", tmp);
 			endarg = make_argument_label(orEndlabel);
-			IR_INSTRUCTION *orendlabel = make_instruction_globl(endarg, NULL);
+			IR_INSTRUCTION *orendlabel = make_instruction_label(endarg, NULL);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -801,7 +818,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			char *pipeEnd = calloc(32,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
 			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
-			IR_INSTRUCTION *pipeLabel = make_instruction_globl(pipeArg, NULL);
+			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeArg, NULL);
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
@@ -931,6 +948,133 @@ void buildForm(char *name, char *actual){
 
 }
 
+//Very basic register allocation, round robin style
+void basic_assign(linked_list *ir_lines){
+
+	int count = 0;
+	linked_list *temp;
+	linked_list *save;
+	temp = ir_lines->next;
+	ARGUMENT *reg;
+	ARGUMENT *cmp;
+	IR_INSTRUCTION *instr1;
+	IR_INSTRUCTION *instr2;
+
+
+	while(temp != ir_lines){
+
+		instr1 = (IR_INSTRUCTION *) temp->data;
+
+		if(instr1->arg1 != NULL && instr1->arg1->kind == tempreg_arg){
+			reg = get_register(count);
+			save = temp;
+			int cmp1 = instr1->arg1->tempid;
+
+			while(temp != ir_lines){
+
+				instr2 = (IR_INSTRUCTION *) temp->data;
+
+				if(instr2->arg1 != NULL && instr2->arg1->kind == tempreg_arg){
+					if(instr2->arg1->tempid == cmp1){
+						
+						instr2->arg1 = reg;
+					}
+				}
+				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
+					if(instr2->arg2->tempid == cmp1){
+						
+						instr2->arg2 = reg;
+					}
+				}
+				temp = temp->next;
+			} 
+			if(++count > 3){
+				count = 0;
+			}
+			instr1->arg1 = reg;
+			temp = save;
+		}
+
+		if(instr1->arg2 != NULL && instr1->arg2->kind == tempreg_arg){
+			reg = get_register(count);
+			save = temp;
+			int cmp2 = instr1->arg2->tempid;
+
+			while(temp != ir_lines){
+				instr2 = (IR_INSTRUCTION *) temp->data;
+
+				if(instr2->arg1 != NULL && instr2->arg1->kind == tempreg_arg){
+
+					if(instr2->arg1->tempid == cmp2){
+
+						instr2->arg1 = reg;
+					}
+				}
+				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
+					
+					if(instr2->arg2->tempid == cmp2){
+						
+						instr2->arg2 = reg;
+					}
+				}
+				temp = temp->next;
+			} 
+			if(++count > 3){
+				count = 0;
+			}
+			instr1->arg2 = reg;
+			temp = save;
+		}
+		
+
+		temp = temp->next;
+	}
+
+}
+
+ARGUMENT *get_register(int n){
+
+	switch(n){
+		case 0:
+			return eax;
+		break;
+		case 1:
+			return ebx;
+		break;
+		case 2:
+			return ecx;
+		break;
+		case 3:
+			return edx;
+		break;
+		/*case 4:
+			return esi;
+		break;
+		case 5:
+			return edi;
+		break;*/
+		default:
+			if(n < 0 || n > 3){
+				return NULL;
+			}
+		break;
+	}
+	return NULL;
+}
+
+void assign_instructionnumber(linked_list *ir_lines){
+
+	linked_list *temp;
+	temp = ir_lines->next;
+	IR_INSTRUCTION *instr;
+
+	while(temp != ir_lines){
+		instr = (IR_INSTRUCTION *) temp->data;
+		instr->id = instructionnumber++;
+		temp = temp->next;
+	}
+}
+
 void IR_printer(linked_list *ir_lines){
 
 	linked_list *temp;
@@ -1012,6 +1156,11 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case globl:
+				IR_print_arguments(instr_to_print->arg1);
+				printf(":\n");
+				break;
+
+			case label:
 				IR_print_arguments(instr_to_print->arg1);
 				printf(":\n");
 				break;

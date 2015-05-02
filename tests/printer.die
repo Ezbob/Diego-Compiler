@@ -4,4 +4,4 @@ var b : int;
 a = 42;
 b = 12;
 
-write a;
+write a - b;
