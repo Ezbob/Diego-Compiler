@@ -53,6 +53,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	buildForm("formNUM:", ".string \"%d\\n\" ");
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
 	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
+	buildForm("formNULL:", ".string \"NULL\\n\" ");
 
 	mainSection = NEW(SECTION);
 	mainSection->symboltable = globalTable;
@@ -307,6 +308,7 @@ void IR_builder_statement ( STATEMENT *st) {
 
 				case SYMBOL_INT:
 				case SYMBOL_BOOL:
+				case SYMBOL_NULL:
 
 					//Push arguments for print then form for print
 					arg1 = IR_builder_expression(st->value.exp);
@@ -323,6 +325,10 @@ void IR_builder_statement ( STATEMENT *st) {
 						ARGUMENT *arg3 = make_argument_label("$formFALSE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);						
+					} else if(st->value.exp->value.term->kind == null_T_K){
+						ARGUMENT *arg3 = make_argument_label("$formNULL");
+						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						append_element(ir_lines, pushform);
 					} else {
 						ARGUMENT *arg3 = make_argument_label("$formNUM");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);

@@ -3,9 +3,9 @@
 #include "kittyregister.h"
 
 //Macro inspiration from mathcs.emory.edu
-#define setbit(A,k) 	(A[(k/32)] |= (1 << (k%32)) )
-#define clearbit(A,k)	(A[(k/32)] &= ~(1 << (k%32)))
-#define testbit(A,k)	(A[(k/32)] & (1 << (k%32)) )
+#define setbit(A,k) 	(A[(k / 32)] |= (1 << (k % 32)) )
+#define clearbit(A,k)	(A[(k / 32)] &= ~(1 << (k % 32)))
+#define testbit(A,k)	(A[(k / 32)] & (1 << (k % 32)) )
 
 extern SECTION *mainSection;
 struct SYMBOLTABLE *symboltable;
@@ -13,10 +13,8 @@ struct linked_list *code;
 struct LIVENESS *tmproot;
 
 BITARRAY *createarray(int i){
-
 	return calloc(i,sizeof(BITARRAY));
 }
-
 
 void begin_register(linked_list *ir_lines){
 
@@ -26,9 +24,6 @@ void begin_register(linked_list *ir_lines){
 	liveness_analysis();
 
 	mainSection = tmpsec;
-
-
-	
 }
 
 void liveness_analysis(){

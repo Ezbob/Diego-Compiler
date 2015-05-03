@@ -25,7 +25,6 @@ typedef struct SUCLIST {
 	struct SUCLIST *next;
 } SUCLIST;
 
-
 void begin_register(linked_list *ir_lines);
 void liveness_analysis();
 void analyseUseDef();

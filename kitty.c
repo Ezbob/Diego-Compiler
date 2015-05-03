@@ -28,7 +28,7 @@ struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
 struct SECTION *mainSection;
 struct linked_list *ir_codes;
-extern SECTION *mainSection;
+//extern SECTION *mainSection;
 
 int main( void ) {
 

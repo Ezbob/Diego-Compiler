@@ -27,7 +27,6 @@ typedef struct IR_INSTRUCTION {
 
 } IR_INSTRUCTION;
 
-
 typedef struct ARGUMENT {
 	int tempid;
 	ARGUMENTTYPE type;
@@ -41,7 +40,6 @@ typedef struct ARGUMENT {
 	int divflag;
 } ARGUMENT;
 
-
 typedef struct SECTION {
 	char *sectionName;
 	int temps;
@@ -53,7 +51,6 @@ typedef struct SECTION {
 	struct LIVENESS *root;
 	struct LIVENESS *tail;
 } SECTION;
-
 
 /*
  * stores all IR code in a linked_list
