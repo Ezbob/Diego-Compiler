@@ -11,6 +11,7 @@ static int local_variable_size = 0;
 static int instructionnumber = 0;
 
 static linked_list *ir_lines; // plug IR code in here
+static linked_list *data_lines; // for allocates
 
 extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
@@ -32,18 +33,17 @@ void initRegisters(){
 }
 
 int getNextLabel(){
-
 	return current_label++;
 }
 
 int getNextFunction(){
-
 	return function_label++;
 }
 
 linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	fprintf(stderr, "%s\n", "Initializing intermediate code generation");
 	ir_lines = initialize_list();
+	data_lines = initialize_list();
 	initRegisters();
 
 	globalTable = symboltable;
@@ -92,6 +92,9 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	mainSection->last = ret;
 
 	append_element(ir_lines, ret);
+
+	build_data_section();
+
 	mainSection = tmp2;
 	linked_list *save = ir_lines;
 	assign_instructionnumber(ir_lines);
@@ -278,12 +281,13 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 }
 
 //Missing allocate, assign, print(records and arrays)
-void IR_builder_statement ( STATEMENT *st) {
+void IR_builder_statement ( STATEMENT *st ) {
 	int tmp = 0; 
 
 	ARGUMENT *returnvalue;
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
+	ARGUMENT *arg3;
 	ARGUMENT *truearg;
 	ARGUMENT *falsearg;
 	ARGUMENT *endarg;
@@ -318,19 +322,19 @@ void IR_builder_statement ( STATEMENT *st) {
 					append_element(ir_lines, params);
 
 					if(st->value.exp->value.term->kind == boolTrue_T_K){
-						ARGUMENT *arg3 = make_argument_label("$formTRUE");
+						arg3 = make_argument_label("$formTRUE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
 					} else if(st->value.exp->value.term->kind == boolFalse_T_K){
-						ARGUMENT *arg3 = make_argument_label("$formFALSE");
+						arg3 = make_argument_label("$formFALSE");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);						
 					} else if(st->value.exp->value.term->kind == null_T_K){
-						ARGUMENT *arg3 = make_argument_label("$formNULL");
+						arg3 = make_argument_label("$formNULL");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
 					} else {
-						ARGUMENT *arg3 = make_argument_label("$formNUM");
+						arg3 = make_argument_label("$formNUM");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
 					}
@@ -411,10 +415,27 @@ void IR_builder_statement ( STATEMENT *st) {
 			}
 			
 			append_element(ir_lines, endlabel);
-
 			break;
 
 		case allocate_S_K:
+			if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
+				arg1 = IR_builder_expression(st->value.allocateS.
+					opt_length->value.exp);
+
+				if (arg1->intConst > 0) {
+					getSymbol(st->symboltable,st->value.
+						allocateS.variable->value.id)->arraySize = arg1->intConst; 
+				}
+
+				append_element(ir_lines, 
+					make_instruction_pushl(arg1, NULL));
+				append_element(ir_lines, 
+					make_instruction_call(NULL,make_argument_label("sbrk")));
+				moveStackpointer(2);
+				// if sbrk return the address -0x1 (-1) throw no mem error
+
+				append_element(data_lines,st);
+			}
 			break;
 
 		case while_S_K:
@@ -462,7 +483,7 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
 	return IR_builder_expression(oplen->value.exp);
 }
 
-//TODO
+//TODO: needs label
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol = getSymbol(var->symboltable, var->value.id);
@@ -1216,6 +1237,12 @@ void IR_printer(linked_list *ir_lines){
 				printf("\n");
 				break;				
 
+			case space:
+				IR_print_arguments(instr_to_print->arg1);
+				printf(": .space ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+
 			default:
 				break;
 		}
@@ -1251,5 +1278,44 @@ void IR_print_arguments(ARGUMENT *arg){
 			break;
 		default:
 			break;
+	}
+}
+
+// builds the data section at the end
+void build_data_section(){
+	if(get_length(data_lines) > 0){
+
+		//linked_list *temp;
+
+		append_element(ir_lines, 
+			make_instruction_globl(make_argument_label(".data"),NULL));
+
+		append_element(ir_lines,
+			make_instruction_space(
+				make_argument_label("heap"),
+				make_argument_label("4194304") // allocate 4MB for heap
+				)
+			);
+
+		/*temp = data_lines->next;
+
+		while ( temp != data_lines ) {
+			STATEMENT *st = (STATEMENT *) temp->data;
+			SYMBOL *symbol = getSymbol(st->symboltable,st->value.allocateS
+				.variable->value.id);
+
+			append_element(ir_lines,
+				make_instruction_space(
+					make_argument_label(
+						st->value.allocateS.variable->value.id
+						)
+					, make_argument_constant(symbol->arraySize)
+					)
+				);
+			temp = temp->next;
+		}
+		*/
+		terminate_list(&data_lines);
+
 	}
 }

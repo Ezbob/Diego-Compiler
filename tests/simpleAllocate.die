@@ -1,0 +1,2 @@
+var list : array of int;
+allocate list of length 32;

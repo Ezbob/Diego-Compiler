@@ -38,6 +38,7 @@ typedef struct SYMBOL {
   struct TYPE *realtype;
   char *uniquename;
   int offset;
+  int arraySize;
 } SYMBOL;
 
 typedef struct SYMBOLTABLE {

@@ -20,7 +20,7 @@ typedef struct IR_INSTRUCTION {
 	char *label;
 	enum { globl, mainmet, string, label, movl, call, pushl, popl, addl, 
 		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
-		JGE, JLE, jl, jg, notl, negl, intcode } op_code; 
+		JGE, JLE, jl, jg, notl, negl, intcode, space } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
@@ -36,7 +36,7 @@ typedef struct ARGUMENT {
 	int intConst;
 	REGISTERS reg;
 	char *charConst;
-	void *address; // for use in local vars
+	void *address;
 	int divflag;
 } ARGUMENT;
 
@@ -86,15 +86,11 @@ ARGUMENT *get_register(int n);
 void basic_assign(linked_list *ir_lines);
 void assign_instructionnumber(linked_list *ir_lines);
 
+void build_data_section();
+
 ARGUMENT *IR_builder_variable ( VAR *var);
 ARGUMENT *IR_builder_expression ( EXPRES *exp);
 ARGUMENT *IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen);
-//void IR_pretty_printer_instruction ( IR_INSTRUCTION *instr );
-//void IR_pretty_printer_arguments (ARGUMENT *arg);
-//void IR_pretty_printer_temp (TEMP *tmp);
-
-//void IR_shift_to_new_frame ();
-//void IR_shift_to_old_frame ();
 
 #endif
