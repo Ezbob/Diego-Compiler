@@ -9,6 +9,7 @@ static int current_label = 0;
 static int function_label = 0;
 static int local_variable_size = 0;
 static int instructionnumber = 0;
+//static int number_of_allocates = 0;
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
@@ -49,11 +50,12 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	globalTable = symboltable;
 	_main_ = program;
 
-	// make ".string "%d\n" "
-	buildForm("formNUM:", ".string \"%d\\n\" ");
-	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
-	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
-	buildForm("formNULL:", ".string \"NULL\\n\" ");
+	append_element(ir_lines, 
+		make_instruction_globl(
+			make_argument_label(".text"), 
+			NULL
+			)
+		);
 
 	mainSection = NEW(SECTION);
 	mainSection->symboltable = globalTable;
@@ -63,9 +65,11 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	SECTION *tmp2 = mainSection;
 	IR_builder_decl_list(_main_->decl_list);
 
+
 	// make ".globl main" directive
 	ARGUMENT *global_label = make_argument_label(".globl main");
-	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label, NULL);
+	IR_INSTRUCTION *globl_directive = 
+		make_instruction_globl(global_label, NULL);
 	append_element(ir_lines, globl_directive);
 
 	// make "main:" label line
@@ -366,11 +370,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 			if( local_variable_size >= 4 && symbol != NULL ) { 
 			// perhaps this needs a local var enum
 				symbol->offset = -1 * (local_variable_size / 4);
-				local_variable_size -= 4; 
+				local_variable_size -= 4;
 			}
 			
 			append_element(
-				ir_lines, 
+				ir_lines,
 				make_instruction_movl (
 					arg1, 
 					make_argument_address ( 
@@ -419,22 +423,47 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case allocate_S_K:
 			if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
+				
+				if(get_length(data_lines) == 0)	{ // add
+					++current_temporary;
+					append_element(
+						ir_lines, 
+						make_instruction_leal(
+							make_argument_label("$heap"),
+							make_argument_tempregister(current_temporary)
+							)
+					);
+
+					append_element(
+						ir_lines, 
+						make_instruction_leal(
+							make_argument_tempregister(current_temporary),
+							make_argument_label("$heapNext")		
+							)
+					);
+
+				}
+
+
 				arg1 = IR_builder_expression(st->value.allocateS.
 					opt_length->value.exp);
 
-				if (arg1->intConst > 0) {
-					getSymbol(st->symboltable,st->value.
-						allocateS.variable->value.id)->arraySize = arg1->intConst; 
-				}
+				// TODO: need to check out of memory here
 
-				append_element(ir_lines, 
-					make_instruction_pushl(arg1, NULL));
-				append_element(ir_lines, 
-					make_instruction_call(NULL,make_argument_label("sbrk")));
-				moveStackpointer(2);
-				// if sbrk return the address -0x1 (-1) throw no mem error
+				char *address_of_id = calloc(strlen(st->value.
+					allocateS.variable->value.id)+4, sizeof(char));
 
+				sprintf(address_of_id, "($%s)",st->value.
+					allocateS.variable->value.id);
+
+				append_element(ir_lines,make_instruction_movl(
+						make_argument_label("$heapNext"),
+						make_argument_label(address_of_id)
+					)
+				);
+			
 				append_element(data_lines,st);
+				//number_of_allocates++;
 			}
 			break;
 
@@ -479,7 +508,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	}
 } 
 
-ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen) {
+ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen ) {
 	return IR_builder_expression(oplen->value.exp);
 }
 
@@ -493,7 +522,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 }
 
-ARGUMENT *IR_builder_expression ( EXPRES *exp) {
+ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 	int tmp = 0;
 
 	ARGUMENT *argLeft;
@@ -1242,6 +1271,15 @@ void IR_printer(linked_list *ir_lines){
 				printf(": .space ");
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
+				break;
+
+			case leal:
+				printf("\tleal ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf(", ");
+				IR_print_arguments(instr_to_print->arg2);
+				printf("\n");
+				break;
 
 			default:
 				break;
@@ -1283,12 +1321,19 @@ void IR_print_arguments(ARGUMENT *arg){
 
 // builds the data section at the end
 void build_data_section(){
+
+	append_element(ir_lines, 
+	make_instruction_globl(make_argument_label(".data"),NULL));
+
+	// make ".string "%d\n" "
+	buildForm("formNUM:", ".string \"%d\\n\" ");
+	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
+	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
+	buildForm("formNULL:", ".string \"NULL\\n\" ");
+
 	if(get_length(data_lines) > 0){
 
-		//linked_list *temp;
-
-		append_element(ir_lines, 
-			make_instruction_globl(make_argument_label(".data"),NULL));
+		linked_list *temp;
 
 		append_element(ir_lines,
 			make_instruction_space(
@@ -1296,26 +1341,30 @@ void build_data_section(){
 				make_argument_label("4194304") // allocate 4MB for heap
 				)
 			);
+		append_element(ir_lines,
+			make_instruction_space(
+				make_argument_label("heapNext"),
+				make_argument_label("4")
+				)
+			);
 
-		/*temp = data_lines->next;
+		temp = data_lines->next;
 
 		while ( temp != data_lines ) {
 			STATEMENT *st = (STATEMENT *) temp->data;
-			SYMBOL *symbol = getSymbol(st->symboltable,st->value.allocateS
-				.variable->value.id);
+			//SYMBOL *symbol = getSymbol(st->symboltable,st->value.allocateS
+			//	.variable->value.id);
 
 			append_element(ir_lines,
 				make_instruction_space(
-					make_argument_label(
-						st->value.allocateS.variable->value.id
-						)
-					, make_argument_constant(symbol->arraySize)
+					make_argument_label(st->value.allocateS.
+						variable->value.id), 
+					make_argument_label("4")
 					)
 				);
 			temp = temp->next;
 		}
-		*/
+		
 		terminate_list(&data_lines);
-
 	}
 }

@@ -8,19 +8,20 @@ typedef struct EXPRES {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	enum {term_E_K, 
-				plus_E_K, 
-				minus_E_K, 
-				times_E_K, 
-				divide_E_K, 
-				booleq_E_K,
-				boolneq_E_K,
-				boolgreater_E_K, 
-				boolless_E_K,
-				boolgeq_E_K,
-				boolleq_E_K,
-				booland_E_K,
-				boolor_E_K 
+	enum {
+			term_E_K, 
+			plus_E_K, 
+			minus_E_K, 
+			times_E_K, 
+			divide_E_K, 
+			booleq_E_K,
+			boolneq_E_K,
+			boolgreater_E_K, 
+			boolless_E_K,
+			boolgeq_E_K,
+			boolleq_E_K,
+			booland_E_K,
+			boolor_E_K 
 	} kind;
 	union {
 		struct { struct EXPRES *left; struct EXPRES *right; } sides;

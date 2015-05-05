@@ -20,7 +20,7 @@ typedef struct IR_INSTRUCTION {
 	char *label;
 	enum { globl, mainmet, string, label, movl, call, pushl, popl, addl, 
 		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
-		JGE, JLE, jl, jg, notl, negl, intcode, space } op_code; 
+		JGE, JLE, jl, jg, notl, negl, intcode, space, long_op, leal } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;

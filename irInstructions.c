@@ -250,6 +250,16 @@ IR_INSTRUCTION *make_instruction_space(ARGUMENT *arg1,ARGUMENT *arg2){
 	return new_instruction;	
 }
 
+IR_INSTRUCTION *make_instruction_leal(ARGUMENT *arg1,ARGUMENT *arg2){
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->id = 0;
+	new_instruction->op_code = leal;
+	new_instruction->arg1 = arg1;
+	new_instruction->arg2 = arg2;
+	return new_instruction;	
+}
+
 ARGUMENT *make_argument_address(int i) {
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
