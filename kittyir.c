@@ -373,7 +373,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				local_variable_size -= 4;
 			}
 			
-			append_element(
+			append_element( // actual assignment
 				ir_lines,
 				make_instruction_movl (
 					arg1, 
@@ -425,35 +425,21 @@ void IR_builder_statement ( STATEMENT *st ) {
 			if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
 				
 				if(get_length(data_lines) == 0)	{ // init heap counter
-					++current_temporary;
-					append_element(
-						ir_lines, 
-						make_instruction_leal(
-							make_argument_label("$heap"),
-							make_argument_tempregister(current_temporary)
-							)
-					);
-
 					append_element(
 						ir_lines, 
 						make_instruction_movl(
-							make_argument_tempregister(current_temporary),
-							make_argument_label("$heapNext")		
+							make_argument_label("$heap"),
+							make_argument_label("(heapNext)")		
 							)
 					);
-
 				}
 
-
-				arg1 = IR_builder_expression(st->value.allocateS.
-					opt_length->value.exp);
-
-				// TODO: need to check out of memory here
+				// put check out of memory here
 
 				char *address_of_id = calloc(strlen(st->value.
-					allocateS.variable->value.id)+4, sizeof(char));
+				allocateS.variable->value.id) + 4, sizeof(char));
 
-				sprintf(address_of_id, "($%s)",st->value.
+				sprintf(address_of_id, "(%s)",st->value.
 					allocateS.variable->value.id);
 
 				append_element(ir_lines,make_instruction_movl(
@@ -461,9 +447,18 @@ void IR_builder_statement ( STATEMENT *st ) {
 						make_argument_label(address_of_id)
 					)
 				);
+
+				arg1 = IR_builder_expression(st->value.allocateS.
+					opt_length->value.exp); // length of-result
+
+				append_element(ir_lines, // add to the next pointer
+					make_instruction_addl(
+						arg1, 
+						make_argument_label("(heapNext)")
+						)
+				);
 			
 				append_element(data_lines,st);
-				//number_of_allocates++;
 			}
 			break;
 
@@ -1268,7 +1263,7 @@ void IR_printer(linked_list *ir_lines){
 
 			case space:
 				IR_print_arguments(instr_to_print->arg1);
-				printf(": .space ");
+				printf(": \n\t .space ");
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
 				break;
@@ -1319,13 +1314,13 @@ void IR_print_arguments(ARGUMENT *arg){
 	}
 }
 
-// builds the data section at the end
+// builds the data section at the end of the file
+// cannot build in top because data_lines is not filled
 void build_data_section(){
 
 	append_element(ir_lines, 
 	make_instruction_globl(make_argument_label(".data"),NULL));
 
-	// make ".string "%d\n" "
 	buildForm("formNUM:", ".string \"%d\\n\" ");
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
 	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
@@ -1350,10 +1345,9 @@ void build_data_section(){
 
 		temp = data_lines->next;
 
-		while ( temp != data_lines ) {
+		while ( temp != data_lines ) { // making label pointers for allocated 
+										// items
 			STATEMENT *st = (STATEMENT *) temp->data;
-			//SYMBOL *symbol = getSymbol(st->symboltable,st->value.allocateS
-			//	.variable->value.id);
 
 			append_element(ir_lines,
 				make_instruction_space(
