@@ -1,2 +1,5 @@
-var list : array of int;
-allocate list of length 32;
+var list : array of int, a : int;
+
+a = 4;
+
+allocate list of length 32+a;

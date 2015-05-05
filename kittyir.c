@@ -228,18 +228,17 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
  void IR_builder_var_type ( VAR_TYPE * vtype ){
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
-			local_variable_size += 4; // 4 bytes
+			local_variable_size += WORDSIZE; // 4 bytes
 			break;
  
 		case bool_TY_K:
-			local_variable_size += 4; // maybe too large
+			local_variable_size += WORDSIZE; // maybe too large
 			break;
 
 		default: // TODO: need to decide size of other types
 			break;
 	}
  }
-
 
 void IR_builder_decl_list ( DECL_LIST *dlst) {
 
@@ -367,10 +366,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 				//INSERT INTCODE EXIT
 			}
 
-			if( local_variable_size >= 4 && symbol != NULL ) { 
+			if( local_variable_size >= WORDSIZE && symbol != NULL ) { 
 			// perhaps this needs a local var enum
-				symbol->offset = -1 * (local_variable_size / 4);
-				local_variable_size -= 4;
+				symbol->offset = -1 * (local_variable_size / WORDSIZE);
+				local_variable_size -= WORDSIZE;
 			}
 			
 			append_element( // actual assignment
@@ -378,7 +377,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				make_instruction_movl (
 					arg1, 
 					make_argument_address ( 
-						symbol->offset * 4
+						symbol->offset * WORDSIZE
 					)
 				)
 			);
@@ -457,7 +456,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				append_element(
 					ir_lines,
 					make_instruction_imul(
-						make_argument_constant(4),
+						make_argument_constant(WORDSIZE),
 						arg1
 					)
 				);
@@ -527,7 +526,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol = getSymbol(var->symboltable, var->value.id);
 	
-	ARGUMENT *arg = make_argument_address(4*(symbol->offset));
+	ARGUMENT *arg = make_argument_address(WORDSIZE*(symbol->offset));
 	return arg;
 
 }
@@ -992,7 +991,7 @@ void calleeRestore(){
 
 void moveStackpointer(int i){
 
-	ARGUMENT *arg = make_argument_constant(i*4);
+	ARGUMENT *arg = make_argument_constant(i * WORDSIZE);
 	IR_INSTRUCTION *instr = make_instruction_addl(arg, esp);
 	append_element(ir_lines, instr); 
 
