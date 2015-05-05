@@ -424,7 +424,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case allocate_S_K:
 			if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
 				
-				if(get_length(data_lines) == 0)	{ // add
+				if(get_length(data_lines) == 0)	{ // init heap counter
 					++current_temporary;
 					append_element(
 						ir_lines, 
@@ -436,7 +436,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					append_element(
 						ir_lines, 
-						make_instruction_leal(
+						make_instruction_movl(
 							make_argument_tempregister(current_temporary),
 							make_argument_label("$heapNext")		
 							)
