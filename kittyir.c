@@ -442,7 +442,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 				sprintf(address_of_id, "(%s)",st->value.
 					allocateS.variable->value.id);
 
-				append_element(ir_lines,make_instruction_movl(
+				append_element(
+					ir_lines,
+					make_instruction_movl(
 						make_argument_label("$heapNext"),
 						make_argument_label(address_of_id)
 					)
@@ -451,14 +453,26 @@ void IR_builder_statement ( STATEMENT *st ) {
 				arg1 = IR_builder_expression(st->value.allocateS.
 					opt_length->value.exp); // length of-result
 
-				append_element(ir_lines, // add to the next pointer
+				// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+				append_element(
+					ir_lines,
+					make_instruction_imul(
+						make_argument_constant(4),
+						arg1
+					)
+				);
+
+				append_element(
+					ir_lines, // add to the next pointer
 					make_instruction_addl(
 						arg1, 
 						make_argument_label("(heapNext)")
-						)
+					)
 				);
 			
 				append_element(data_lines,st);
+			}else if( st->value.allocateS.opt_length->kind == empty_OL_K ) {
+					// do something else?
 			}
 			break;
 
@@ -499,6 +513,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		default:
 			printf("%s\n", "GOT NOTHING");
+			break;
 
 	}
 } 
