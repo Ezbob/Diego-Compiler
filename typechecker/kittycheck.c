@@ -15,8 +15,8 @@ void check_error_report(const char* errorMsg, int lineno){
 }
 
 void begin_check(BODY *main){
-
 	check_body(main);
+
 }
 
 void check_function(FUNC *func) {
@@ -113,10 +113,13 @@ void check_declaration ( DECLARATION *decl){
 }
 
 void check_statement_list ( STATEMENT_LIST *slst){
+
 	switch(slst->kind){
+
 		case statement_SL_K:
 			check_statement(slst->value.statement);
 			break;
+
 		case compound_SL_K:
 			check_statement(slst->value.compoundSL.statement);
 			if(slst->value.compoundSL.statement_list == NULL){
@@ -128,7 +131,6 @@ void check_statement_list ( STATEMENT_LIST *slst){
 }
 
 void check_statement ( STATEMENT *st){
-
 	switch(st->kind){
 		case return_S_K:
 			check_expression(st->value.returnS.exp);
@@ -157,11 +159,12 @@ void check_statement ( STATEMENT *st){
 			if(st->value.exp->symboltype->type == SYMBOL_ARRAY &&
 				 st->value.exp->value.term->kind != expresPipes_T_K){
 					check_error_report("Only length of arrays can be written", 
-																															st->lineno);
+					st->lineno);
 			}
 			break;
 
 		case allocate_S_K:
+
 			check_variable(st->value.allocateS.variable);
 			check_opt_length(st->value.allocateS.opt_length);
 
@@ -208,6 +211,7 @@ void check_statement ( STATEMENT *st){
 		case statement_list_S_K:
 			check_statement_list(st->value.statement_list);
 			break;
+
 	}
 }
 //Læængden på en allocate skal være en int
@@ -248,11 +252,26 @@ void check_variable ( VAR *var){
 			}
 
 			break;
-		/*TODO*/
+		
 		case indexing_V_K:
+
 			check_variable(var->value.indexingV.variable);
 			check_expression(var->value.indexingV.exp);
+
+			//Expression must be int
+			if(var->value.indexingV.exp->symboltype->type != SYMBOL_INT){
+				check_error_report("Expression must evaluate to int", var->lineno);
+			}
+
+			//Variable must be array type
+			if(var->value.indexingV.variable->symboltype->type != SYMBOL_ARRAY){
+				check_error_report("Variable is not an array", var->lineno);
+			}
+
+			var->symboltype = var->value.indexingV.variable->symboltype->value.array->symboltype;
 			break;
+
+		/*TODO*/
 		case dot_V_K:
 			check_variable(var->value.dotV.variable);
 			break;
@@ -260,20 +279,14 @@ void check_variable ( VAR *var){
 }
 
 void check_expression ( EXPRES *exp){
-
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
 	SYMBOL *check;
 
 	switch(exp->kind){
 		case term_E_K:
 			check_term(exp->value.term);
-			/*if(exp->value.term->kind == var_T_K){
-				check = getSymbol(exp->symboltable, exp->value.term->value.var->value.id);
-				exp->symboltype = check->symboltype;
-			} else {*/
-				symbolT = exp->value.term->symboltype;
-				exp->symboltype = symbolT;
-			//}
+			symbolT = exp->value.term->symboltype;
+			exp->symboltype = symbolT;
 			break;
 
 		case plus_E_K:
@@ -469,7 +482,7 @@ void check_expression ( EXPRES *exp){
 
 int check_term ( TERM *term){
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
-	SYMBOL *symbol;// = NEW(SYMBOL);
+	SYMBOL *symbol;
 
 	int count = 0;
 
@@ -477,7 +490,11 @@ int check_term ( TERM *term){
 		case var_T_K:
 			check_variable(term->value.var);
 			symbol = getSymbol(term->symboltable, term->value.var->value.id);
-			term->symboltype = symbol->symboltype;
+			if(symbol != NULL) {
+				term->symboltype = symbol->symboltype;
+			} else {
+				term->symboltype = term->value.var->symboltype;
+			}
 			break;
 
 		case actList_T_K:

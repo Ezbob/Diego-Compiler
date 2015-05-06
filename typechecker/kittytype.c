@@ -84,7 +84,7 @@ void collect_type ( TYPE *type, SYMBOLTABLE *st){
 			symboltype->type = SYMBOL_ARRAY;
 			type->symboltype = symboltype;
 			collect_type(type->value.type, st);
-			//type->symboltype->value.array = type->value.type;
+			type->symboltype->value.array = type->value.type;
 			break;
 
 		case recordof_TY_K:

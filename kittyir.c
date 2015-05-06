@@ -379,28 +379,52 @@ void IR_builder_statement ( STATEMENT *st ) {
 			}
 			break;
 
-		case assign_S_K: // todo with local variables
-			arg1 = IR_builder_expression(st->value.assignS.exp);
+		case assign_S_K:  // todo with local variables
 
-			SYMBOL *symbol = getSymbol(st->symboltable,st->value
-				.assignS.variable->value.id);
+			switch(st->value.assignS.variable->kind){
 
-			if( local_variable_size >= WORDSIZE && symbol != NULL ) { 
-			// perhaps this needs a local var enum
-				symbol->offset = -1 * (local_variable_size / WORDSIZE);
-				local_variable_size -= WORDSIZE;
-			}
-			
-			append_element( // actual assignment
-				ir_lines,
-				make_instruction_movl (
-					arg1, 
-					make_argument_address ( 
-						symbol->offset * WORDSIZE
-					)
-				)
-			);
-			
+				case indexing_V_K:
+					printf("%s\n", "INDEXING");
+					arg1 = IR_builder_expression(st->value.assignS.exp);
+					char *id = st->value.assignS.variable->value.id;
+					
+					ARGUMENT *firstElement = make_argument_tempregister(
+					current_temporary++);
+
+					append_element( 
+						ir_lines,
+						make_instruction_movl(
+							make_argument_labelAddring(
+								id, 
+								arg1 
+							),
+							firstElement 
+						)
+					);
+
+				default:
+					printf("%s\n", "DEFAULT");
+					arg1 = IR_builder_expression(st->value.assignS.exp);
+
+					SYMBOL *symbol = getSymbol(st->symboltable,st->value
+						.assignS.variable->value.id);
+
+					if( local_variable_size >= WORDSIZE && symbol != NULL ) { 
+					// perhaps this needs a local var enum
+						symbol->offset = -1 * (local_variable_size / WORDSIZE);
+						local_variable_size -= WORDSIZE;
+					}
+					
+					append_element( // actual assignment
+						ir_lines,
+						make_instruction_movl (
+							arg1, 
+							make_argument_address ( 
+								symbol->offset * WORDSIZE
+							)
+						)
+					);
+				}
 			break;
 
 		case ifbranch_S_K:
@@ -620,7 +644,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 	int tmp = 0;
-	printf("EXPRESSION\n");
+
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *truearg;
@@ -884,7 +908,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 	switch(term->kind){
 		case num_T_K:
-		printf("%s\n", "IN NUM");
 			arg1 = make_argument_constant(term->value.intconst);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -892,7 +915,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps
 
 		case boolTrue_T_K:
-		printf("%s\n", "IN BOOL TRUE");
 			arg1 = make_argument_constant(1);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -901,7 +923,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case null_T_K:
 		case boolFalse_T_K:
-		printf("%s\n", "IN BOOL FALSE");
 			arg1 = make_argument_constant(0);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -909,12 +930,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps
 
 		case expresParent_T_K:
-		printf("%s\n", "IN PARAN");
 			arg1 = IR_builder_expression(term->value.exp);
 			return arg1;
 
 		case var_T_K:
-			printf("VAR IR\n");
 			arg1 = IR_builder_variable(term->value.var);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -922,7 +941,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps			
 
 		case actList_T_K:
-		printf("%s\n", "IN CALL");
 			// static link ?
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 			params = 0;
@@ -957,7 +975,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return returnarg; // by convention eax holds return values
 
 		case termBang_T_K:
-		printf("%s\n", "IN BANG");
 			arg1 = IR_builder_term(term->value.term);
 			arg2 = make_argument_tempregister(current_temporary++);
 			IR_INSTRUCTION *neg = make_instruction_notl(arg1);
@@ -967,7 +984,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2;
 
 		case expresPipes_T_K:
-		printf("%s\n", "IN PIPE");
 			params = 0;
 			char *pipeEnd = calloc(32,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
@@ -976,7 +992,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
-				printf("%s\n", "IN INT");
 				//2 cases, positive numbers and negative numbers
 				ARGUMENT *pipeCMPArg = make_argument_constant(0);
 
@@ -989,10 +1004,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element(ir_lines, pipeLabel);
 				return arg1;
 			}else if(term->symboltype->type == SYMBOL_ARRAY){
-				printf("%s\n", "IN ARRAY");
 				char *id = term->value.exp->value.term->value.var->value.id;
-					// must be this way since it's a array
-				printf("%s\n", id);
+
 				ARGUMENT *firstElement = make_argument_tempregister(
 					current_temporary++);
 
@@ -1166,6 +1179,7 @@ void basic_assign(linked_list *ir_lines){
 						instr2->arg1 = reg;
 					}
 				}
+
 				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
 					if(instr2->arg2->tempid == cmp1){
 						
