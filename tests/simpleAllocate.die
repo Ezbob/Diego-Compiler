@@ -1,5 +1,5 @@
-var list : array of int, a : int;
+var list : array of int;
 
-a = 4;
+allocate list of length 32;
 
-allocate list of length 32+a;
+write |list|;

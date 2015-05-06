@@ -84,7 +84,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	localVariableAllocation();
 
 	callerSave();
-
+	
 	IR_builder_statement_list(_main_->statement_list);
 	
 	calleeRestore();
@@ -310,7 +310,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case print_S_K:
-
+			printf("------------------> %p <-----------\n", (void *) st->symboltable);
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_INT:
@@ -862,7 +862,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	IR_INSTRUCTION *instr;
 	SYMBOL *symbol;
 	int params;
-	printf("%s\n", "IN TERM");
+
 	switch(term->kind){
 		case num_T_K:
 		printf("%s\n", "IN NUM");
@@ -895,6 +895,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg1;
 
 		case var_T_K:
+			printf("VAR IR\n");
 			arg1 = IR_builder_variable(term->value.var);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);

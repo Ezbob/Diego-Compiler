@@ -8,9 +8,10 @@
 extern SYMBOLTABLE *loltable;
 
 void collect(BODY *main, SYMBOLTABLE *symboltable){
-
+	fprintf(stderr, "Initializing Type collection\n");
 	//Start collecting
 	collect_body(main, symboltable);
+
 
 }
 
@@ -24,7 +25,7 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 	collect_head(function->functionF.head, scope, st);
 	collect_body(function->functionF.body, scope);
 	function->symboltype = function->functionF.head->symboltype;
-
+	
 }
 
 void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
@@ -55,8 +56,7 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
-	dumpSymbolTable(st);
-	printf("%s: %d\n", "SYMBOLTABLE CONTAINS", st->temps);
+
 }
 
 void collect_type ( TYPE *type, SYMBOLTABLE *st){
@@ -297,7 +297,6 @@ void collect_variable ( VAR *var, SYMBOLTABLE *st ){
 void collect_expression ( EXPRES *exp, SYMBOLTABLE *st ){
 
 	exp->symboltable = st;
-
 
 	switch(exp->kind){
 		case term_E_K:

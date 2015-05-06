@@ -275,12 +275,18 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 
 STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
 
-	if(slst == NULL){
+	/*if(slst == NULL){
 		return NULL;
-	}
+	}*/
 
-	slst->value.compoundSL.statement_list = weed_statement_list(slst->value.compoundSL.statement_list);
-	slst->value.compoundSL.statement = weed_statement(slst->value.compoundSL.statement);
+	
+	if(slst->kind == compound_SL_K){
+		slst->value.compoundSL.statement_list = weed_statement_list(slst->value.compoundSL.statement_list);
+		slst->value.compoundSL.statement = weed_statement(slst->value.compoundSL.statement);
+	} else {
+			slst->value.statement = weed_statement(slst->value.statement);
+	}
+		
 
 	if(slst->value.statement == NULL) {
 		return slst->value.compoundSL.statement_list;
@@ -290,7 +296,7 @@ STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
 	 * Trying to remove statements after a return,
 	 * but returns after a return is still not weeded
 	 */
-	if(slst->value.compoundSL.statement_list != NULL &&
+	if(slst->kind == compound_SL_K &&
 	   slst->value.compoundSL.statement_list->value.statement->foundReturn == 1) {
 		return slst->value.compoundSL.statement_list;
 	}
@@ -740,13 +746,13 @@ TERM *weed_term ( TERM *term){
 		case expresPipes_T_K: //Absolut værdi |-værdi| = værdi
 			term->value.exp = weed_expression(term->value.exp);
 			if (term->value.exp->kind == term_E_K){
-				between = term->value.exp->value.term;
-				if (between->kind == num_T_K){
-					term->kind = num_T_K;
-					if(between->value.intconst < 0){
-						term->value.intconst = between->value.intconst *(-1);
+
+				if (term->value.exp->value.term->kind == num_T_K){
+					
+					if(term->value.exp->value.term->value.intconst < 0){
+						term->value.exp->value.term->value.intconst *(-1);
 					} else{
-						term->value.intconst = between->value.intconst;
+						term->value.exp->value.term->value.intconst;
 					}
 
 				}

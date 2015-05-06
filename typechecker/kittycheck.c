@@ -237,6 +237,9 @@ void check_variable ( VAR *var){
 	switch(var->kind){
 		case id_V_K:
 			if((symbol = getSymbol(var->symboltable, var->value.id)) != NULL){
+				printf("VAR: %s\n", var->value.id);
+				dumpSymbol(symbol);
+				printf("\n");	
 				var->symboltype = symbol->symboltype;
 			} else{
 				check_error_report("Undefined symbol", var->lineno);
@@ -319,7 +322,6 @@ void check_expression ( EXPRES *exp){
 			break;
 
 		//array og record må være null, bool skal være med bool, int skal være med int 
-		//Copy paste her symboltype ind
 		case booleq_E_K:
 		case boolneq_E_K:
 			check_expression(exp->value.sides.left);
@@ -465,6 +467,7 @@ int check_term ( TERM *term){
 
 	switch(term->kind){
 		case var_T_K:
+			printf("ITS A VAR\n");
 			check_variable(term->value.var);
 			symbolT = term->value.var->symboltype;
 			term->symboltype = symbolT;
@@ -532,6 +535,7 @@ int check_term ( TERM *term){
 			break;
 
 		case expresPipes_T_K:
+		printf("IN PIPE\n");
 			check_expression(term->value.exp);
 			if(term->value.exp->value.term->symboltype->type == SYMBOL_BOOL ||
 			   term->value.exp->value.term->symboltype->type == SYMBOL_ID ||

@@ -24,6 +24,7 @@ int Hash(char *str){
 SYMBOLTABLE *initSymbolTable(){
 	SYMBOLTABLE *tablePointer = NEW(SYMBOLTABLE);
 	tablePointer->next = NULL;
+	tablePointer->temps = 0;
 	int i;
 
 	for (i = 0; i < HASH_SIZE; i++){
@@ -72,6 +73,7 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 	PutSymbol->next = NULL;
 	PutSymbol->symboltype = symbolT;
 	PutSymbol->uniquename = calloc(11,sizeof(char));
+	PutSymbol->offset = 0;
 
 	Placeholder = t->table[HashValue]; 
 	if (Placeholder != NULL){ // has a SYMBOL in field 
