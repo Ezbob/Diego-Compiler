@@ -246,9 +246,7 @@ void check_variable ( VAR *var){
 			} else{
 				check_error_report("Undefined symbol", var->lineno);
 			}
-
 			break;
-		/*TODO*/
 		case indexing_V_K:
 			check_variable(var->value.indexingV.variable);
 			check_expression(var->value.indexingV.exp);
@@ -262,7 +260,11 @@ void check_variable ( VAR *var){
 void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
+<<<<<<< HEAD
 	SYMBOL *check;
+=======
+	//printf("----->>> symboltable in expression %p\n",(void*) exp->symboltable );
+>>>>>>> 5ae86806af9967dad7dd01f393970d25d0b4b18b
 
 	switch(exp->kind){
 		case term_E_K:
@@ -330,6 +332,7 @@ void check_expression ( EXPRES *exp){
 			break;
 
 		//array og record må være null, bool skal være med bool, int skal være med int 
+		//Copy paste her symboltype ind
 		case booleq_E_K:
 		case boolneq_E_K:
 			check_expression(exp->value.sides.left);
@@ -468,8 +471,15 @@ void check_expression ( EXPRES *exp){
 }
 
 int check_term ( TERM *term){
+<<<<<<< HEAD
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
 	SYMBOL *symbol;// = NEW(SYMBOL);
+=======
+	SYMBOLTYPE *symbolT;
+	SYMBOL *symbol;
+
+	printf("----->>> symboltable term %p\n",(void*) term->symboltable );
+>>>>>>> 5ae86806af9967dad7dd01f393970d25d0b4b18b
 
 	int count = 0;
 
@@ -553,17 +563,20 @@ int check_term ( TERM *term){
 			break;
 
 		case null_T_K:
+			symbolT = NEW(SYMBOLTYPE)
 			symbolT->type = SYMBOL_NULL;
 			term->symboltype = symbolT;
 			break;
 
 		case boolTrue_T_K:
 		case boolFalse_T_K:
+			symbolT = NEW(SYMBOLTYPE)
 			symbolT->type = SYMBOL_BOOL;
 			term->symboltype = symbolT;
 			break;
 
 		case num_T_K:
+			symbolT = NEW(SYMBOLTYPE)
 			symbolT->type = SYMBOL_INT;
 			term->symboltype = symbolT;
 			break;
