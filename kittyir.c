@@ -351,7 +351,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case SYMBOL_ARRAY:
-
+						printf("%s\n", "IN WRITE");
 						callerSave();
 						arg1 = IR_builder_expression(st->value.exp);
 
@@ -385,23 +385,17 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case indexing_V_K:
 					printf("%s\n", "INDEXING");
+					arg2 = IR_builder_variable(st->value.assignS.variable);
 					arg1 = IR_builder_expression(st->value.assignS.exp);
-					char *id = st->value.assignS.variable->value.id;
 					
-					ARGUMENT *firstElement = make_argument_tempregister(
-					current_temporary++);
-
 					append_element( 
 						ir_lines,
 						make_instruction_movl(
-							make_argument_labelAddring(
-								id, 
-								arg1 
-							),
-							firstElement 
+							arg1,
+							arg2
 						)
 					);
-
+					break;
 				default:
 					printf("%s\n", "DEFAULT");
 					arg1 = IR_builder_expression(st->value.assignS.exp);
@@ -622,13 +616,21 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			arg = make_argument_address(WORDSIZE*(symbol->offset));
 			break;
 		case indexing_V_K:
-			/*resultOfSubExp = IR_builder_expression(var->value.indexingV.exp);
+				resultOfSubExp = make_argument_constant(var->value.indexingV.exp->value.term->value.intconst);
+				arg = make_argument_tempregister(current_temporary++);
 
-				address_of_id = calloc(strlen(var->value.indexingV->value.id) + 4, sizeof(char));
+				append_element(ir_lines,
+						make_instruction_movl(
+							resultOfSubExp,
+							arg
+						)
+				);
 
-				sprintf(address_of_id, "(%s)",st->value.
-				allocateS.variable->value.id);
-			*/
+				address_of_id = make_argument_labelAddring(
+							var->value.indexingV.variable->value.id,
+							arg
+						);				
+			return address_of_id;
 
 			break;
 		default:
