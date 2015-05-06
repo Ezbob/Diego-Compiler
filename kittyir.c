@@ -452,6 +452,42 @@ void IR_builder_statement ( STATEMENT *st ) {
 				arg1 = IR_builder_expression(st->value.allocateS.
 					opt_length->value.exp); // length of-result
 
+				arg2 = make_argument_tempregister(current_temporary++);
+
+				append_element(
+					ir_lines,
+					make_instruction_pushl(
+						arg2,
+						NULL
+					)
+				);
+
+				append_element( // xored to get zero
+					ir_lines,
+					make_instruction_xor(
+						arg2,
+						arg2
+					)
+				);
+
+				append_element(
+					ir_lines,
+					make_instruction_movl(
+						arg1,
+						make_argument_labelAddring(
+							st->value.allocateS.variable->value.id,
+							arg2
+						)
+					)
+				);
+
+				append_element( // first element is the length so incl
+					ir_lines,
+					make_instruction_incl(
+						arg1
+					)
+				);
+
 				// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
 				append_element(
 					ir_lines,
@@ -466,6 +502,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 					make_instruction_addl(
 						arg1, 
 						make_argument_label("(heapNext)")
+					)
+				);
+
+				append_element(
+					ir_lines,
+					make_instruction_popl(
+						arg2,
+						NULL
 					)
 				);
 			
@@ -524,9 +568,33 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen ) {
 //TODO: needs label
 ARGUMENT *IR_builder_variable (VAR *var) {
 
-	SYMBOL *symbol = getSymbol(var->symboltable, var->value.id);
+	SYMBOL *symbol;
+	ARGUMENT *arg;
+	ARGUMENT *resultOfSubExp;
+	char *address_of_id;
 	
-	ARGUMENT *arg = make_argument_address(WORDSIZE*(symbol->offset));
+	switch (var->kind){
+		case id_V_K:
+			symbol = getSymbol(var->symboltable, var->value.id);
+			arg = make_argument_address(WORDSIZE*(symbol->offset));
+			break;
+		case indexing_V_K:
+			/*resultOfSubExp = IR_builder_expression(var->value.indexingV.exp);
+
+				address_of_id = calloc(strlen(var->value.indexingV->value.id) + 4, sizeof(char));
+
+				sprintf(address_of_id, "(%s)",st->value.
+				allocateS.variable->value.id);
+			*/
+
+			break;
+		default:
+			fprintf(stderr, "Error: variable kind not supported\n" );
+			arg = NULL; // this will probably 
+				// generate a seg fault in upper levels
+			break;
+	}
+	
 	return arg;
 
 }
@@ -780,7 +848,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, ortruesave);
 
 			append_element(ir_lines, orendlabel);
-
 			break;
 	}
 
@@ -795,9 +862,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	IR_INSTRUCTION *instr;
 	SYMBOL *symbol;
 	int params;
-
+	printf("%s\n", "IN TERM");
 	switch(term->kind){
 		case num_T_K:
+		printf("%s\n", "IN NUM");
 			arg1 = make_argument_constant(term->value.intconst);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -805,6 +873,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps
 
 		case boolTrue_T_K:
+		printf("%s\n", "IN BOOL TRUE");
 			arg1 = make_argument_constant(1);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -813,6 +882,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case null_T_K:
 		case boolFalse_T_K:
+		printf("%s\n", "IN BOOL FALSE");
 			arg1 = make_argument_constant(0);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -820,6 +890,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps
 
 		case expresParent_T_K:
+		printf("%s\n", "IN PARAN");
 			arg1 = IR_builder_expression(term->value.exp);
 			return arg1;
 
@@ -831,7 +902,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2; //Return arg2 to keep track of temps			
 
 		case actList_T_K:
-
+		printf("%s\n", "IN CALL");
 			// static link ?
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 			params = 0;
@@ -866,6 +937,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return returnarg; // by convention eax holds return values
 
 		case termBang_T_K:
+		printf("%s\n", "IN BANG");
 			arg1 = IR_builder_term(term->value.term);
 			arg2 = make_argument_tempregister(current_temporary++);
 			IR_INSTRUCTION *neg = make_instruction_notl(arg1);
@@ -875,6 +947,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return arg2;
 
 		case expresPipes_T_K:
+		printf("%s\n", "IN PIPE");
 			params = 0;
 			char *pipeEnd = calloc(32,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
@@ -883,6 +956,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
+				printf("%s\n", "IN INT");
 				//2 cases, positive numbers and negative numbers
 				ARGUMENT *pipeCMPArg = make_argument_constant(0);
 
@@ -894,8 +968,40 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element(ir_lines, negl);
 				append_element(ir_lines, pipeLabel);
 				return arg1;
-			} //Missing array length
+			}else if(term->symboltype->type == SYMBOL_ARRAY){
+				printf("%s\n", "IN ARRAY");
+				char *id = term->value.exp->value.term->value.var->value.id;
+					// must be this way since it's a array
+				printf("%s\n", id);
+				ARGUMENT *firstElement = make_argument_tempregister(
+					current_temporary++);
+
+				ARGUMENT *zeroElement = make_argument_tempregister(
+					current_temporary++);
+
+				append_element( // xored to get zero
+					ir_lines,
+					make_instruction_xor(
+						zeroElement,
+						zeroElement
+					)
+				);
+
+				append_element( // move from first place in array to reg
+					ir_lines,
+					make_instruction_movl(
+						make_argument_labelAddring(
+							id, // label to pointer to heap
+							zeroElement // index
+						),
+						firstElement // result
+					)
+				);
+				return firstElement;
+			}
+			printf("%s\n", "NOTHING");
 		default:
+			printf("%s\n", "DEFAULT");
 			break;
 	}
 
@@ -1289,7 +1395,16 @@ void IR_printer(linked_list *ir_lines){
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
 				break;
-
+			case incl:
+				printf("\tincl ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
+			case decl:
+				printf("\tdecl ");
+				IR_print_arguments(instr_to_print->arg1);
+				printf("\n");
+				break;
 			default:
 				break;
 		}
@@ -1322,6 +1437,12 @@ void IR_print_arguments(ARGUMENT *arg){
 
 		case address_arg:
 			printf("%d(%%ebp)", arg->intConst);
+			break;
+
+		case indexing_arg:
+			printf("%s(,",arg->dispLabel);
+			IR_print_arguments(arg->index);
+			printf(",4)");
 			break;
 		default:
 			break;
@@ -1375,4 +1496,55 @@ void build_data_section(){
 		
 		terminate_list(&data_lines);
 	}
+}
+
+/*
+ * Resolves addressing of id-expressions
+ * return null if it encounters a invalid VAR struct
+ * temporary_id is the id of the temporary that is returned as a
+ * ARGUMENT 
+ */
+ARGUMENT *address_resolver(VAR *var, const int temporary_id){
+/*	
+	ARGUMENT *result;
+	ARGUMENT *temporary;
+	ARGUMENT *expArgument;
+	char *address_of_id;
+
+	// TODO: make it so you get the address as a argument 
+	switch(var->kind){
+		case id_V_K: // this is the base case
+			address_of_id = calloc(strlen(var->value.id) + 8, sizeof(char));
+			sprintf(address_of_id, "(%s)",var->value.id);
+
+			temporary = make_argument_tempregister(temporary_id);
+
+			append_element(ir_lines,
+				make_instruction_movl(
+					make_argument_label(address_of_id),
+					temporary
+				)
+			);
+
+			return temporary;
+		case indexing_V_K: // this is one of two recursive steps
+
+			temporary = address_resolver(var->value.indexingV->variable, temporary_id);
+			expArgument = IR_builder_expression(var->value.indexingV.exp);
+
+			append_element(ir_lines,
+				make_instruction_movl(
+					temporary
+
+				)
+			);
+
+
+			return temporary;
+		case dot_V_K:
+			
+	
+		default:*/
+			return NULL;
+	//}
 }

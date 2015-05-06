@@ -170,6 +170,24 @@ IR_INSTRUCTION *make_instruction_subl(ARGUMENT *arg1, ARGUMENT *arg2) {
 	return new_instruction;
 }
 
+IR_INSTRUCTION *make_instruction_incl(ARGUMENT *arg1) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->id = 0;
+	new_instruction->op_code = incl;
+	new_instruction->arg1 = arg1;
+	return new_instruction;
+}
+
+IR_INSTRUCTION *make_instruction_decl(ARGUMENT *arg1) {
+	IR_INSTRUCTION *new_instruction;
+	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
+	new_instruction->id = 0;
+	new_instruction->op_code = decl;
+	new_instruction->arg1 = arg1;
+	return new_instruction;
+}
+
 IR_INSTRUCTION *make_instruction_div(ARGUMENT *arg1, ARGUMENT *arg2) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
@@ -304,4 +322,11 @@ ARGUMENT *make_argument_tempregister(int i){
 	return new_argument;
 }
 
-
+ARGUMENT *make_argument_labelAddring(char *dispLabel, ARGUMENT *index){
+	ARGUMENT *new_argument;
+	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
+	new_argument->dispLabel = dispLabel;
+	new_argument->index = index;
+	new_argument->kind = indexing_arg;
+	return new_argument;
+}

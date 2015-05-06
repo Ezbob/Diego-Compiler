@@ -21,7 +21,8 @@ typedef struct IR_INSTRUCTION {
 	char *label;
 	enum { globl, mainmet, string, label, movl, call, pushl, popl, addl, 
 		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
-		JGE, JLE, jl, jg, notl, negl, intcode, space, long_op, leal } op_code; 
+		JGE, JLE, jl, jg, notl, negl, intcode, space, long_op, leal,
+		incl, decl } op_code; 
 							// add more instructions later on
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
@@ -32,10 +33,12 @@ typedef struct ARGUMENT {
 	int tempid;
 	ARGUMENTTYPE type;
 	enum { address_arg, register_arg, label_arg, 
-		constant_arg, tempreg_arg } kind;
+		constant_arg, tempreg_arg, indexing_arg } kind;
 	char *label;
 	int intConst;
 	REGISTERS reg;
+	char *dispLabel;
+	struct ARGUMENT *index;
 	char *charConst;
 	void *address;
 	int divflag;
@@ -93,5 +96,7 @@ ARGUMENT *IR_builder_variable ( VAR *var);
 ARGUMENT *IR_builder_expression ( EXPRES *exp);
 ARGUMENT *IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen);
+
+ARGUMENT *address_resolver(VAR *, int);
 
 #endif

@@ -1,7 +1,5 @@
-var a : int;
-var b : int;
+var a : record of {
+	values : array of int
+};
 
-a = 42;
-b = 12;
-
-write a - b;
+write a.values[1];

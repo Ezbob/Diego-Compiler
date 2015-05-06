@@ -17,6 +17,8 @@ IR_INSTRUCTION *make_instruction_jg(char *);
 IR_INSTRUCTION *make_instruction_jl(char *);
 IR_INSTRUCTION *make_instruction_JGE(char *);
 IR_INSTRUCTION *make_instruction_JLE(char *);
+IR_INSTRUCTION *make_instruction_incl(ARGUMENT *arg1);
+IR_INSTRUCTION *make_instruction_decl(ARGUMENT *arg1);
 IR_INSTRUCTION *make_instruction_popl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_addl(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_subl(ARGUMENT *arg1, ARGUMENT *arg2);
@@ -37,5 +39,6 @@ ARGUMENT *make_argument_label(char *);
 ARGUMENT *make_argument_constant(int i);
 ARGUMENT *make_argument_temp(int i);
 ARGUMENT *make_argument_tempregister(int i);
+ARGUMENT *make_argument_labelAddring(char *dispLabel, ARGUMENT *index);
 
 #endif

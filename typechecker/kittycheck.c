@@ -533,11 +533,10 @@ int check_term ( TERM *term){
 
 		case expresPipes_T_K:
 			check_expression(term->value.exp);
-			if(term->value.exp->value.term->symboltype->type == SYMBOL_BOOL){
-				check_error_report("Expected term int", term->lineno);
-			}
-			if(term->value.exp->value.term->symboltype->type != SYMBOL_INT||
-			   term->value.exp->symboltype->type != SYMBOL_ARRAY){
+			if(term->value.exp->value.term->symboltype->type == SYMBOL_BOOL ||
+			   term->value.exp->value.term->symboltype->type == SYMBOL_ID ||
+			   term->value.exp->value.term->symboltype->type == SYMBOL_RECORD ||
+			   term->value.exp->value.term->symboltype->type == SYMBOL_FUNCTION){
 				check_error_report("Expected term int", term->lineno);
 			}
 			break;
