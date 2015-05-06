@@ -295,6 +295,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *falsearg;
 	ARGUMENT *endarg;
 	ARGUMENT *compare;
+	SYMBOL *check;
 
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
@@ -309,8 +310,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			
 			break;
 
-		case print_S_K:
-			printf("------------------> %p <-----------\n", (void *) st->symboltable);
+		case print_S_K: 
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_INT:
@@ -350,6 +350,29 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					break;
 
+				case SYMBOL_ARRAY:
+
+						callerSave();
+						arg1 = IR_builder_expression(st->value.exp);
+
+						append_element(
+							ir_lines,
+							make_instruction_pushl(
+								arg1,
+								NULL
+							)
+						);
+
+						arg3 = make_argument_label("$formNUM");
+						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						append_element(ir_lines, pushform);
+						arg2 = make_argument_label("printf");
+						call = make_instruction_call(NULL, arg2);
+						append_element(ir_lines, call);
+
+						moveStackpointer(2);
+						callerRestore();
+
 				default:
 					printf("%s\n", "DEFAULT CASE PRINT");
 					break;
@@ -361,10 +384,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			SYMBOL *symbol = getSymbol(st->symboltable,st->value
 				.assignS.variable->value.id);
-			if(symbol == NULL){
-				printf("%s\n", "ERROR");
-				//INSERT INTCODE EXIT
-			}
 
 			if( local_variable_size >= WORDSIZE && symbol != NULL ) { 
 			// perhaps this needs a local var enum
@@ -601,7 +620,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 	int tmp = 0;
-
+	printf("EXPRESSION\n");
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *truearg;

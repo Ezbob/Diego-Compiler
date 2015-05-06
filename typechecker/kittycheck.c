@@ -154,6 +154,11 @@ void check_statement ( STATEMENT *st){
 
 		case print_S_K:
 			check_expression(st->value.exp);
+			if(st->value.exp->symboltype->type == SYMBOL_ARRAY &&
+				 st->value.exp->value.term->kind != expresPipes_T_K){
+					check_error_report("Only length of arrays can be written", 
+																															st->lineno);
+			}
 			break;
 
 		case allocate_S_K:
@@ -237,9 +242,6 @@ void check_variable ( VAR *var){
 	switch(var->kind){
 		case id_V_K:
 			if((symbol = getSymbol(var->symboltable, var->value.id)) != NULL){
-				printf("VAR: %s\n", var->value.id);
-				dumpSymbol(symbol);
-				printf("\n");	
 				var->symboltype = symbol->symboltype;
 			} else{
 				check_error_report("Undefined symbol", var->lineno);
@@ -260,12 +262,18 @@ void check_variable ( VAR *var){
 void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
+	SYMBOL *check;
 
 	switch(exp->kind){
 		case term_E_K:
 			check_term(exp->value.term);
-			symbolT = exp->value.term->symboltype;
-			exp->symboltype = symbolT;
+			/*if(exp->value.term->kind == var_T_K){
+				check = getSymbol(exp->symboltable, exp->value.term->value.var->value.id);
+				exp->symboltype = check->symboltype;
+			} else {*/
+				symbolT = exp->value.term->symboltype;
+				exp->symboltype = symbolT;
+			//}
 			break;
 
 		case plus_E_K:
@@ -461,16 +469,15 @@ void check_expression ( EXPRES *exp){
 
 int check_term ( TERM *term){
 	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
-	SYMBOL *symbol = NEW(SYMBOL);
+	SYMBOL *symbol;// = NEW(SYMBOL);
 
 	int count = 0;
 
 	switch(term->kind){
 		case var_T_K:
-			printf("ITS A VAR\n");
 			check_variable(term->value.var);
-			symbolT = term->value.var->symboltype;
-			term->symboltype = symbolT;
+			symbol = getSymbol(term->symboltable, term->value.var->value.id);
+			term->symboltype = symbol->symboltype;
 			break;
 
 		case actList_T_K:
@@ -535,7 +542,6 @@ int check_term ( TERM *term){
 			break;
 
 		case expresPipes_T_K:
-		printf("IN PIPE\n");
 			check_expression(term->value.exp);
 			if(term->value.exp->value.term->symboltype->type == SYMBOL_BOOL ||
 			   term->value.exp->value.term->symboltype->type == SYMBOL_ID ||
@@ -543,6 +549,7 @@ int check_term ( TERM *term){
 			   term->value.exp->value.term->symboltype->type == SYMBOL_FUNCTION){
 				check_error_report("Expected term int", term->lineno);
 			}
+			term->symboltype = term->value.exp->symboltype;
 			break;
 
 		case null_T_K:
