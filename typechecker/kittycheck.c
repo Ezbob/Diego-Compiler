@@ -259,12 +259,8 @@ void check_variable ( VAR *var){
 
 void check_expression ( EXPRES *exp){
 
-	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
-<<<<<<< HEAD
+	SYMBOLTYPE *symbolT;
 	SYMBOL *check;
-=======
-	//printf("----->>> symboltable in expression %p\n",(void*) exp->symboltable );
->>>>>>> 5ae86806af9967dad7dd01f393970d25d0b4b18b
 
 	switch(exp->kind){
 		case term_E_K:
@@ -286,6 +282,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
 				exp->symboltype = symbolT;
 			}
@@ -300,6 +297,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
 				exp->symboltype = symbolT;
 			}
@@ -313,6 +311,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.right->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
 				exp->symboltype = symbolT;
 			}
@@ -326,6 +325,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
 				exp->symboltype = symbolT;
 			}
@@ -339,53 +339,61 @@ void check_expression ( EXPRES *exp){
 			check_expression(exp->value.sides.right);
 			if(exp->value.sides.right->symboltype->type == SYMBOL_INT || 
 			   exp->value.sides.left->symboltype->type == SYMBOL_INT ) { 
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
 				exp->symboltype = symbolT;
 				break;
 			}
 			if(exp->value.sides.right->symboltype->type == SYMBOL_BOOL || 
 			   exp->value.sides.left->symboltype->type == SYMBOL_BOOL ) { 
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 			if(exp->value.sides.right->symboltype->type == SYMBOL_ARRAY || 
 			   exp->value.sides.left->symboltype->type == SYMBOL_NULL ) { 
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 			if(exp->value.sides.right->symboltype->type == SYMBOL_NULL || 
 			   exp->value.sides.left->symboltype->type == SYMBOL_ARRAY ) { 
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 			if(exp->value.sides.right->symboltype->type == SYMBOL_ARRAY || 
 			   exp->value.sides.left->symboltype->type == SYMBOL_ARRAY ) { 
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 
 			if(exp->value.sides.right->symboltype->type == SYMBOL_RECORD ||
 			   exp->value.sides.left->symboltype->type == SYMBOL_NULL ) {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 
 			if(exp->value.sides.right->symboltype->type == SYMBOL_NULL ||
 			   exp->value.sides.left->symboltype->type == SYMBOL_RECORD ) {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 
 			if(exp->value.sides.right->symboltype->type == SYMBOL_RECORD ||
 			   exp->value.sides.left->symboltype->type == SYMBOL_RECORD ) {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 				break;
 			}
 
@@ -401,8 +409,9 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) {
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 			}
 			break;
 
@@ -414,6 +423,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) {
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
 				exp->symboltype = symbolT;
 			}
@@ -427,8 +437,9 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 			}
 			break;
 
@@ -440,8 +451,9 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
 				check_error_report("Expected exp int", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 			}
 			break;
 
@@ -452,8 +464,9 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_BOOL) { 
 				check_error_report("Expected exp bool", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
-                                exp->symboltype = symbolT;
+                exp->symboltype = symbolT;
 			}
 			break;
 		case boolor_E_K:
@@ -463,6 +476,7 @@ void check_expression ( EXPRES *exp){
 			   exp->value.sides.left->symboltype->type != SYMBOL_BOOL) { 
 				check_error_report("Expected exp bool", exp->lineno);
 			} else {
+				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
 				exp->symboltype = symbolT;
 			}
@@ -471,15 +485,9 @@ void check_expression ( EXPRES *exp){
 }
 
 int check_term ( TERM *term){
-<<<<<<< HEAD
-	SYMBOLTYPE *symbolT = NEW(SYMBOLTYPE);
-	SYMBOL *symbol;// = NEW(SYMBOL);
-=======
+
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
-
-	printf("----->>> symboltable term %p\n",(void*) term->symboltable );
->>>>>>> 5ae86806af9967dad7dd01f393970d25d0b4b18b
 
 	int count = 0;
 
