@@ -122,6 +122,30 @@ void IR_printer(linked_list *ir_lines){
 				printf("\n");
 				break;
 
+			case jl:
+				printf("\t%s", "jl ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
+			case jg:
+				printf("\t%s", "jg ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
+			case JGE:
+				printf("\t%s", "jge ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
+			case JLE:
+				printf("\t%s", "jle ");
+				printf("%s", instr_to_print->label);
+				printf("\n");
+				break;
+
 			case notl:
 				printf("\t%s", "notl ");
 				IR_print_arguments(instr_to_print->arg1);

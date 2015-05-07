@@ -5,4 +5,5 @@ count = 0;
 
 while (count < 10) do {
 	write 42;
+	count = count + 1;
 }

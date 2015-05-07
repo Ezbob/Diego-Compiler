@@ -806,19 +806,19 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 					break;
 
 				case boolgreater_E_K:
-					truejmp = make_instruction_jl(booltruelabel);
-					break;
-
-				case boolless_E_K:
 					truejmp = make_instruction_jg(booltruelabel);
 					break;
 
+				case boolless_E_K:
+					truejmp = make_instruction_jl(booltruelabel);
+					break;
+
 				case boolleq_E_K:
-					truejmp = make_instruction_JGE(booltruelabel);
+					truejmp = make_instruction_JLE(booltruelabel);
 					break;
 
 				case boolgeq_E_K:
-					truejmp = make_instruction_JLE(booltruelabel);
+					truejmp = make_instruction_JGE(booltruelabel);
 					break;
 
 				default:
@@ -830,6 +830,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			//false
 			IR_INSTRUCTION *falsesave = make_instruction_movl(make_argument_constant(0), result);
 			append_element(ir_lines, falsesave);
+
 
 			IR_INSTRUCTION *endjmp = make_instruction_jmp(boolendlabel);
 			append_element(ir_lines, endjmp);
