@@ -1,16 +1,8 @@
 var list1 : array of int, count : int;
-var list2 : array of array of int;
-
-type newFun = int;
-type newFun2 = newFun;
-var c : newFun2;
 
 allocate list1 of length 10; 	
-	# here we allocate place for a array
 count = 0;
 
 while (count < 10) do {
-	list1[count] = count;
-	count = count + 1;
+	write 42;
 }
-

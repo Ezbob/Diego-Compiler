@@ -286,6 +286,10 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 void IR_builder_statement ( STATEMENT *st ) {
 	int tmp = 0; 
 
+	char *endwhilestring;
+	char *truewhilestring;
+	char *endlabelstring;
+
 	ARGUMENT *returnvalue;
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
@@ -294,7 +298,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *falsearg;
 	ARGUMENT *endarg;
 	ARGUMENT *compare;
-	SYMBOL *check;
 
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
@@ -350,7 +353,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case SYMBOL_ARRAY:
-						printf("%s\n", "IN WRITE");
+					//	printf("%s\n", "IN WRITE");
 						callerSave();
 						arg1 = IR_builder_expression(st->value.exp);
 
@@ -373,7 +376,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						callerRestore();
 
 				default:
-					printf("%s\n", "DEFAULT CASE PRINT");
+				//	printf("%s\n", "DEFAULT CASE PRINT");
 					break;
 			}
 			break;
@@ -383,7 +386,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.assignS.variable->kind){
 
 				case indexing_V_K:
-					printf("%s\n", "INDEXING");
+				//	printf("%s\n", "INDEXING");
 					arg2 = IR_builder_variable(st->value.assignS.variable);
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 					
@@ -396,7 +399,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					);
 					break;
 				default:
-					printf("%s\n", "DEFAULT");
+				//	printf("%s\n", "DEFAULT");
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 
 					SYMBOL *symbol = getSymbol(st->symboltable,st->value
@@ -559,30 +562,58 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			tmp = getNextLabel();
 
-			char *truewhilestring = calloc(32,sizeof(char));
-			char *endwhilestring = calloc(32,sizeof(char));
+			truewhilestring = calloc(32,sizeof(char));
 			endlabelstring = calloc(32,sizeof(char));
 
 			sprintf(truewhilestring, "whileStart%d", current_label);
-			truearg = make_argument_label(truewhilestring);
-			IR_INSTRUCTION *truelabel = make_instruction_label(truearg, NULL);
-
 			sprintf(endlabelstring, "whileEnd%d", current_label);
-			endarg = make_argument_label(endlabelstring);
-			IR_INSTRUCTION *whileend = make_instruction_label(endarg, NULL);
-			append_element(ir_lines, truelabel);
 
+		
+			append_element( // while-start label insert 
+				ir_lines, 
+				make_instruction_label(
+					make_argument_label(
+						truewhilestring
+						), 
+					NULL
+				)
+			);
+
+			// evaluting expressions
 			arg1 = IR_builder_expression(st->value.whileS.exp);
-			compare = make_argument_constant(1); //Compare with true
-			IR_INSTRUCTION *cmpinst = make_instruction_cmp(compare, arg1);
-			append_element(ir_lines, cmpinst);
-			IR_INSTRUCTION *jneinst = make_instruction_jne(endwhilestring);
-			append_element(ir_lines, jneinst);			
+			
+			append_element( //Compare evaluted expression with true
+				ir_lines, 
+				make_instruction_cmp(
+					make_argument_constant(1),
+					arg1
+				)
+			);
+			
+			append_element( // jump to end if while condition is false 
+				ir_lines, 
+				make_instruction_jne(
+					endlabelstring
+				)
+			);			
 
+			// generate code for statements
 			IR_builder_statement(st->value.whileS.statement);
-			IR_INSTRUCTION *jmpstart = make_instruction_jmp(truewhilestring);
-			append_element(ir_lines, jmpstart);
-			append_element(ir_lines, whileend);
+			
+			append_element( // repeating statement jump
+				ir_lines, 
+				make_instruction_jmp(truewhilestring)
+			);
+			
+			append_element( // insertion of while-end
+				ir_lines, 
+				make_instruction_label(
+					make_argument_label(
+						endlabelstring)
+					, NULL
+				)
+			);
+
 			current_label++;
 			break;
 
@@ -591,7 +622,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		default:
-			printf("%s\n", "GOT NOTHING");
+		//	printf("%s\n", "GOT NOTHING");
 			break;
 
 	}
@@ -606,8 +637,8 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol;
 	ARGUMENT *arg;
+	ARGUMENT *arg1;
 	ARGUMENT *resultOfSubExp;
-	char *address_of_id;
 	
 	switch (var->kind){
 		case id_V_K:
@@ -625,11 +656,11 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						)
 				);
 
-				address_of_id = make_argument_labelAddring(
+				arg1 = make_argument_labelAddring(
 							var->value.indexingV.variable->value.id,
 							arg
 						);
-			return address_of_id;
+			return arg1;
 
 			break;
 		default:
@@ -1033,9 +1064,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				);
 				return firstElement;
 			}
-			printf("%s\n", "NOTHING");
+		//	printf("%s\n", "NOTHING");
 		default:
-			printf("%s\n", "DEFAULT");
+		//	printf("%s\n", "DEFAULT");
 			break;
 	}
 
