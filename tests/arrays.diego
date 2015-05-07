@@ -3,7 +3,8 @@ var list1 : array of int, count : int;
 allocate list1 of length 10; 	
 count = 0;
 
-while (count < 10) do {
-	write 42;
+while (count < 2) do {
+	list1[count] = count;
+	write list1[count];
 	count = count + 1;
 }

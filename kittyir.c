@@ -386,7 +386,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.assignS.variable->kind){
 
 				case indexing_V_K:
-				//	printf("%s\n", "INDEXING");
 					arg2 = IR_builder_variable(st->value.assignS.variable);
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 					
@@ -646,19 +645,16 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			arg = make_argument_address(WORDSIZE*(symbol->offset));
 			break;
 		case indexing_V_K:
-				resultOfSubExp = make_argument_constant(var->value.indexingV.exp->value.term->value.intconst);
+				resultOfSubExp = IR_builder_expression(var->value.indexingV.exp);
 				arg = make_argument_tempregister(current_temporary++);
 
 				append_element(ir_lines,
-						make_instruction_movl(
-							resultOfSubExp,
-							arg
-						)
+					make_instruction_incl(resultOfSubExp)
 				);
 
 				arg1 = make_argument_labelAddring(
-							var->value.indexingV.variable->value.id,
-							arg
+							var->value.indexingV.variable->value.id, // arrays in records problem
+							resultOfSubExp
 						);
 			return arg1;
 
@@ -1067,7 +1063,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			}
 		//	printf("%s\n", "NOTHING");
 		default:
-		//	printf("%s\n", "DEFAULT");
+			//printf("%s\n", "DEFAULT");
 			break;
 	}
 
