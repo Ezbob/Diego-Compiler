@@ -629,13 +629,13 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				address_of_id = make_argument_labelAddring(
 							var->value.indexingV.variable->value.id,
 							arg
-						);				
+						);
 			return address_of_id;
 
 			break;
 		default:
 			fprintf(stderr, "Error: variable kind not supported\n" );
-			arg = NULL; // this will probably 
+			arg = NULL; // this will probably
 				// generate a seg fault in upper levels
 			break;
 	}
@@ -1177,17 +1177,33 @@ void basic_assign(linked_list *ir_lines){
 
 				if(instr2->arg1 != NULL && instr2->arg1->kind == tempreg_arg){
 					if(instr2->arg1->tempid == cmp1){
-						
+
 						instr2->arg1 = reg;
+					}
+				}
+				//Arrays
+				if(instr2->arg1 != NULL && instr2->arg1->kind == indexing_arg){
+					if(instr2->arg1->index->tempid == cmp1){
+
+						instr2->arg1->index = reg;
 					}
 				}
 
 				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
 					if(instr2->arg2->tempid == cmp1){
-						
+
 						instr2->arg2 = reg;
 					}
 				}
+
+                                //Arrays
+                                if(instr2->arg2 != NULL && instr2->arg2->kind == indexing_arg){
+                                        if(instr2->arg2->index->tempid == cmp1){
+
+                                                instr2->arg2->index = reg;
+                                        }
+                                }
+
 				temp = temp->next;
 			} 
 			if(++count > 5){
@@ -1212,13 +1228,33 @@ void basic_assign(linked_list *ir_lines){
 						instr2->arg1 = reg;
 					}
 				}
+
+                                //Arrays
+                                if(instr2->arg1 != NULL && instr2->arg1->kind == indexing_arg){
+                                        if(instr2->arg1->index->tempid == cmp2){
+
+                                                instr2->arg1->index = reg;
+                                        }
+                                }
+
+
 				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
-					
+
 					if(instr2->arg2->tempid == cmp2){
-						
+
 						instr2->arg2 = reg;
 					}
 				}
+
+                                //Arrays
+                                if(instr2->arg2 != NULL && instr2->arg2->kind == indexing_arg){
+                                        if(instr2->arg2->index->tempid == cmp2){
+
+                                                instr2->arg2->index = reg;
+                                        }
+                                }
+
+
 				temp = temp->next;
 			} 
 			if(++count > 5){
