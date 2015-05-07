@@ -1,7 +1,18 @@
-var a : array of int;
+func func1( a : int) : int
+	type myrecord = record of {
+		x : int,
+		y : int
+	};
+	
+	var p : myrecord;
 
-allocate a of length 10;
+	allocate p;
 
-a[6] = 10;
+	p.x = a;
 
-write a[6];
+	return p.x;
+
+end func1
+
+
+write func1(2);

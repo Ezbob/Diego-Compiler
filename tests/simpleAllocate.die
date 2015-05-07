@@ -2,7 +2,7 @@ var list : array of int;
 
 allocate list of length 32;
 
-list[2] = 5;
+list[2] = 3;
 list[3] = 6;
 
 write list[2] + list[3];

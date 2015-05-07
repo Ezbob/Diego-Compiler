@@ -384,7 +384,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.assignS.variable->kind){
 
 				case indexing_V_K:
-					printf("%s\n", "INDEXING");
 					arg2 = IR_builder_variable(st->value.assignS.variable);
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 					
@@ -396,6 +395,21 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 					break;
+
+				case dot_V_K:
+
+					arg1 = IR_builder_expression(st->value.assignS.exp);
+					arg2 = IR_builder_variable(st->value.assignS.variable);
+
+					append_element( 
+						ir_lines,
+						make_instruction_movl(
+							arg1,
+							arg2
+						)
+					);
+					break;
+
 				default:
 					printf("%s\n", "DEFAULT");
 					arg1 = IR_builder_expression(st->value.assignS.exp);
@@ -458,102 +472,189 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case allocate_S_K:
-			if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
-				
-				if(get_length(data_lines) == 0)	{ // init heap counter
-					append_element(
-						ir_lines, 
-						make_instruction_movl(
-							make_argument_label("$heap"),
-							make_argument_label("(heapNext)")		
+
+			switch(st->value.allocateS.variable->symboltype->type){
+
+				case SYMBOL_ARRAY:
+					if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
+						
+						if(get_length(data_lines) == 0)	{ // init heap counter
+							append_element(
+								ir_lines, 
+								make_instruction_movl(
+									make_argument_label("$heap"),
+									make_argument_label("(heapNext)")		
+									)
+							);
+						}
+
+						// put check out of memory here
+
+						char *address_of_id = calloc(strlen(st->value.
+						allocateS.variable->value.id) + 4, sizeof(char));
+
+						sprintf(address_of_id, "(%s)",st->value.
+							allocateS.variable->value.id);
+
+						append_element(
+							ir_lines,
+							make_instruction_movl(
+								make_argument_label("$heapNext"),
+								make_argument_label(address_of_id)
 							)
-					);
+						);
+
+						arg1 = IR_builder_expression(st->value.allocateS.
+							opt_length->value.exp); // length of-result
+
+						arg2 = make_argument_tempregister(current_temporary++);
+
+						append_element(
+							ir_lines,
+							make_instruction_pushl(
+								arg2,
+								NULL
+							)
+						);
+
+						append_element( // xored to get zero
+							ir_lines,
+							make_instruction_xor(
+								arg2,
+								arg2
+							)
+						);
+
+						append_element(
+							ir_lines,
+							make_instruction_movl(
+								arg1,
+								make_argument_labelAddring(
+									st->value.allocateS.variable->value.id,
+									arg2
+								)
+							)
+						);
+
+						append_element( // first element is the length so incl
+							ir_lines,
+							make_instruction_incl(
+								arg1
+							)
+						);
+
+						// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+						append_element(
+							ir_lines,
+							make_instruction_imul(
+								make_argument_constant(WORDSIZE),
+								arg1
+							)
+						);
+
+						append_element(
+							ir_lines, // add to the next pointer
+							make_instruction_addl(
+								arg1, 
+								make_argument_label("(heapNext)")
+							)
+						);
+
+						append_element(
+							ir_lines,
+							make_instruction_popl(
+								arg2,
+								NULL
+							)
+						);
+					
+						append_element(data_lines,st);
+					}else if( st->value.allocateS.opt_length->kind == empty_OL_K ) {
+							// do something else?
+					}
+					break;
+
+				case SYMBOL_RECORD:
+
+						if(get_length(data_lines) == 0)	{ // init heap counter
+							append_element(
+								ir_lines, 
+								make_instruction_movl(
+									make_argument_label("$heap"),
+									make_argument_label("(heapNext)")		
+									)
+							);
+						}
+
+						char *address_of_id = calloc(strlen(st->value.
+						allocateS.variable->value.id) + 4, sizeof(char));
+
+						sprintf(address_of_id, "(%s)",st->value.
+							allocateS.variable->value.id);
+
+						append_element(
+							ir_lines,
+							make_instruction_movl(
+								make_argument_label("$heapNext"),
+								make_argument_label(address_of_id)
+							)
+						);
+
+						arg1 = make_argument_constant(st->value.allocateS.
+							opt_length->emptyLength); // length of-result
+
+
+
+						arg2 = make_argument_tempregister(current_temporary++);
+
+						append_element(
+							ir_lines,
+							make_instruction_pushl(
+								arg2,
+								NULL
+							)
+						);
+
+
+						append_element(
+							ir_lines,
+							make_instruction_movl(
+								arg1,
+								arg2
+							)
+						);
+
+						// type check maybe? but symboltype of variabe is SYMBOL_RECORD
+						append_element(
+							ir_lines,
+							make_instruction_imul(
+								make_argument_constant(WORDSIZE),
+								ebx
+							)
+						);
+
+						append_element(
+							ir_lines, // add to the next pointer
+							make_instruction_addl(
+								ebx, 
+								make_argument_label("(heapNext)")
+							)
+						);
+
+						append_element(
+							ir_lines,
+							make_instruction_popl(
+								arg2,
+								NULL
+							)
+						);
+				
+						append_element(data_lines,st);
+					break;
+
+					default:
+						break;
 				}
-
-				// put check out of memory here
-
-				char *address_of_id = calloc(strlen(st->value.
-				allocateS.variable->value.id) + 4, sizeof(char));
-
-				sprintf(address_of_id, "(%s)",st->value.
-					allocateS.variable->value.id);
-
-				append_element(
-					ir_lines,
-					make_instruction_movl(
-						make_argument_label("$heapNext"),
-						make_argument_label(address_of_id)
-					)
-				);
-
-				arg1 = IR_builder_expression(st->value.allocateS.
-					opt_length->value.exp); // length of-result
-
-				arg2 = make_argument_tempregister(current_temporary++);
-
-				append_element(
-					ir_lines,
-					make_instruction_pushl(
-						arg2,
-						NULL
-					)
-				);
-
-				append_element( // xored to get zero
-					ir_lines,
-					make_instruction_xor(
-						arg2,
-						arg2
-					)
-				);
-
-				append_element(
-					ir_lines,
-					make_instruction_movl(
-						arg1,
-						make_argument_labelAddring(
-							st->value.allocateS.variable->value.id,
-							arg2
-						)
-					)
-				);
-
-				append_element( // first element is the length so incl
-					ir_lines,
-					make_instruction_incl(
-						arg1
-					)
-				);
-
-				// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
-				append_element(
-					ir_lines,
-					make_instruction_imul(
-						make_argument_constant(WORDSIZE),
-						arg1
-					)
-				);
-
-				append_element(
-					ir_lines, // add to the next pointer
-					make_instruction_addl(
-						arg1, 
-						make_argument_label("(heapNext)")
-					)
-				);
-
-				append_element(
-					ir_lines,
-					make_instruction_popl(
-						arg2,
-						NULL
-					)
-				);
-			
-				append_element(data_lines,st);
-			}else if( st->value.allocateS.opt_length->kind == empty_OL_K ) {
-					// do something else?
-			}
 			break;
 
 		case while_S_K:
@@ -608,7 +709,8 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	SYMBOL *symbol;
 	ARGUMENT *arg;
 	ARGUMENT *resultOfSubExp;
-	char *address_of_id;
+	ARGUMENT *address_of_id;
+	SYMBOLTABLE *tmpTable;
 	
 	switch (var->kind){
 		case id_V_K:
@@ -633,6 +735,31 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			return address_of_id;
 
 			break;
+
+		case dot_V_K:
+
+				if((symbol = getSymbol(var->symboltable, var->value.dotV.variable->value.id)) != NULL){
+					tmpTable = symbol->symboltype->child;
+				}
+
+				if((symbol = getSymbol(tmpTable, var->value.dotV.id)) != NULL){
+					resultOfSubExp = make_argument_constant(symbol->offset);
+				}
+
+				arg = make_argument_tempregister(current_temporary++);
+
+				append_element(ir_lines,
+						make_instruction_movl(
+							resultOfSubExp,
+							arg
+						)
+				);
+
+				address_of_id = make_argument_labelAddring(
+							var->value.dotV.variable->value.id,
+							arg
+						);
+			return address_of_id;
 		default:
 			fprintf(stderr, "Error: variable kind not supported\n" );
 			arg = NULL; // this will probably

@@ -5,6 +5,7 @@
 
 typedef struct SYMBOLTYPE {
   int visited;
+  struct SYMBOLTABLE *child;
   enum {    SYMBOL_FUNCTION, 
         SYMBOL_INT, 
         SYMBOL_BOOL, 
