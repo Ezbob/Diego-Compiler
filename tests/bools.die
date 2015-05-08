@@ -1,10 +1,15 @@
-var a : bool, b : bool;
+var a : bool, b : bool, c : bool;
 
 a = true;
 b = false;
 
-if (a != b) then {
+c = !(a != b);
+
+write c;
+(*
+if (a == b) then {
 	write a;
 } else {
 	write b;
 }
+*)

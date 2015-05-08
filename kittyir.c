@@ -511,7 +511,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				default:
-				//	printf("%s\n", "DEFAULT");
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 
 					SYMBOL *symbol = getSymbol(st->symboltable,st->value
@@ -1193,6 +1192,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	IR_INSTRUCTION *instr;
 	SYMBOL *symbol;
 	int params;
+	int tmp;
+	char *endlabelstring;
+	char *falselabel;
 
 	switch(term->kind){
 		case num_T_K:
@@ -1263,13 +1265,70 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return returnarg; // by convention eax holds return values
 
 		case termBang_T_K:
+			tmp = getNextLabel();
 			arg1 = IR_builder_term(term->value.term);
-			arg2 = make_argument_tempregister(current_temporary++);
-			IR_INSTRUCTION *neg = make_instruction_notl(arg1);
-			append_element(ir_lines, neg);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2;
+
+			falselabel = calloc(16,sizeof(char));
+			endlabelstring = calloc(16,sizeof(char));
+
+			sprintf(falselabel,"negf%d",tmp);
+			sprintf(endlabelstring, "nege%d",tmp);
+
+			append_element( // compaire with zero(false)
+				ir_lines,
+				make_instruction_cmp( 
+					make_argument_constant(0),
+					arg1
+					)
+				);
+
+			append_element( // goto false label if it's not zero
+				ir_lines,
+				make_instruction_jne(
+					falselabel
+					)
+				);
+
+			append_element( // since it's zero add 1 to negate
+				ir_lines,
+				make_instruction_addl(
+					make_argument_constant(1),
+					arg1
+					)
+				);
+
+			append_element( // get to the end of the negate statement
+				ir_lines,
+				make_instruction_jmp(
+					endlabelstring
+					)
+				);
+
+			append_element( // here goes the false label
+				ir_lines,
+				make_instruction_label(
+					make_argument_label(falselabel),
+					NULL
+					)
+				);
+
+			append_element( // since it's one make it zero
+				ir_lines,
+				make_instruction_xor(
+					arg1,
+					arg1
+					)
+				);
+
+			append_element( // this is end (label) !
+				ir_lines,
+				make_instruction_label(
+					make_argument_label(endlabelstring),
+					NULL
+					)
+				);
+			
+			return arg1;
 
 		case expresPipes_T_K:
 			params = 0;

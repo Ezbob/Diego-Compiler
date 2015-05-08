@@ -3,6 +3,10 @@ var list1 : array of int, count : int;
 allocate list1 of length 10; 	
 count = 0;
 
+write |list1|;
+
+write list1[3];
+
 while (count < 2) do {
 	list1[count] = count + 2;
 	write list1[count];
