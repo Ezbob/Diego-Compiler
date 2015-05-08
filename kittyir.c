@@ -290,6 +290,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 	char *truewhilestring;
 	char *endlabelstring;
 	char *elselabel;
+	char *printlabel;
+	char *falselabel;
+	char *truelabel;
 
 	ARGUMENT *returnvalue;
 	ARGUMENT *arg1;
@@ -316,8 +319,109 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case print_S_K: 
 			switch(st->value.exp->symboltype->type){
 
-				case SYMBOL_INT:
 				case SYMBOL_BOOL:
+					
+					// generating argument for boolean expression
+					arg1 = IR_builder_expression(st->value.exp);
+
+					tmp = getNextLabel();
+
+					falselabel = calloc(16,sizeof(char));
+					truelabel = calloc(16,sizeof(char));
+					printlabel = calloc(16, sizeof(char));
+
+					sprintf(falselabel,"bfalse%d", tmp );
+					sprintf(truelabel, "btrue%d",tmp);
+					sprintf(printlabel,"printbool%d",tmp);
+
+					append_element( // compaire boolean value to true
+						ir_lines,
+						make_instruction_cmp(
+							make_argument_constant(1),
+							arg1
+							)
+						);
+
+					append_element( // true has to be printed?
+						ir_lines,
+						make_instruction_jne(
+								falselabel
+							)
+						);
+
+					callerSave();
+
+					append_element(ir_lines, // making a push to the stack
+											// with result of expression
+						make_instruction_pushl(
+							arg1,
+							NULL
+							)
+						);
+
+					append_element( // true case here
+						ir_lines,
+						make_instruction_pushl(
+							make_argument_label("$formTRUE"),
+							NULL
+							)
+						);
+
+					append_element( // jmp to printf call 
+						ir_lines,
+						make_instruction_jmp(
+								printlabel
+							)
+						);
+
+					append_element( // false label section
+						ir_lines,
+						make_instruction_label(
+							make_argument_label(falselabel),
+							NULL
+							)
+						);
+
+					callerSave();
+					
+					append_element(ir_lines, // making a push to the stack
+											// with result of expression
+						make_instruction_pushl(
+							arg1,
+							NULL
+							)
+						);
+
+					append_element( // false case here
+						ir_lines,
+						make_instruction_pushl(
+							make_argument_label("$formFALSE"),
+							NULL
+							)
+						);
+
+					append_element( // printing section
+						ir_lines,
+						make_instruction_label(
+							make_argument_label(printlabel),
+							NULL
+							)
+						);
+
+					append_element( // call to print
+						ir_lines,
+						make_instruction_call(
+							arg1,
+							make_argument_label("printf")
+							)
+						);
+
+					moveStackpointer(2); // clean up
+					callerRestore();
+
+					break;
+
+				case SYMBOL_INT:
 				case SYMBOL_NULL:
 
 					//Push arguments for print then form for print
@@ -326,16 +430,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					params = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, params);
-
-					if(st->value.exp->value.term->kind == boolTrue_T_K){
-						arg3 = make_argument_label("$formTRUE");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
-						append_element(ir_lines, pushform);
-					} else if(st->value.exp->value.term->kind == boolFalse_T_K){
-						arg3 = make_argument_label("$formFALSE");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
-						append_element(ir_lines, pushform);						
-					} else if(st->value.exp->value.term->kind == null_T_K){
+		
+					if (st->value.exp->value.term->kind == null_T_K){
 						arg3 = make_argument_label("$formNULL");
 						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
 						append_element(ir_lines, pushform);
@@ -350,32 +446,33 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, call);
 
 					moveStackpointer(2);
+					callerRestore();
 
 					break;
 
 				case SYMBOL_ARRAY:
 					//	printf("%s\n", "IN WRITE");
-						callerSave();
-						arg1 = IR_builder_expression(st->value.exp);
+					callerSave();
+					arg1 = IR_builder_expression(st->value.exp);
 
-						append_element(
-							ir_lines,
-							make_instruction_pushl(
-								arg1,
-								NULL
-							)
-						);
+					append_element(
+						ir_lines,
+						make_instruction_pushl(
+							arg1,
+							NULL
+						)
+					);
 
-						arg3 = make_argument_label("$formNUM");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
-						append_element(ir_lines, pushform);
-						arg2 = make_argument_label("printf");
-						call = make_instruction_call(NULL, arg2);
-						append_element(ir_lines, call);
+					arg3 = make_argument_label("$formNUM");
+					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+					append_element(ir_lines, pushform);
+					arg2 = make_argument_label("printf");
+					call = make_instruction_call(NULL, arg2);
+					append_element(ir_lines, call);
 
-						moveStackpointer(2);
-						callerRestore();
-
+					moveStackpointer(2);
+					callerRestore();
+					break;
 				default:
 				//	printf("%s\n", "DEFAULT CASE PRINT");
 					break;
@@ -501,7 +598,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				make_instruction_label(
 					make_argument_label(endlabelstring), 
 					NULL
-				)
+					)
 			);
 
 			break;

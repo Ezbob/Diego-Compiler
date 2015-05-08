@@ -1,0 +1,10 @@
+var a : bool, b : bool;
+
+a = true;
+b = false;
+
+if (a != b) then {
+	write a;
+} else {
+	write b;
+}
