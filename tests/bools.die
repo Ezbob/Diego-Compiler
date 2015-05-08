@@ -1,15 +1,15 @@
-var a : bool, b : bool, c : bool;
+var a : bool, b : bool, count : int,
+c : bool, d : array of bool;
 
+allocate d of length (10);
 a = true;
 b = false;
 
-c = !(a != b);
+count = 0;
 
-write c;
-(*
-if (a == b) then {
-	write a;
-} else {
-	write b;
+while (count < 10) do {
+	write d[count];
+	count = count + 1;	
 }
-*)
+
+

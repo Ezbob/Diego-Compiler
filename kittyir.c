@@ -282,7 +282,7 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 	}
 }
 
-//Missing allocate, assign, print(records and arrays)
+
 void IR_builder_statement ( STATEMENT *st ) {
 	int tmp = 0; 
 
@@ -510,15 +510,18 @@ void IR_builder_statement ( STATEMENT *st ) {
 					);
 					break;
 
-				default:
+				case id_V_K:
 					arg1 = IR_builder_expression(st->value.assignS.exp);
 
 					SYMBOL *symbol = getSymbol(st->symboltable,st->value
 						.assignS.variable->value.id);
 
-					if( local_variable_size >= WORDSIZE && symbol != NULL ) { 
-					// perhaps this needs a local var enum
-						symbol->offset = -1 * (local_variable_size / WORDSIZE);
+					if( symbol->offset == 0 && 
+						local_variable_size >= WORDSIZE && symbol != NULL ) { 
+						// assigning offsets in stack
+					
+						symbol->offset = -1 * (local_variable_size / 
+																	WORDSIZE);
 						local_variable_size -= WORDSIZE;
 					}
 					
@@ -527,10 +530,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 						make_instruction_movl (
 							arg1, 
 							make_argument_address ( 
-								symbol->offset * WORDSIZE
+								(symbol->offset * WORDSIZE)
+								)
 							)
-						)
-					);
+						);
+					break;
 				}
 			break;
 
@@ -1219,9 +1223,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element(ir_lines, instr);
 			return arg2; //Return arg2 to keep track of temps
 
-		case expresParent_T_K:
-			arg1 = IR_builder_expression(term->value.exp);
-			return arg1;
+		case expresParent_T_K: // paranteses just parses
+			return IR_builder_expression(term->value.exp);
 
 		case var_T_K:
 			arg1 = IR_builder_variable(term->value.var);
