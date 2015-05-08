@@ -164,11 +164,28 @@ void check_statement ( STATEMENT *st){
 			break;
 
 		case allocate_S_K:
-
+			
 			check_variable(st->value.allocateS.variable);
 			check_opt_length(st->value.allocateS.opt_length);
+			
+			if(st->value.allocateS.opt_length->kind == empty_OL_K &&
+			   st->value.allocateS.variable->symboltype->type != SYMBOL_RECORD) {
+				check_error_report("Only records can be allocated without length", st->lineno);
+			} else if (st->value.allocateS.opt_length->kind == empty_OL_K &&
+			   st->value.allocateS.variable->symboltype->type == SYMBOL_RECORD){
 
-			if(st->value.allocateS.variable->symboltype->type != SYMBOL_ARRAY ){
+				SYMBOL *childSymbol;
+				if((childSymbol = getSymbol(st->symboltable, st->value.allocateS.variable->value.id)) != NULL){
+					st->value.allocateS.opt_length->emptyLength = 
+													childSymbol->symboltype->child->temps;
+				}
+
+			}
+
+			if(st->value.allocateS.variable->symboltype->type == SYMBOL_INT ||
+			   st->value.allocateS.variable->symboltype->type == SYMBOL_BOOL ||
+			   st->value.allocateS.variable->symboltype->type == SYMBOL_NULL ||
+			   st->value.allocateS.variable->symboltype->type == SYMBOL_ID ){
 				check_error_report("Only arrays can be allocated", st->lineno);
 			}
 
@@ -179,10 +196,35 @@ void check_statement ( STATEMENT *st){
 			check_expression(st->value.assignS.exp);
 
 			SYMBOL *temp_sym;
+			SYMBOLTABLE *tmpTable;
+			//Checking if assignments are OK with record types
+			if(st->value.assignS.variable->kind == dot_V_K){
 
-			if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.id)) != NULL){
-				if(temp_sym->symboltype->type != st->value.assignS.exp->symboltype->type){
-					check_error_report("Invalid assignment", st->lineno);
+				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.dotV.variable->value.id)) != NULL){
+					tmpTable = temp_sym->symboltype->child;
+				}
+				
+				if((temp_sym = getSymbol(tmpTable, st->value.assignS.variable->value.id)) != NULL){
+
+					if(temp_sym->symboltype->type != st->value.assignS.exp->symboltype->type){
+						check_error_report("Invalid assignment", st->lineno);
+					} 
+				}
+				int i = 0;
+				int index = 0;
+				while(i < HASH_SIZE){
+					if(tmpTable->table[i] != NULL){
+						tmpTable->table[i]->offset = index;
+						index++;
+					}
+					i++;
+				}
+			} else { //Standard check
+
+				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.id)) != NULL){
+					if(temp_sym->symboltype->type != st->value.assignS.exp->symboltype->type){
+							check_error_report("Invalid assignment", st->lineno);
+					} 
 				}
 			}
 
@@ -240,7 +282,6 @@ void check_opt_else ( OPT_ELSE *opel){
 }
 
 void check_variable ( VAR *var){
-
 	SYMBOL *symbol;
 
 	switch(var->kind){
@@ -281,12 +322,12 @@ void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT;
 	SYMBOL *check;
+	SYMBOLTYPE *tmp;
 
 	switch(exp->kind){
 		case term_E_K:
 			check_term(exp->value.term);
-			symbolT = exp->value.term->symboltype;
-			exp->symboltype = symbolT;
+			 exp->symboltype = exp->value.term->symboltype;
 			break;
 
 		case plus_E_K:
@@ -502,18 +543,26 @@ int check_term ( TERM *term){
 
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
+	SYMBOLTABLE *tmpTable;
 
 	int count = 0;
 
 	switch(term->kind){
 		case var_T_K:
 			check_variable(term->value.var);
-			symbol = getSymbol(term->symboltable, term->value.var->value.id);
-			if(symbol != NULL) {
+			if(term->value.var->kind == dot_V_K){
+				tmpTable = getSymbol(term->symboltable, term->value.var->value.dotV.variable->value.id)->symboltype->child;
+				symbol = getSymbol(tmpTable, term->value.var->value.dotV.id);
 				term->symboltype = symbol->symboltype;
-			} else {
-				term->symboltype = term->value.var->symboltype;
+			} else{
+				symbol = getSymbol(term->symboltable, term->value.var->value.id);
+				if(symbol != NULL) {
+					term->symboltype = symbol->symboltype;
+				} else {
+					term->symboltype = term->value.var->symboltype;
+				}
 			}
+
 			break;
 
 		case actList_T_K:

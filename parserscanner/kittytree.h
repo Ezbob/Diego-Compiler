@@ -199,6 +199,7 @@ typedef struct OPT_LENGTH
 {
 	int lineno;
 	SYMBOLTABLE *symboltable;
+	int emptyLength;
 	enum { lengthof_OL_K, empty_OL_K } kind;
 	union { 
 		struct EXPRES *exp;

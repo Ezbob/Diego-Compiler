@@ -48,7 +48,7 @@ int main( void ) {
 			//begin_set(_main_);
 			fprintf(stderr, "%s\n", "Initializing typecheck phase");
 			begin_check(_main_);
-			//printer_body(_main_);
+			printer_body(_main_);
 			ir_codes = IR_build(_main_, globalTable);
 			//begin_register(ir_codes);
 			break;

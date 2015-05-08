@@ -91,6 +91,8 @@ void collect_type ( TYPE *type, SYMBOLTABLE *st){
 			symboltype->type = SYMBOL_RECORD;
 			type->symboltype = symboltype;
 			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st));
+			symboltype->child = type->value.var_decl_list->symboltable;
+			//dumpSymbolTable(symboltype->child);
 			break;
 	}
 }
@@ -132,14 +134,21 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 	vtype->symboltable = st;
 	collect_type(vtype->type, st);
-
+	//dumpSymbolTable(vtype->type->value.var_decl_list->symboltable);
 	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
 	if(vtype->symbol == NULL){
 		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 		exit(1);
 	}
+	SYMBOL *check;
+	if((check = getSymbol(vtype->symboltable, vtype->type->value.idconst)) != NULL){
+		vtype->symbol->symboltype = check->symboltype;
+		//dumpSymbolTable(vtype->symbol->symboltype->child);
+	} else {
+		vtype->symbol->realtype = vtype->type;
+	}
 	st->temps++;
-	vtype->symbol->realtype = vtype->type;
+	
 
 }
 
