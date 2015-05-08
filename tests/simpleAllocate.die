@@ -1,8 +1,20 @@
-var list : array of int;
+type uf = record of {
+	a : int,
+	b : int
+};
+var list : array of int, fun : uf;
 
+allocate fun;
 allocate list of length 32;
 
-list[2] = 3;
-list[3] = 6;
+fun.a = 0;
 
-write list[2] + list[3];
+while ( fun.a <= 10 ) do {
+
+	write fun.a;
+	fun.a = fun.a + 1;
+}
+
+list[2] = 3;
+
+write list[2] + fun.a;

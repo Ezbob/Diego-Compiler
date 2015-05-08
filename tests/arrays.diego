@@ -4,7 +4,7 @@ allocate list1 of length 10;
 count = 0;
 
 while (count < 2) do {
-	list1[count] = count;
+	list1[count] = count + 2;
 	write list1[count];
 	count = count + 1;
 }

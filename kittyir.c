@@ -289,6 +289,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	char *endwhilestring;
 	char *truewhilestring;
 	char *endlabelstring;
+	char *elselabel;
 
 	ARGUMENT *returnvalue;
 	ARGUMENT *arg1;
@@ -440,37 +441,69 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case ifbranch_S_K:
 			tmp = getNextLabel();
 
-			char *elselabel = calloc(32,sizeof(char));
-			char *endlabelstring = calloc(32,sizeof(char));
-
-			arg1 = IR_builder_expression(st->value.ifbranchS.exp);
+			elselabel = calloc(32,sizeof(char));
+			endlabelstring = calloc(32,sizeof(char));
 
 			sprintf(elselabel, "else%d", tmp);
 			sprintf(endlabelstring, "endIf%d", tmp);
 
-			falsearg = make_argument_label(elselabel);
-			endarg = make_argument_label(endlabelstring);
+			arg1 = IR_builder_expression(st->value.ifbranchS.exp); 
+				// generate code for boolean expression(s)
 
-			IR_INSTRUCTION *falselabel = make_instruction_label(falsearg, NULL);
-			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
+			append_element( //Comparison with "true" boolean value
+				ir_lines, 
+				make_instruction_cmp(
+					make_argument_constant(1), 
+					arg1
+					) 
+				);
 
-			compare = make_argument_constant(1); //Compare with true
-			IR_INSTRUCTION *cmpinstr = make_instruction_cmp(compare, arg1);
-			append_element(ir_lines ,cmpinstr);
-
-			IR_INSTRUCTION *jneinstr = make_instruction_jne(elselabel);
-			append_element(ir_lines, jneinstr);
+			if(st->value.ifbranchS.opt_else->kind != empty_OE_K){
+				append_element( // if not equal goto else part
+					ir_lines,
+					make_instruction_jne(elselabel) 
+				);
+			} else {
+				append_element( // if not equal goto end-of-if
+					ir_lines,
+					make_instruction_jne(endlabelstring) 
+				);
+			}
 
 			IR_builder_statement(st->value.ifbranchS.statement);
-			IR_INSTRUCTION *jmpend = make_instruction_jmp(endlabelstring);
-			append_element(ir_lines, jmpend);
+				// build statements in if-case
 
-			if(st->value.ifbranchS.opt_else->value.statement != NULL){
-				append_element(ir_lines, falselabel);
-				IR_builder_statement(st->value.ifbranchS.opt_else->value.statement);
+
+			if(st->value.ifbranchS.opt_else->kind != empty_OE_K){
+
+				append_element( // we have to jump over 
+									//else when if-case is true
+					ir_lines, 
+					make_instruction_jmp(
+						endlabelstring
+						)
+					);
+
+				append_element( // make else-label
+					ir_lines, 
+					make_instruction_label(
+						make_argument_label(elselabel),
+						NULL 
+					)
+				);
+
+				IR_builder_statement( // build else statements
+					st->value.ifbranchS.opt_else->value.statement);
 			}
 			
-			append_element(ir_lines, endlabel);
+			append_element( // end-of-if label
+				ir_lines, 
+				make_instruction_label(
+					make_argument_label(endlabelstring), 
+					NULL
+				)
+			);
+
 			break;
 
 		case allocate_S_K:

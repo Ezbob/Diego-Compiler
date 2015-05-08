@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include "parserscanner/y.tab.h"
 #include "parserscanner/kittytree.h"
 #include "typechecker/kittyweed.h"
@@ -29,7 +30,7 @@ struct SYMBOLTABLE *globalTable;
 struct SECTION *mainSection;
 struct linked_list *ir_codes;
 
-int main( void ) {
+int main(void) {
 
 	globalTable = initSymbolTable();
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
@@ -48,7 +49,9 @@ int main( void ) {
 			//begin_set(_main_);
 			fprintf(stderr, "%s\n", "Initializing typecheck phase");
 			begin_check(_main_);
-			printer_body(_main_);
+
+			//	printer_body(_main_);	
+			
 			ir_codes = IR_build(_main_, globalTable);
 			//begin_register(ir_codes);
 			break;
