@@ -20,8 +20,6 @@ extern SECTION *mainSection;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
-char functionlabel[MAXLABELSIZE];
-
 void initRegisters(){
 	eax = make_argument_register(r_eax, "eax");
 	ebx = make_argument_register(r_ebx, "ebx");
@@ -60,7 +58,8 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	mainSection = NEW(SECTION);
 	mainSection->symboltable = globalTable;
 	mainSection->temps = globalTable->temps;
-	mainSection->sectionName = calloc(32,sizeof(char));
+	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
+	
 	sprintf(mainSection->sectionName, "%s", "main");
 	SECTION *tmp2 = mainSection;
 	IR_builder_decl_list(_main_->decl_list);
@@ -108,11 +107,14 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	return ir_lines;
 }
 
-//TODO
 void IR_builder_function(FUNC *func) {
 
+	char *functionlabel = calloc(MAXLABELSIZE ,sizeof(char));
+
 	SYMBOL *symbol = getSymbol(globalTable, func->functionF.head->headH.id);
+
 	sprintf(functionlabel, "func%d", getNextFunction());
+
 	strcpy(symbol->uniquename, functionlabel);
 
 	sprintf(functionlabel, "%s", functionlabel);
@@ -130,10 +132,16 @@ void IR_builder_function(FUNC *func) {
 	mainSection->sectionName = calloc(32,sizeof(char));
 	sprintf(mainSection->sectionName, "%s", functionlabel);
 
-	ARGUMENT *func_label = make_argument_label(functionlabel);
-	IR_INSTRUCTION *func_main = make_instruction_label(func_label, NULL);
+
+	IR_INSTRUCTION *func_main = make_instruction_label(
+									make_argument_label(
+										functionlabel
+									), 
+									NULL
+								);
 
 	mainSection->first = func_main;
+
 	append_element(ir_lines, func_main);
 
 	
@@ -142,6 +150,15 @@ void IR_builder_function(FUNC *func) {
 
 	//Section is done, restore old section
 	mainSection = temp;
+
+	//move stackpointer and basepointer
+	calleeEnd();
+	local_variable_size = 0;
+	IR_INSTRUCTION *ret = make_instruction_ret();
+	mainSection->last = ret;
+
+	append_element(ir_lines, ret);
+
 }
 
 
@@ -193,23 +210,7 @@ void IR_builder_body (BODY *body) {
 	localVariableAllocation();
 
 	IR_builder_statement_list(body->statement_list);
-
-
-	//move stackpointer and basepointer
-	calleeEnd();
-	local_variable_size = 0;
-	IR_INSTRUCTION *ret = make_instruction_ret();
-	mainSection->last = ret;
-
-	append_element(ir_lines, ret);
-
 }
-
-/*
-void IR_builder_par_decl_list ( PAR_DECL_LIST *pdecl) {
-	return;
-}
-*/
 
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	switch(vdecl->kind){
@@ -227,14 +228,20 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
  void IR_builder_var_type ( VAR_TYPE * vtype ){
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
-			local_variable_size += WORDSIZE; // 4 bytes
+			local_variable_size += WORDSIZE;
 			break;
  
 		case bool_TY_K:
-			local_variable_size += WORDSIZE; // maybe too large
+			local_variable_size += WORDSIZE; 
 			break;
 
-		default: // TODO: need to decide size of other types
+		case arrayof_TY_K:
+			// local_variable_size += WORDSIZE; // parse by reference but we have to find out if it's parameters 
+			break;
+		case recordof_TY_K:
+			// local_variable_size += WORDSIZE; // like arrays
+			break;
+		default:
 			break;
 	}
  }
@@ -256,11 +263,9 @@ void IR_builder_declaration ( DECLARATION *decl) {
 	switch(decl->kind){
 		case typeassign_D_K:
 			break;
-
 		case func_D_K:
 			IR_builder_function(decl->value.function);
 			break;
-
 		case var_D_K:
 			IR_builder_var_decl_list(decl->value.var_decl_list);
 			break; 
@@ -326,9 +331,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					tmp = getNextLabel();
 
-					falselabel = calloc(16,sizeof(char));
-					truelabel = calloc(16,sizeof(char));
-					printlabel = calloc(16, sizeof(char));
+					falselabel = calloc(MAXLABELSIZE,sizeof(char));
+					truelabel = calloc(MAXLABELSIZE,sizeof(char));
+					printlabel = calloc(MAXLABELSIZE, sizeof(char));
 
 					sprintf(falselabel,"bfalse%d", tmp );
 					sprintf(truelabel, "btrue%d",tmp);
@@ -541,8 +546,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case ifbranch_S_K:
 			tmp = getNextLabel();
 
-			elselabel = calloc(32,sizeof(char));
-			endlabelstring = calloc(32,sizeof(char));
+			elselabel = calloc(MAXLABELSIZE,sizeof(char));
+			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(elselabel, "else%d", tmp);
 			sprintf(endlabelstring, "endIf%d", tmp);
@@ -796,8 +801,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			tmp = getNextLabel();
 
-			truewhilestring = calloc(32,sizeof(char));
-			endlabelstring = calloc(32,sizeof(char));
+			truewhilestring = calloc(MAXLABELSIZE,sizeof(char));
+			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(truewhilestring, "whileStart%d", current_label);
 			sprintf(endlabelstring, "whileEnd%d", current_label);
@@ -972,7 +977,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case divide_E_K:
 			tmp = getNextLabel();
 
-			char *zeroden = calloc(32,sizeof(char));
+			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(zeroden, "zeroDen%d", tmp);
 			ARGUMENT *zerodenarg = make_argument_label(zeroden);
 			IR_INSTRUCTION *zerodenlabel = make_instruction_label(zerodenarg, NULL);
@@ -1038,8 +1043,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case boolgeq_E_K:
 			result = make_argument_tempregister(current_temporary++);
 
-			char *booltruelabel = calloc(32,sizeof(char));
-			char *boolendlabel = calloc(32,sizeof(char));
+			char *booltruelabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *boolendlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(booltruelabel, "booOPtrue%d", current_label);
 			truearg = make_argument_label(booltruelabel);
@@ -1105,8 +1110,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case booland_E_K:
 			tmp = getNextLabel();
 
-			char *andFalselabel = calloc(32,sizeof(char));
-			char *andEndlabel = calloc(32,sizeof(char));
+			char *andFalselabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *andEndlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(andFalselabel, "ANDfalse%d", tmp);
 			falsearg = make_argument_label(andFalselabel);
@@ -1146,8 +1151,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case boolor_E_K:
 			tmp = getNextLabel();
 
-			char *orOKlabel = calloc(32,sizeof(char));
-			char *orEndlabel = calloc(32,sizeof(char));
+			char *orOKlabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *orEndlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(orOKlabel, "ORtrue%d", tmp);
 			truearg = make_argument_label(orOKlabel);
@@ -1271,8 +1276,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			tmp = getNextLabel();
 			arg1 = IR_builder_term(term->value.term);
 
-			falselabel = calloc(16,sizeof(char));
-			endlabelstring = calloc(16,sizeof(char));
+			falselabel = calloc(MAXLABELSIZE,sizeof(char));
+			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(falselabel,"negf%d",tmp);
 			sprintf(endlabelstring, "nege%d",tmp);
@@ -1335,7 +1340,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case expresPipes_T_K:
 			params = 0;
-			char *pipeEnd = calloc(32,sizeof(char));
+			char *pipeEnd = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
 			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
 			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeArg, NULL);

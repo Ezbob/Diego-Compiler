@@ -1,15 +1,17 @@
-var a : bool, b : bool, count : int,
-c : bool, d : array of bool;
+func BooleanFunction (a : bool, b : bool) : bool
+	
+	if (a != b) then {
+		return a;
+	} else {
+		return b;
+		write 42 + 13;
+	}
+	write 42;
+end BooleanFunction
 
-allocate d of length (10);
-a = true;
-b = false;
+var an : int, bn : int;
 
-count = 0;
+an = 2231;
+bn = 2391;
 
-while (count < 10) do {
-	write d[count];
-	count = count + 1;	
-}
-
-
+write BooleanFunction(an != bn,false);
