@@ -109,11 +109,14 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 void IR_builder_function(FUNC *func) {
 
+	int functiondId = getNextFunction();
 	char *functionlabel = calloc(MAXLABELSIZE ,sizeof(char));
+	char *functionendlabel = calloc(MAXLABELSIZE ,sizeof(char));
 
 	SYMBOL *symbol = getSymbol(globalTable, func->functionF.head->headH.id);
 
-	sprintf(functionlabel, "func%d", getNextFunction());
+	sprintf(functionlabel, "func%d", functiondId);
+	sprintf(functionendlabel,"endFunc%d", functiondId);
 
 	strcpy(symbol->uniquename, functionlabel);
 
@@ -129,21 +132,23 @@ void IR_builder_function(FUNC *func) {
 	mainSection->nextSection->prevSection = mainSection;
 	mainSection = mainSection->nextSection;
 	mainSection->symboltable = globalTable;
-	mainSection->sectionName = calloc(32,sizeof(char));
+	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
 	sprintf(mainSection->sectionName, "%s", functionlabel);
 
 
-	IR_INSTRUCTION *func_main = make_instruction_label(
-									make_argument_label(
-										functionlabel
-									), 
-									NULL
-								);
+	IR_INSTRUCTION *func_main = 
+		make_instruction_label( // start function label
+			make_argument_label(
+				functionlabel
+			), 
+			NULL
+		);
 
 	mainSection->first = func_main;
 
 	append_element(ir_lines, func_main);
 
+	calleeStart(); // shift in stackframe
 	
 	IR_builder_head(func->functionF.head);
 	IR_builder_body(func->functionF.body);
@@ -151,7 +156,17 @@ void IR_builder_function(FUNC *func) {
 	//Section is done, restore old section
 	mainSection = temp;
 
-	//move stackpointer and basepointer
+	append_element( // end of function
+		ir_lines,
+		make_instruction_label(
+			make_argument_label(functionendlabel),
+			NULL
+			)
+		);
+
+
+	calleeRestore();
+	callerRestore();
 	calleeEnd();
 	local_variable_size = 0;
 	IR_INSTRUCTION *ret = make_instruction_ret();
@@ -203,11 +218,9 @@ void IR_builder_body (BODY *body) {
  
  	IR_builder_decl_list(body->decl_list);
 
-	//move stackpointer and basepointer
-	calleeStart();
 	calleeSave();
-
 	localVariableAllocation();
+	callerSave();
 
 	IR_builder_statement_list(body->statement_list);
 }
@@ -291,7 +304,6 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst) {
 void IR_builder_statement ( STATEMENT *st ) {
 	int tmp = 0; 
 
-	char *endwhilestring;
 	char *truewhilestring;
 	char *endlabelstring;
 	char *elselabel;
@@ -303,10 +315,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	ARGUMENT *arg3;
-	ARGUMENT *truearg;
-	ARGUMENT *falsearg;
-	ARGUMENT *endarg;
-	ARGUMENT *compare;
 
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
@@ -317,8 +325,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			returnvalue = IR_builder_expression(st->value.exp);
 			IR_INSTRUCTION *movl = make_instruction_movl(returnvalue, eax);
 			append_element(ir_lines, movl);
-			calleeRestore();
-			
 			break;
 
 		case print_S_K: 
@@ -861,9 +867,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		default:
-		//	printf("%s\n", "GOT NOTHING");
 			break;
-
 	}
 } 
 
@@ -899,9 +903,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 							resultOfSubExp
 						);
 			return arg1;
-
-			break;
-
 		case dot_V_K:
 
 				if((symbol = getSymbol(var->symboltable, var->value.dotV.variable->value.id)) != NULL){

@@ -35,8 +35,6 @@ BODY *begin_weed(BODY *body){
 
 }
 
-
-/* TODO */
 FUNC *weed_function ( FUNC *function ){
 
 	FUNC *assertion;
@@ -53,10 +51,12 @@ FUNC *weed_function ( FUNC *function ){
 	weed_body(function->functionF.body);
 
 
-	if( function->functionF.body->statement_list->value.compoundSL.statement->foundReturn == 0 ||
-	    function->functionF.body->statement_list == NULL ){
+	if( function->functionF.body->statement_list->value.compoundSL.
+		statement->foundReturn == 0 || function->functionF.body->
+		statement_list == NULL ){
 
-		weed_error_report("No return in function", function->functionF.head->lineno);
+		weed_error_report("No return in function", 
+						function->functionF.head->lineno);
 	}
 
 	if((assertion = funcStackPop(the_stack)) == NULL){
@@ -78,7 +78,6 @@ HEAD *weed_head ( HEAD *header){
 }
 
 TYPE *weed_type ( TYPE *type){
-
 	switch(type->kind){
 
 		case arrayof_TY_K:
@@ -86,24 +85,24 @@ TYPE *weed_type ( TYPE *type){
 			break;
 
 		case recordof_TY_K:
-			type->value.var_decl_list = weed_var_decl_list(type->value.var_decl_list);
+			type->value.var_decl_list = 
+				weed_var_decl_list(type->value.var_decl_list);
 			break;
 
 		default:
 			break; //id, int, bool
 	}
-
 	return type;
 
 }
 
 PAR_DECL_LIST *weed_par_decl_list ( PAR_DECL_LIST *pdecl){
 
-
 	switch(pdecl->kind){
 
 		case varType_PDL_K:
-			pdecl->value.var_decl_list = weed_var_decl_list(pdecl->value.var_decl_list);
+			pdecl->value.var_decl_list = weed_var_decl_list(
+				pdecl->value.var_decl_list);
 			break;
 
 		case empty_PDL_K:
@@ -115,18 +114,14 @@ PAR_DECL_LIST *weed_par_decl_list ( PAR_DECL_LIST *pdecl){
 }
 
 VAR_DECL_LIST *weed_var_decl_list ( VAR_DECL_LIST *vdecl){ 
-
 	switch(vdecl->kind){
-
 		case comma_VDL_K:
-			if(vdecl->value.commaVDL.var_decl_list != NULL){
-				//vdecl->value.var_type = weed_var_type(vdecl->value.var_type);
-				vdecl->value.commaVDL.var_decl_list = weed_var_decl_list(vdecl->value.commaVDL.var_decl_list);
-			}
-		break;
+			weed_var_decl_list(vdecl->value.commaVDL.var_decl_list);
+			weed_var_type(vdecl->value.commaVDL.var_type);
+			break;
 
 		case var_VDL_typeK:
-			vdecl->value.var_type = weed_var_type(vdecl->value.var_type);
+			weed_var_type(vdecl->value.var_type);
 			break;
 
 	}
@@ -136,7 +131,7 @@ VAR_DECL_LIST *weed_var_decl_list ( VAR_DECL_LIST *vdecl){
 
 VAR_TYPE *weed_var_type ( VAR_TYPE *vtype){
 
-	vtype->type = weed_type(vtype->type);
+	weed_type(vtype->type);
 
 	return vtype;
 }
@@ -147,7 +142,7 @@ OPT_LENGTH *weed_opt_length ( OPT_LENGTH *oplen){
 	switch(oplen->kind){
 
 		case lengthof_OL_K:
-			oplen->value.exp = weed_expression(oplen->value.exp);
+			weed_expression(oplen->value.exp);
 			break;
 
 		case empty_OL_K:
@@ -166,15 +161,17 @@ VAR *weed_variable ( VAR *var){
 			break;
 
 		case indexing_V_K:
-			var->value.indexingV.variable = weed_variable(var->value.indexingV.variable);
-			var->value.indexingV.exp = weed_expression(var->value.indexingV.exp);
+			var->value.indexingV.variable = 
+				weed_variable(var->value.indexingV.variable);
+			var->value.indexingV.exp = 
+				weed_expression(var->value.indexingV.exp);
 			break;
 
 		case dot_V_K:
-			var->value.dotV.variable = weed_variable(var->value.dotV.variable);
+			var->value.dotV.variable = 
+				weed_variable(var->value.dotV.variable);
 			break;
 	}
-
 
 	return var;
 
@@ -192,7 +189,6 @@ ACT_LIST *weed_act_list ( ACT_LIST *actlst){
 			break;
 	}
 
-
 	return actlst;
 
 }
@@ -207,41 +203,34 @@ EXP_LIST *weed_expression_list ( EXP_LIST *explst){
 			break;
 
 		case commalist_EL_K:
-			explst->value.commaEL.exp = weed_expression(explst->value.commaEL.exp);
-			explst->value.commaEL.explist = weed_expression_list(explst->value.commaEL.explist);
+			explst->value.commaEL.exp = weed_expression(
+				explst->value.commaEL.exp);
+			explst->value.commaEL.explist = weed_expression_list(
+				explst->value.commaEL.explist);
 			break;
 	}
-
 
 	return explst;
 
 }
 
-
-
-
-/* TODO */
 BODY *weed_body ( BODY *body ){
-
 	body->decl_list = weed_decl_list(body->decl_list);
+
 	body->statement_list = weed_statement_list(body->statement_list);
 
 	return body;
 
 }
 
-/* TODO */
 DECL_LIST *weed_decl_list ( DECL_LIST *dlst ){
 	switch(dlst->kind){
 		case compound_DL_K:
-			dlst->value.compoundDL.decl_list = weed_decl_list(dlst->value.compoundDL.decl_list);
-			dlst->value.compoundDL.declaration = weed_declaration(dlst->value.compoundDL.declaration);
+			weed_decl_list(dlst->value.compoundDL.decl_list);
+			weed_declaration(dlst->value.compoundDL.declaration);
 			break;
 
 		case empty_DL_K:
-			break;
-
-		default:
 			break;
 	}
 
@@ -274,15 +263,12 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 }
 
 STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
-
-	/*if(slst == NULL){
-		return NULL;
-	}*/
-
 	
 	if(slst->kind == compound_SL_K){
-		slst->value.compoundSL.statement_list = weed_statement_list(slst->value.compoundSL.statement_list);
-		slst->value.compoundSL.statement = weed_statement(slst->value.compoundSL.statement);
+		slst->value.compoundSL.statement_list = 
+			weed_statement_list(slst->value.compoundSL.statement_list);
+		slst->value.compoundSL.statement = 
+			weed_statement(slst->value.compoundSL.statement);
 	} else {
 			slst->value.statement = weed_statement(slst->value.statement);
 	}
@@ -297,7 +283,8 @@ STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
 	 * but returns after a return is still not weeded
 	 */
 	if(slst->kind == compound_SL_K &&
-	   slst->value.compoundSL.statement_list->value.statement->foundReturn == 1) {
+	   slst->value.compoundSL.statement_list->value.
+	   		statement->foundReturn == 1) {
 		return slst->value.compoundSL.statement_list;
 	}
 
@@ -313,11 +300,13 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 	switch(st->kind){
 		case return_S_K:
+			
 			st->value.returnS.exp = weed_expression(st->value.returnS.exp);
 			if(the_stack->top == NULL){
 				weed_error_report("Return not associated with function",
 																st->lineno);
 			}
+
 			st->value.returnS.function = the_stack->top->function;
 			st->foundReturn = 1;
 			return st;
@@ -328,19 +317,21 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 																		.exp);
 			st->value.ifbranchS.statement = weed_statement(st->value.ifbranchS
 																  .statement);
+			
 			st->value.ifbranchS.opt_else = weed_opt_else(st->value.ifbranchS
 																   .opt_else);
+			
 			if(st->value.ifbranchS.opt_else->kind == empty_OE_K &&
 			   st->value.ifbranchS.statement == NULL){
-					return NULL;
+					break;
 			}
 
-			//Case where there exists a return in both if and else, can ignore everything after the if/else
-			if(st->value.ifbranchS.statement->foundReturn == 1 &&
-			   st->value.ifbranchS.opt_else->value.statement->foundReturn == 1 &&
-         st->value.ifbranchS.opt_else->kind != empty_OE_K &&
-			   st->value.ifbranchS.statement != NULL) {
-
+			// Case where there exists a return in both if and else, 
+			// can ignore everything after the if/else
+			if(st->value.ifbranchS.statement->foundReturn == 1 
+			   && st->value.ifbranchS.opt_else->kind != empty_OE_K 
+			   && st->value.ifbranchS.opt_else->value.statement->
+			   	foundReturn == 1 && st->value.ifbranchS.statement != NULL) {
 			   st->foundReturn = 1;
 
 			}
@@ -352,7 +343,8 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 					break;
 				}
 
-				if (ifTerm->kind == boolFalse_T_K && (st->value.ifbranchS.opt_else->kind != empty_OE_K)){
+				if (ifTerm->kind == boolFalse_T_K && (st->value.
+					ifbranchS.opt_else->kind != empty_OE_K)){
 					// if FALSE then we should only look at else
 					return st->value.ifbranchS.opt_else->value.statement;
 				}else if (ifTerm->kind == boolTrue_T_K){
@@ -360,22 +352,25 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 					return st->value.ifbranchS.statement;
 				}
 			}
-
 			break;
 		case statement_list_S_K:
-			st->value.statement_list = weed_statement_list(st->value.statement_list);
+			st->value.statement_list = 
+				weed_statement_list(st->value.statement_list);
 			if(st->value.statement_list == NULL){
-				return NULL;
+				break;
 			}
 			//Look for returns
 			if(st->value.statement_list != NULL){
-				st->foundReturn = st->value.statement_list->value.statement->foundReturn;
+				st->foundReturn = 
+					st->value.statement_list->value.statement->foundReturn;
 			}
 			break;
 
 		case assign_S_K:
-			st->value.assignS.variable = weed_variable(st->value.assignS.variable);
-			st->value.assignS.exp = weed_expression(st->value.assignS.exp);
+			st->value.assignS.variable = 
+				weed_variable(st->value.assignS.variable);
+			st->value.assignS.exp = 
+				weed_expression(st->value.assignS.exp);
 			break;
 
 		case print_S_K:
@@ -383,13 +378,15 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			break;
 
 		case allocate_S_K:
-			st->value.allocateS.variable = weed_variable(st->value.allocateS.variable);
-			st->value.allocateS.opt_length = weed_opt_length(st->value.allocateS.opt_length);
+			st->value.allocateS.variable = 
+				weed_variable(st->value.allocateS.variable);
+			st->value.allocateS.opt_length = 
+				weed_opt_length(st->value.allocateS.opt_length);
 			break;
 
 		case while_S_K:
-			st->value.whileS.statement = weed_statement(st->value.whileS.statement);
-
+			st->value.whileS.statement = 
+				weed_statement(st->value.whileS.statement);
 		default:
 			break;
 
@@ -743,18 +740,15 @@ TERM *weed_term ( TERM *term){
 				}
 			break; 
 
-		case expresPipes_T_K: //Absolut værdi |-værdi| = værdi
+		case expresPipes_T_K: //Absolut vaerdi |-vaerdi| = vaerdi
 			term->value.exp = weed_expression(term->value.exp);
 			if (term->value.exp->kind == term_E_K){
 
 				if (term->value.exp->value.term->kind == num_T_K){
 					
 					if(term->value.exp->value.term->value.intconst < 0){
-						term->value.exp->value.term->value.intconst *(-1);
-					} else{
-						term->value.exp->value.term->value.intconst;
-					}
-
+						term->value.exp->value.term->value.intconst *= (-1);
+					} 
 				}
 			}
 			break;

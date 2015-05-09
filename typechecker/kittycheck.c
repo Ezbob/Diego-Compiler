@@ -321,8 +321,7 @@ void check_variable ( VAR *var){
 void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT;
-	SYMBOL *check;
-	SYMBOLTYPE *tmp;
+
 
 	switch(exp->kind){
 		case term_E_K:

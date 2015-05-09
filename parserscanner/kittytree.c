@@ -406,7 +406,6 @@ VAR_TYPE *make_VAR_TYPE_id( char *id, TYPE *type ){
 	strcpy(var_type->id, id);
 	var_type->type = type;
 	
-
 	return var_type;
 
 }
@@ -448,6 +447,7 @@ VAR *make_VAR_dot(VAR *var, char *id){
 }
 
 DECL_LIST *make_DECL_LIST_compound(DECL_LIST *declst, DECLARATION *dec){
+
 
 	DECL_LIST *compound = NEW(DECL_LIST);
 	compound->lineno = lineno;

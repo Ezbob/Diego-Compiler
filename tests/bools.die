@@ -1,12 +1,8 @@
-func BooleanFunction (a : bool, b : bool) : bool
-	
-	if (a != b) then {
+func BooleanFunction (a : bool) : bool
+	if( a ) then {
 		return a;
-	} else {
-		return b;
-		write 42 + 13;
 	}
-	write 42;
+	return false;
 end BooleanFunction
 
 var an : int, bn : int;
@@ -14,4 +10,4 @@ var an : int, bn : int;
 an = 2231;
 bn = 2391;
 
-write BooleanFunction(an != bn,false);
+write BooleanFunction(an != bn);
