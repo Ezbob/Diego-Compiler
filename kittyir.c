@@ -238,7 +238,7 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	
 }
 
- void IR_builder_var_type ( VAR_TYPE * vtype ){
+ void IR_builder_var_type ( VAR_TYPE * vtype ) {
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
 			local_variable_size += WORDSIZE;
@@ -259,7 +259,7 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	}
  }
 
-void IR_builder_decl_list ( DECL_LIST *dlst) {
+void IR_builder_decl_list ( DECL_LIST *dlst ) {
 
 	switch(dlst->kind){
 		case compound_DL_K:
@@ -272,7 +272,7 @@ void IR_builder_decl_list ( DECL_LIST *dlst) {
 
 }
 
-void IR_builder_declaration ( DECLARATION *decl) {
+void IR_builder_declaration ( DECLARATION *decl ) {
 	switch(decl->kind){
 		case typeassign_D_K:
 			break;
@@ -286,7 +286,7 @@ void IR_builder_declaration ( DECLARATION *decl) {
 
 }
 
-void IR_builder_statement_list ( STATEMENT_LIST *slst) {
+void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 	switch(slst->kind) {
 		case compound_SL_K:
 			IR_builder_statement_list(slst->value.compoundSL.statement_list);
