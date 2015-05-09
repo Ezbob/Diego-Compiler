@@ -3,6 +3,8 @@ var list1 : array of int, count : int;
 allocate list1 of length 10; 	
 count = 0;
 
+write | |count| + count |;
+
 write |list1|;
 
 write list1[3];

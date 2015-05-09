@@ -462,7 +462,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case SYMBOL_ARRAY:
-					//	printf("%s\n", "IN WRITE");
 					callerSave();
 					arg1 = IR_builder_expression(st->value.exp);
 
@@ -485,7 +484,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					callerRestore();
 					break;
 				default:
-				//	printf("%s\n", "DEFAULT CASE PRINT");
 					break;
 			}
 			break;
@@ -535,7 +533,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 																	WORDSIZE);
 						local_variable_size -= WORDSIZE;
 					}
-					
 					append_element( // actual assignment
 						ir_lines,
 						make_instruction_movl (
@@ -858,8 +855,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					, NULL
 				)
 			);
-
-			current_label++;
 			break;
 
 		case statement_list_S_K:
@@ -875,7 +870,6 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen ) {
 	return IR_builder_expression(oplen->value.exp);
 }
 
-//TODO: needs label
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol;
@@ -1043,15 +1037,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case boolleq_E_K:
 		case boolgeq_E_K:
 			result = make_argument_tempregister(current_temporary++);
+			tmp = getNextLabel();
 
 			char *booltruelabel = calloc(MAXLABELSIZE,sizeof(char));
 			char *boolendlabel = calloc(MAXLABELSIZE,sizeof(char));
 
-			sprintf(booltruelabel, "booOPtrue%d", current_label);
+			sprintf(booltruelabel, "booOPtrue%d", tmp);
 			truearg = make_argument_label(booltruelabel);
 			IR_INSTRUCTION *truelabel = make_instruction_label(truearg, NULL);
 
-			sprintf(boolendlabel, "boolOPend%d", current_label);
+			sprintf(boolendlabel, "boolOPend%d", tmp);
 			endarg = make_argument_label(boolendlabel);
 			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
 
@@ -1092,7 +1087,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, truejmp);
 
 			//false
-			IR_INSTRUCTION *falsesave = make_instruction_movl(make_argument_constant(0), result);
+			IR_INSTRUCTION *falsesave = make_instruction_movl(
+				make_argument_constant(0), result);
 			append_element(ir_lines, falsesave);
 
 
@@ -1101,11 +1097,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			//true
 			append_element(ir_lines, truelabel);
-			IR_INSTRUCTION *truesave = make_instruction_movl(make_argument_constant(1), result);
+			IR_INSTRUCTION *truesave = make_instruction_movl(
+				make_argument_constant(1), result);
 			append_element(ir_lines, truesave);
 
 			append_element(ir_lines, endlabel);
-			current_label++;
 			return result;
 
 		case booland_E_K:
@@ -1197,6 +1193,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 ARGUMENT *IR_builder_term ( TERM *term) {
 
+	
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	IR_INSTRUCTION *instr;
@@ -1233,6 +1230,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return IR_builder_expression(term->value.exp);
 
 		case var_T_K:
+			
 			arg1 = IR_builder_variable(term->value.var);
 			arg2 = make_argument_tempregister(current_temporary++);
 			instr = make_instruction_movl(arg1, arg2);
@@ -1242,24 +1240,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 		case actList_T_K:
 			// static link ?
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
-			params = 0;
 
-			EXP_LIST *args = term->value.actlistT.actlist->value.exp_list;
-
-			while(params < symbol->noArguments && args != NULL){
-
-				if(args->kind == exp_EL_K){
-					arg1 = IR_builder_expression(args->value.exp);
-					instr = make_instruction_pushl(arg1, NULL);
-					append_element(ir_lines, instr);
-				} else if(args->kind == commalist_EL_K) {
-					arg1 = IR_builder_expression(args->value.commaEL.exp);
-					instr = make_instruction_pushl(arg1, NULL);
-					append_element(ir_lines, instr);
-				}
-				args = args->value.commaEL.explist;
-				params++;
-			}
+			// push parameters on stack recursively
+			IR_builder_act_list(term->value.actlistT.actlist);
 
 			arg2 = make_argument_label(symbol->uniquename);
 			IR_INSTRUCTION *call = make_instruction_call(NULL, arg2);
@@ -1388,28 +1371,47 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				);
 				return firstElement;
 			}
-		//	printf("%s\n", "NOTHING");
 		default:
-			//printf("%s\n", "DEFAULT");
 			break;
 	}
 
 	return NULL;
 }
 
-// TODO function // void IR_builder_act_list ( ACT_LIST *actlst) { }
+void IR_builder_act_list ( ACT_LIST *actlst) { 
 
+	switch(actlst->kind){
+		case explist_AL_K:
+			IR_builder_expression_list(actlst->value.exp_list);
+			break;
+		case empty_AL_K:
+			break;
+	}
+}
+
+// since expression_list is used only by act list we can push function
+// parameters from here
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
-	if(explst == NULL){
-		return;
+	switch(explst->kind){
+		case exp_EL_K:
+			append_element(
+				ir_lines, make_instruction_pushl(
+					IR_builder_expression(explst->value.exp),
+					NULL
+					)
+				); 
+			break;
+		case commalist_EL_K:
+			IR_builder_expression_list(explst->value.commaEL.explist);
+			append_element(
+				ir_lines, make_instruction_pushl(
+					IR_builder_expression(explst->value.commaEL.exp),
+					NULL
+					)
+				);
+			break;
 	}
-
-	if(explst->kind == commalist_EL_K){
-		IR_builder_expression_list(explst->value.commaEL.explist);
-	}
-
-	IR_builder_expression(explst->value.exp);
 }
 
 /* Adding allocation of local variables, this is by convention 
@@ -1422,7 +1424,7 @@ IR_INSTRUCTION *localVariableAllocation() {
 				esp);
 		append_element(ir_lines, instr);
 		return instr; 
-	 // reset the size counting	?
+		// reset counter at end of function
 	}
 	return NULL;
 }
