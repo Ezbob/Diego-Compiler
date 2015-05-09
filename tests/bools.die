@@ -6,9 +6,15 @@ func BooleanFunction ( a : bool ) : bool
 	}
 end BooleanFunction
 
-var an : int, bn : int;
+var an : int, bn : int, record : record of {
+	a : int,
+	b : bool
+};
 
 an = -2231;
 bn = 2391;
 
-write BooleanFunction(an < bn);
+write record;
+#write |an|;
+
+#write BooleanFunction(an < bn);

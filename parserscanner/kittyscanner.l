@@ -10,7 +10,7 @@
 %option never-interactive
 %x MULCOMMENT
 
-DIGITS (-[0-9]+)|([0-9]+)
+DIGITS ([^0-9]-[0-9]+)|([0-9]+)
 ID	["_"a-zA-Z]["_"A-Za-z0-9]*
 SINGLECOMMENT "#"[^\n]* 
 WHITESPACE [\ \t]*

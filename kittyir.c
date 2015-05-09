@@ -176,8 +176,6 @@ void IR_builder_function(FUNC *func) {
 
 }
 
-
-//TODO sæt ordenligt offset OBS reverse vars
 void IR_builder_head (HEAD *header) {
 
 	SYMBOL *symbol;
@@ -193,9 +191,11 @@ void IR_builder_head (HEAD *header) {
 		if(globalTable != NULL || vars->value.var_type != NULL){
 		
 			if (vars->kind == comma_VDL_K) {
-				symbol = getSymbol(header->headH.pdeclist->symboltable, vars->value.commaVDL.var_type->id);
+				symbol = getSymbol(header->headH.pdeclist->symboltable, 
+					vars->value.commaVDL.var_type->id);
 			} else {
-				symbol = getSymbol(header->headH.pdeclist->symboltable, vars->value.var_type->id);
+				symbol = getSymbol(header->headH.pdeclist->symboltable, 
+					vars->value.var_type->id);
 			}
 
 			if(symbol == NULL){
@@ -213,7 +213,6 @@ void IR_builder_head (HEAD *header) {
 	}
 }
 
-//TODO
 void IR_builder_body (BODY *body) {
  
  	IR_builder_decl_list(body->decl_list);
@@ -436,8 +435,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_NULL:
 
 					//Push arguments for print then form for print
-					arg1 = IR_builder_expression(st->value.exp);
 					callerSave();
+					arg1 = IR_builder_expression(st->value.exp);
 
 					params = make_instruction_pushl(arg1, NULL);
 					append_element(ir_lines, params);
@@ -1193,7 +1192,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 ARGUMENT *IR_builder_term ( TERM *term) {
 
-	
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	IR_INSTRUCTION *instr;
@@ -1334,7 +1332,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				//2 cases, positive numbers and negative numbers
 				ARGUMENT *pipeCMPArg = make_argument_constant(0);
 
-				IR_INSTRUCTION *pipeCMP = make_instruction_cmp(pipeCMPArg, arg1);
+				IR_INSTRUCTION *pipeCMP = make_instruction_cmp(pipeCMPArg, 
+					arg1);
 				append_element(ir_lines, pipeCMP);
 				IR_INSTRUCTION *pipeEndJmp = make_instruction_JGE(pipeEnd);
 				append_element(ir_lines, pipeEndJmp);
@@ -1516,7 +1515,6 @@ void basic_assign(linked_list *ir_lines){
 	ARGUMENT *reg;
 	IR_INSTRUCTION *instr1;
 	IR_INSTRUCTION *instr2;
-
 
 	while(temp != ir_lines){
 
