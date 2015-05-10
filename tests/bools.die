@@ -13,8 +13,9 @@ var an : int, bn : int, record : record of {
 
 an = -2231;
 bn = 2391;
+allocate record;
 
 write record;
 #write |an|;
 
-#write BooleanFunction(an < bn);
+write BooleanFunction(an < bn);

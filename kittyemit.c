@@ -166,9 +166,9 @@ void IR_printer(linked_list *ir_lines){
 
 			case space:
 				IR_print_arguments(instr_to_print->arg1);
-				printf(": \n\t .space ");
+				printf(":\n\t.space ");
 				IR_print_arguments(instr_to_print->arg2);
-				printf("\n");
+				printf("\n\n");
 				break;
 
 			case leal:

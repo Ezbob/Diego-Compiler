@@ -48,7 +48,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	globalTable = symboltable;
 	_main_ = program;
 
-	append_element(ir_lines, 
+	append_element(ir_lines, // adding text section for completion
 		make_instruction_globl(
 			make_argument_label(".text"), 
 			NULL
@@ -148,8 +148,6 @@ void IR_builder_function(FUNC *func) {
 
 	append_element(ir_lines, func_main);
 
-	calleeStart(); // shift in stackframe
-	
 	IR_builder_head(func->functionF.head);
 	IR_builder_body(func->functionF.body);
 
@@ -216,6 +214,8 @@ void IR_builder_head (HEAD *header) {
 void IR_builder_body (BODY *body) {
  
  	IR_builder_decl_list(body->decl_list);
+
+ 	calleeStart(); // shift in stackframe
 
 	calleeSave();
 	localVariableAllocation();
@@ -488,7 +488,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case assign_S_K:  // todo with local variables
-
 			switch(st->value.assignS.variable->kind){
 
 				case indexing_V_K:
@@ -1388,7 +1387,7 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 	}
 }
 
-// since expression_list is used only by act list we can push function
+// Since expression_list is used only by act list we can push function
 // parameters from here
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
@@ -1529,34 +1528,38 @@ void basic_assign(linked_list *ir_lines){
 
 				instr2 = (IR_INSTRUCTION *) temp->data;
 
-				if(instr2->arg1 != NULL && instr2->arg1->kind == tempreg_arg){
+				if(instr2->arg1 != NULL && instr2->arg1->kind == 
+						tempreg_arg){
 					if(instr2->arg1->tempid == cmp1){
 
 						instr2->arg1 = reg;
 					}
 				}
 				//Arrays
-				if(instr2->arg1 != NULL && instr2->arg1->kind == indexing_arg){
+				if(instr2->arg1 != NULL && instr2->arg1->kind == 
+						indexing_arg){
 					if(instr2->arg1->index->tempid == cmp1){
 
 						instr2->arg1->index = reg;
 					}
 				}
 
-				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
+				if(instr2->arg2 != NULL && instr2->arg2->kind == 
+						tempreg_arg){
 					if(instr2->arg2->tempid == cmp1){
 
 						instr2->arg2 = reg;
 					}
 				}
 
-                                //Arrays
-                                if(instr2->arg2 != NULL && instr2->arg2->kind == indexing_arg){
-                                        if(instr2->arg2->index->tempid == cmp1){
+                //Arrays
+                if(instr2->arg2 != NULL && instr2->arg2->kind == 
+                		indexing_arg){
+                        if(instr2->arg2->index->tempid == cmp1){
 
-                                                instr2->arg2->index = reg;
-                                        }
-                                }
+                                instr2->arg2->index = reg;
+                        }
+                }
 
 				temp = temp->next;
 			} 
@@ -1583,13 +1586,14 @@ void basic_assign(linked_list *ir_lines){
 					}
 				}
 
-                                //Arrays
-                                if(instr2->arg1 != NULL && instr2->arg1->kind == indexing_arg){
-                                        if(instr2->arg1->index->tempid == cmp2){
+                //Arrays
+                if(instr2->arg1 != NULL && instr2->arg1->kind == 
+                		indexing_arg){
+                        if(instr2->arg1->index->tempid == cmp2){
 
-                                                instr2->arg1->index = reg;
-                                        }
-                                }
+                                instr2->arg1->index = reg;
+                        }
+                }
 
 
 				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
@@ -1600,14 +1604,14 @@ void basic_assign(linked_list *ir_lines){
 					}
 				}
 
-                                //Arrays
-                                if(instr2->arg2 != NULL && instr2->arg2->kind == indexing_arg){
-                                        if(instr2->arg2->index->tempid == cmp2){
+                //Arrays
+                if(instr2->arg2 != NULL && instr2->arg2->kind == 
+                		indexing_arg){
+                        if(instr2->arg2->index->tempid == cmp2){
 
-                                                instr2->arg2->index = reg;
-                                        }
-                                }
-
+                                instr2->arg2->index = reg;
+                        }
+                }
 
 				temp = temp->next;
 			} 
@@ -1679,23 +1683,38 @@ void build_data_section(){
 	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
 	buildForm("formNULL:", ".string \"NULL\\n\" ");
 
-	if(get_length(data_lines) > 0){
-
-		linked_list *temp;
-
+	if( function_label > 0 || get_length(data_lines) > 0){
+		// if there is allocation to the heap or a function is declared
+		// (need heap for the static link)
 		append_element(ir_lines,
 			make_instruction_space(
 				make_argument_label("heap"),
-				make_argument_label("4194304") // allocate 4MB for heap
+				make_argument_label("4194304")
 				)
 			);
+
 		append_element(ir_lines,
 			make_instruction_space(
 				make_argument_label("heapNext"),
 				make_argument_label("4")
 				)
-			);
+			);			
+	}
 
+	if ( function_label > 0 ){
+		// make static link pointer (pointer to a array of static links)
+		append_element(ir_lines,
+		make_instruction_space(
+			make_argument_label("staticLinks"),
+			make_argument_label("4")
+			)
+		);	
+	}	
+	
+	if(get_length(data_lines) > 0){
+		// make pointers to records / arrays in heap
+
+		linked_list *temp;
 		temp = data_lines->next;
 
 		while ( temp != data_lines ) { // making label pointers for allocated 
