@@ -89,12 +89,6 @@ void IR_printer(linked_list *ir_lines){
 				printf("%s:\n",instr_to_print->label);
 				break;
 
-			case string:
-				printf("\t");
-				IR_print_arguments(instr_to_print->arg1);
-				printf("\n\n");
-				break;
-
 			case cmp:
 				printf("\t%s", "cmp ");
 				IR_print_arguments(instr_to_print->arg1);
@@ -167,7 +161,7 @@ void IR_printer(linked_list *ir_lines){
 				IR_print_arguments(instr_to_print->arg1);
 				printf(":\n\t.space ");
 				IR_print_arguments(instr_to_print->arg2);
-				printf("\n\n");
+				printf("\n");
 				break;
 
 			case leal:

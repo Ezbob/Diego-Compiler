@@ -1451,17 +1451,6 @@ void moveStackpointer(int i){
 
 }
 
-void buildForm(char *name, char *actual){
-
-	IR_INSTRUCTION *instr1 = make_instruction_directive(name);
-	append_element(ir_lines, instr1);
-
-	ARGUMENT *arg2 = make_argument_label(actual);
-	IR_INSTRUCTION *instr2 = make_instruction_string(arg2);
-	append_element(ir_lines, instr2);
-
-}
-
 //Very basic register allocation, round robin style
 void basic_assign(linked_list *ir_lines){
 
@@ -1634,11 +1623,21 @@ void assign_instructionnumber(linked_list *ir_lines){
 void build_data_section(){
 
 	append_element(ir_lines, make_instruction_directive(".data"));
+	append_element(ir_lines, 
+		make_instruction_directive("formNUM: \n\t.string \"%d\\n\" ")
+		);
 
-	buildForm("formNUM:", ".string \"%d\\n\" ");
-	buildForm("formTRUE:", ".string \"TRUE\\n\" ");
-	buildForm("formFALSE:", ".string \"FALSE\\n\" ");
-	buildForm("formNULL:", ".string \"NULL\\n\" ");
+	append_element(ir_lines, 
+		make_instruction_directive("formTRUE: \n\t.string \"TRUE\\n\" ")
+	);
+
+	append_element(ir_lines, 
+		make_instruction_directive("formFALSE: \n\t.string \"FALSE\\n\" ")
+	);
+
+	append_element(ir_lines, 
+		make_instruction_directive("formNULL: \n\t.string \"NULL\\n\" ")
+	);
 
 	if( function_label > 0 || get_length(data_lines) > 0){
 		// if there is allocation to the heap or a function is declared

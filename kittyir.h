@@ -19,7 +19,7 @@ typedef enum REGISTERS {
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { directive, mainmet, string, label, movl, call, pushl, popl, addl, 
+	enum { directive, label, movl, call, pushl, popl, addl, 
 		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
 		JGE, JLE, jl, jg, notl, negl, intcode, space, long_op, leal,
 		incl, decl } op_code; 
@@ -85,7 +85,6 @@ int getNextFunction();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);
 void IR_printer(linked_list *ir_lines);
-void buildForm(char *name, char *actual);
 ARGUMENT *get_register(int n);
 void basic_assign(linked_list *ir_lines);
 void assign_instructionnumber(linked_list *ir_lines);

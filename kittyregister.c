@@ -169,7 +169,7 @@ void getSuccessors(LIVENESS *line, IR_INSTRUCTION *instr){
 		next = next->next;
 	}
 	//Pointer compare stops before the last instruction, hence:
-	if(startinstr->op_code == globl){
+	if(startinstr->op_code == directive){
 		list->element = next;			
 		list->labelId = startinstr->label;
 		list->next = NEW(SUCLIST);

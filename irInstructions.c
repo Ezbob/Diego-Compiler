@@ -240,16 +240,6 @@ IR_INSTRUCTION *make_instruction_label(char *clabel) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_string(ARGUMENT *arg1) {
-	IR_INSTRUCTION *new_instruction;
-	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
-	new_instruction->id = 0;
-	new_instruction->op_code = string;
-	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = NULL;
-	return new_instruction;
-}
-
 IR_INSTRUCTION *make_instruction_ret() {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));

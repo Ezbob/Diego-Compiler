@@ -34,7 +34,8 @@ typedef struct TERM {
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
 	enum {var_T_K, actList_T_K, expresParent_T_K, expresPipes_T_K, 
-		termBang_T_K, num_T_K, boolTrue_T_K, boolFalse_T_K, null_T_K } kind;
+		termBang_T_K, num_T_K, boolTrue_T_K, boolFalse_T_K, 
+		null_T_K } kind;
 	union {
 		char *nullval;
 		int intconst;

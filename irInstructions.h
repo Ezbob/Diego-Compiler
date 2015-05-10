@@ -27,7 +27,6 @@ IR_INSTRUCTION *make_instruction_div(ARGUMENT *arg1);
 IR_INSTRUCTION *make_instruction_imul(ARGUMENT *arg1, ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_label(char *);
 IR_INSTRUCTION *make_instruction_directive(char *);
-IR_INSTRUCTION *make_instruction_string(ARGUMENT *arg1);
 IR_INSTRUCTION *make_instruction_space(ARGUMENT *arg1,ARGUMENT *arg2);
 IR_INSTRUCTION *make_instruction_leal(ARGUMENT *,ARGUMENT *);
 IR_INSTRUCTION *make_instruction_ret();
