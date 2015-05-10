@@ -113,7 +113,8 @@ void IR_builder_function(FUNC *func) {
 	char *functionlabel = calloc(MAXLABELSIZE ,sizeof(char));
 	char *functionendlabel = calloc(MAXLABELSIZE ,sizeof(char));
 
-	SYMBOL *symbol = getSymbol(globalTable, func->functionF.head->headH.id);
+	SYMBOL *symbol = getSymbol(func->symboltable, 
+		func->functionF.head->headH.id);
 
 	sprintf(functionlabel, "func%d", functiondId);
 	sprintf(functionendlabel,"endFunc%d", functiondId);
@@ -175,7 +176,7 @@ void IR_builder_function(FUNC *func) {
 }
 
 void IR_builder_head (HEAD *header) {
-
+	
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
 	mainSection->temps = args->noArguments;

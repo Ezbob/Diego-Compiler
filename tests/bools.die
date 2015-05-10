@@ -1,4 +1,10 @@
 func BooleanFunction ( a : bool ) : bool
+	func annoyingFunc() : int
+		return 42;
+	end annoyingFunc
+
+	write annoyingFunc();
+
 	if( a ) then {
 		return a;
 	} else {

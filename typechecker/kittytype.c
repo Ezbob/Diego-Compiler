@@ -12,10 +12,11 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 	//Start collecting
 	collect_body(main, symboltable);
 
-
 }
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
+
+	function->symboltable = st;	
 
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st);

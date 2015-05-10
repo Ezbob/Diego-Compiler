@@ -322,7 +322,6 @@ void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT;
 
-
 	switch(exp->kind){
 		case term_E_K:
 			check_term(exp->value.term);
@@ -571,10 +570,13 @@ int check_term ( TERM *term){
 				check_error_report("Function not defined or not a function", term->lineno);
 			}
 
+
+			// PAR_DECL_LIST * type of symbol->parameters
+
 			if((term->value.actlistT.actlist->kind == empty_AL_K && 
-			   symbol->parameters != empty_PDL_K) ||
+			   symbol->parameters->kind != empty_PDL_K) ||
 				(term->value.actlistT.actlist->kind != empty_AL_K && 
-			   symbol->parameters == empty_PDL_K)) {
+			   symbol->parameters->kind == empty_PDL_K)) {
 
 				check_error_report("Wrong no. of parameters", term->lineno);
 			}
