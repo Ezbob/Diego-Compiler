@@ -132,10 +132,14 @@ void IR_builder_function(FUNC *func) {
 	mainSection->nextSection = NEW(SECTION);
 	mainSection->nextSection->prevSection = mainSection;
 	mainSection = mainSection->nextSection;
-	mainSection->symboltable = globalTable;
+	mainSection->symboltable = globalTable; // sure this is correct?
 	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
 	sprintf(mainSection->sectionName, "%s", functionlabel);
 
+
+	// move the handling of the declaration list here instead of the body to
+	// avoid nested function getting generated inside each others 
+	IR_builder_decl_list(func->functionF.body->decl_list);
 
 	IR_INSTRUCTION *func_main = 
 		make_instruction_label( // start function label
@@ -155,7 +159,7 @@ void IR_builder_function(FUNC *func) {
 	//Section is done, restore old section
 	mainSection = temp;
 
-	append_element( // end of function
+	append_element( // end of function label
 		ir_lines,
 		make_instruction_label(
 			make_argument_label(functionendlabel),
@@ -176,7 +180,7 @@ void IR_builder_function(FUNC *func) {
 }
 
 void IR_builder_head (HEAD *header) {
-	
+
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
 	mainSection->temps = args->noArguments;
@@ -213,8 +217,6 @@ void IR_builder_head (HEAD *header) {
 }
 
 void IR_builder_body (BODY *body) {
- 
- 	IR_builder_decl_list(body->decl_list);
 
  	calleeStart(); // shift in stackframe
 
