@@ -37,7 +37,7 @@ typedef struct ARGUMENT {
 	char *label;
 	int intConst;
 	REGISTERS reg;
-	char *dispLabel;
+	struct ARGUMENT *displace;
 	struct ARGUMENT *index;
 	char *charConst;
 	void *address;

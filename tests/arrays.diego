@@ -1,8 +1,8 @@
-var list1 : array of int, count : int;
+var list1 : array of array of int;
 
 allocate list1 of length 10; 	
-count = 0;
 
+(*
 write | |count| + count |;
 
 write |list1|;
@@ -14,3 +14,4 @@ while (count < 2) do {
 	write list1[count];
 	count = count + 1;
 }
+*)

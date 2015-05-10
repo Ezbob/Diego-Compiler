@@ -47,8 +47,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	append_element(ir_lines, // adding text section for completion
 		make_instruction_globl(
-			make_argument_label(".text"), 
-			NULL
+			make_argument_label(".text")
 			)
 		);
 
@@ -64,13 +63,12 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	// make ".globl main" directive
 	ARGUMENT *global_label = make_argument_label(".globl main");
-	IR_INSTRUCTION *globl_directive = 
-		make_instruction_globl(global_label, NULL);
+	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label);
 	append_element(ir_lines, globl_directive);
 
 	// make "main:" label line
 	ARGUMENT *main_label = make_argument_label("main");
-	IR_INSTRUCTION *globl_main = make_instruction_label(main_label, NULL);
+	IR_INSTRUCTION *globl_main = make_instruction_label(main_label);
 	mainSection->first = globl_main;
 	append_element(ir_lines, globl_main);
 
@@ -141,10 +139,7 @@ void IR_builder_function(FUNC *func) {
 
 	IR_INSTRUCTION *func_main = 
 		make_instruction_label( // start function label
-			make_argument_label(
-				functionlabel
-			), 
-			NULL
+			make_argument_label( functionlabel ) 
 		);
 
 	mainSection->first = func_main;
@@ -160,8 +155,7 @@ void IR_builder_function(FUNC *func) {
 	append_element( // end of function label
 		ir_lines,
 		make_instruction_label(
-			make_argument_label(functionendlabel),
-			NULL
+			make_argument_label(functionendlabel)
 			)
 		);
 
@@ -366,16 +360,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
 						make_instruction_pushl(
-							arg1,
-							NULL
+							arg1
 							)
 						);
 
 					append_element( // true case here
 						ir_lines,
 						make_instruction_pushl(
-							make_argument_label("$formTRUE"),
-							NULL
+							make_argument_label("$formTRUE")
 							)
 						);
 
@@ -389,8 +381,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element( // false label section
 						ir_lines,
 						make_instruction_label(
-							make_argument_label(falselabel),
-							NULL
+							make_argument_label(falselabel)
 							)
 						);
 
@@ -398,32 +389,26 @@ void IR_builder_statement ( STATEMENT *st ) {
 					
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
-						make_instruction_pushl(
-							arg1,
-							NULL
-							)
+						make_instruction_pushl(arg1)
 						);
 
 					append_element( // false case here
 						ir_lines,
 						make_instruction_pushl(
-							make_argument_label("$formFALSE"),
-							NULL
+							make_argument_label("$formFALSE")
 							)
 						);
 
 					append_element( // printing section
 						ir_lines,
 						make_instruction_label(
-							make_argument_label(printlabel),
-							NULL
+							make_argument_label(printlabel)
 							)
 						);
 
 					append_element( // call to print
 						ir_lines,
 						make_instruction_call(
-							arg1,
 							make_argument_label("printf")
 							)
 						);
@@ -440,21 +425,23 @@ void IR_builder_statement ( STATEMENT *st ) {
 					callerSave();
 					arg1 = IR_builder_expression(st->value.exp);
 
-					params = make_instruction_pushl(arg1, NULL);
+					params = make_instruction_pushl(arg1);
 					append_element(ir_lines, params);
 		
 					if (st->value.exp->value.term->kind == null_T_K){
 						arg3 = make_argument_label("$formNULL");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						IR_INSTRUCTION *pushform = 
+							make_instruction_pushl(arg3);
 						append_element(ir_lines, pushform);
 					} else {
 						arg3 = make_argument_label("$formNUM");
-						IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+						IR_INSTRUCTION *pushform = 
+							make_instruction_pushl(arg3);
 						append_element(ir_lines, pushform);
 					}
 
 					arg2 = make_argument_label("printf");
-					call = make_instruction_call(arg1, arg2);
+					call = make_instruction_call(arg2);
 					append_element(ir_lines, call);
 
 					moveStackpointer(2);
@@ -469,16 +456,15 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(
 						ir_lines,
 						make_instruction_pushl(
-							arg1,
-							NULL
+							arg1
 						)
 					);
 
 					arg3 = make_argument_label("$formNUM");
-					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3, NULL);
+					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3);
 					append_element(ir_lines, pushform);
 					arg2 = make_argument_label("printf");
-					call = make_instruction_call(NULL, arg2);
+					call = make_instruction_call(arg2);
 					append_element(ir_lines, call);
 
 					moveStackpointer(2);
@@ -596,8 +582,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				append_element( // make else-label
 					ir_lines, 
 					make_instruction_label(
-						make_argument_label(elselabel),
-						NULL 
+						make_argument_label(elselabel)
 					)
 				);
 
@@ -608,8 +593,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( // end-of-if label
 				ir_lines, 
 				make_instruction_label(
-					make_argument_label(endlabelstring), 
-					NULL
+					make_argument_label(endlabelstring)
 					)
 			);
 
@@ -656,8 +640,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element(
 							ir_lines,
 							make_instruction_pushl(
-								arg2,
-								NULL
+								arg2
 							)
 						);
 
@@ -673,8 +656,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 							ir_lines,
 							make_instruction_movl(
 								arg1,
-								make_argument_labelAddring(
-									st->value.allocateS.variable->value.id,
+								make_argument_indexing(
+									make_argument_label(
+										st->value.allocateS.variable->value.id
+										),
 									arg2
 								)
 							)
@@ -707,8 +692,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element(
 							ir_lines,
 							make_instruction_popl(
-								arg2,
-								NULL
+								arg2
 							)
 						);
 					
@@ -754,8 +738,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element(
 							ir_lines,
 							make_instruction_pushl(
-								arg2,
-								NULL
+								arg2
 							)
 						);
 
@@ -788,8 +771,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element(
 							ir_lines,
 							make_instruction_popl(
-								arg2,
-								NULL
+								arg2
 							)
 						);
 				
@@ -815,10 +797,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( // while-start label insert 
 				ir_lines, 
 				make_instruction_label(
-					make_argument_label(
-						truewhilestring
-						), 
-					NULL
+					make_argument_label(truewhilestring)
 				)
 			);
 
@@ -851,9 +830,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( // insertion of while-end
 				ir_lines, 
 				make_instruction_label(
-					make_argument_label(
-						endlabelstring)
-					, NULL
+					make_argument_label(endlabelstring)
 				)
 			);
 			break;
@@ -893,8 +870,10 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					make_instruction_incl(resultOfSubExp)
 				);
 
-				arg1 = make_argument_labelAddring(
-							var->value.indexingV.variable->value.id, // arrays in records problem
+				arg1 = make_argument_indexing(
+							make_argument_label(var->value.indexingV.
+								variable->value.id), 
+								// arrays in records problem
 							resultOfSubExp
 						);
 			return arg1;
@@ -917,8 +896,11 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						)
 				);
 
-				address_of_id = make_argument_labelAddring(
-							var->value.dotV.variable->value.id,
+				address_of_id = 
+						make_argument_indexing(
+							make_argument_label(
+								var->value.dotV.variable->value.id
+								),
 							arg
 						);
 			return address_of_id;
@@ -976,22 +958,26 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(zeroden, "zeroDen%d", tmp);
 			ARGUMENT *zerodenarg = make_argument_label(zeroden);
-			IR_INSTRUCTION *zerodenlabel = make_instruction_label(zerodenarg, NULL);
+			IR_INSTRUCTION *zerodenlabel = 
+				make_instruction_label(zerodenarg);
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
-			IR_INSTRUCTION *cmpvszero = make_instruction_cmp(zeroArg, argRight);
+			IR_INSTRUCTION *cmpvszero = 
+				make_instruction_cmp(zeroArg, argRight);
 			append_element(ir_lines, cmpvszero);
 
 			IR_INSTRUCTION *notzero = make_instruction_jne(zeroden);
 			append_element(ir_lines, notzero);
 
 			ARGUMENT *exitARG1 = make_argument_constant(3);
-			IR_INSTRUCTION *moveExitArg1 = make_instruction_movl(exitARG1, ebx);
+			IR_INSTRUCTION *moveExitArg1 = 
+				make_instruction_movl(exitARG1, ebx);
 			append_element(ir_lines, moveExitArg1);
 
 			ARGUMENT *exitARG2 = make_argument_constant(1);
-			IR_INSTRUCTION *moveExitArg2 = make_instruction_movl(exitARG2, eax);
+			IR_INSTRUCTION *moveExitArg2 = 
+				make_instruction_movl(exitARG2, eax);
 			append_element(ir_lines, moveExitArg2);
 
 			IR_INSTRUCTION *sysexit = make_instruction_intcode("0x80");
@@ -1001,14 +987,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			//HACK -------------------------
 
-			IR_INSTRUCTION *hack1 = make_instruction_pushl(ebx, NULL);
+			IR_INSTRUCTION *hack1 = make_instruction_pushl(ebx);
 			append_element(ir_lines, hack1);
 
 			IR_INSTRUCTION *hack2 = make_instruction_movl(argRight, ebx);
 			append_element(ir_lines, hack2);
 
 			//------------------------------
-			edxsave = make_instruction_pushl(edx, NULL); //Saving edx register
+			edxsave = make_instruction_pushl(edx); //Saving edx register
 			append_element(ir_lines, edxsave);
 
 			instr = make_instruction_xor(edx, edx); //Clear edx for DIV
@@ -1017,16 +1003,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			IR_INSTRUCTION *instr1 = make_instruction_movl(argLeft, eax);
 			append_element(ir_lines, instr1);
 
-			IR_INSTRUCTION*instr2 = make_instruction_div(ebx, NULL);
+			IR_INSTRUCTION *instr2 = make_instruction_div(ebx);
 			append_element(ir_lines, instr2);
 
 			IR_INSTRUCTION *instr3 = make_instruction_movl(eax, argLeft);
 			append_element(ir_lines, instr3);
 
-			IR_INSTRUCTION *hack3 = make_instruction_popl(ebx, NULL);
+			IR_INSTRUCTION *hack3 = make_instruction_popl(ebx);
 			append_element(ir_lines, hack3);
 
-			edxrestore = make_instruction_popl(edx, NULL);
+			edxrestore = make_instruction_popl(edx);
 			append_element(ir_lines, edxrestore); //Restoring edx register
 
 			return argLeft;
@@ -1045,11 +1031,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			sprintf(booltruelabel, "booOPtrue%d", tmp);
 			truearg = make_argument_label(booltruelabel);
-			IR_INSTRUCTION *truelabel = make_instruction_label(truearg, NULL);
+			IR_INSTRUCTION *truelabel = make_instruction_label(truearg);
 
 			sprintf(boolendlabel, "boolOPend%d", tmp);
 			endarg = make_argument_label(boolendlabel);
-			IR_INSTRUCTION *endlabel = make_instruction_label(endarg, NULL);
+			IR_INSTRUCTION *endlabel = make_instruction_label(endarg);
 
 			instr = make_instruction_cmp( argRight, argLeft);
 			append_element(ir_lines, instr);
@@ -1113,11 +1099,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			sprintf(andFalselabel, "ANDfalse%d", tmp);
 			falsearg = make_argument_label(andFalselabel);
-			IR_INSTRUCTION *andFalseinstr = make_instruction_label(falsearg, NULL);
+			IR_INSTRUCTION *andFalseinstr = make_instruction_label(falsearg);
 
 			sprintf(andEndlabel, "ANDend%d", tmp);
 			endarg = make_argument_label(andEndlabel);
-			IR_INSTRUCTION *andEndinstr = make_instruction_label(endarg, NULL);
+			IR_INSTRUCTION *andEndinstr = make_instruction_label(endarg);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -1133,14 +1119,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, cmp2);
 			append_element(ir_lines, jmpfalse);
 
-			IR_INSTRUCTION *trueand = make_instruction_movl(make_argument_constant(1), result);
+			IR_INSTRUCTION *trueand = 
+				make_instruction_movl(make_argument_constant(1), result);
 			append_element(ir_lines, trueand);
 
 			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
 			append_element(ir_lines, andjmpend);
 
 			append_element(ir_lines, andFalseinstr);
-			IR_INSTRUCTION *falseand = make_instruction_movl(make_argument_constant(0), result);
+			IR_INSTRUCTION *falseand = 
+				make_instruction_movl(make_argument_constant(0), result);
 			append_element(ir_lines, falseand);
 
 			append_element(ir_lines, andEndinstr);
@@ -1154,11 +1142,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			sprintf(orOKlabel, "ORtrue%d", tmp);
 			truearg = make_argument_label(orOKlabel);
-			IR_INSTRUCTION *oroklabel = make_instruction_label(truearg, NULL);
+			IR_INSTRUCTION *oroklabel = make_instruction_label(truearg);
 
 			sprintf(orEndlabel, "ORend%d", tmp);
 			endarg = make_argument_label(orEndlabel);
-			IR_INSTRUCTION *orendlabel = make_instruction_label(endarg, NULL);
+			IR_INSTRUCTION *orendlabel = make_instruction_label(endarg);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -1245,7 +1233,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			IR_builder_act_list(term->value.actlistT.actlist);
 
 			arg2 = make_argument_label(symbol->uniquename);
-			IR_INSTRUCTION *call = make_instruction_call(NULL, arg2);
+			IR_INSTRUCTION *call = make_instruction_call(arg2);
 			append_element(ir_lines, call);
 			//function paramerters are useless after function call
 			moveStackpointer(symbol->noArguments);
@@ -1299,8 +1287,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element( // here goes the false label
 				ir_lines,
 				make_instruction_label(
-					make_argument_label(falselabel),
-					NULL
+					make_argument_label(falselabel)
 					)
 				);
 
@@ -1315,8 +1302,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element( // this is end (label) !
 				ir_lines,
 				make_instruction_label(
-					make_argument_label(endlabelstring),
-					NULL
+					make_argument_label(endlabelstring)
 					)
 				);
 			
@@ -1327,7 +1313,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			char *pipeEnd = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
 			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
-			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeArg, NULL);
+			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeArg);
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
@@ -1363,8 +1349,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element( // move from first place in array to reg
 					ir_lines,
 					make_instruction_movl(
-						make_argument_labelAddring(
-							id, // label to pointer to heap
+						make_argument_indexing(
+							make_argument_label(id), 
+								// label to pointer to heap
 							zeroElement // index
 						),
 						firstElement // result
@@ -1398,8 +1385,7 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 		case exp_EL_K:
 			append_element(
 				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->value.exp),
-					NULL
+					IR_builder_expression(explst->value.exp)
 					)
 				); 
 			break;
@@ -1407,8 +1393,7 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 			IR_builder_expression_list(explst->value.commaEL.explist);
 			append_element(
 				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->value.commaEL.exp),
-					NULL
+					IR_builder_expression(explst->value.commaEL.exp)
 					)
 				);
 			break;
@@ -1432,8 +1417,8 @@ IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *currentScope) {
 
 void callerSave(){
 
-	IR_INSTRUCTION *instr1 = make_instruction_pushl(ecx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_pushl(edx, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_pushl(ecx);
+	IR_INSTRUCTION *instr2 = make_instruction_pushl(edx);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
 
@@ -1441,8 +1426,8 @@ void callerSave(){
 
 void callerRestore(){
 
-	IR_INSTRUCTION *instr1 = make_instruction_popl(edx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_popl(ecx, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_popl(edx);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(ecx);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
 
@@ -1450,7 +1435,7 @@ void callerRestore(){
 
 void calleeStart(){
 
-	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebp, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebp);
 	IR_INSTRUCTION *instr2 = make_instruction_movl(esp, ebp);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
@@ -1460,7 +1445,7 @@ void calleeStart(){
 void calleeEnd(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_movl(ebp, esp);
-	IR_INSTRUCTION *instr2 = make_instruction_popl(ebp, NULL);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(ebp);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
 
@@ -1468,9 +1453,9 @@ void calleeEnd(){
 
 void calleeSave(){
 
-	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi, NULL);
-	IR_INSTRUCTION *instr3 = make_instruction_pushl(edi, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx);
+	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi);
+	IR_INSTRUCTION *instr3 = make_instruction_pushl(edi);
 	append_element(ir_lines, instr1);
 	append_element(ir_lines, instr2);
 	append_element(ir_lines, instr3);
@@ -1478,9 +1463,9 @@ void calleeSave(){
 
 void calleeRestore(){
 
-	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx, NULL);
-	IR_INSTRUCTION *instr2 = make_instruction_popl(esi, NULL);
-	IR_INSTRUCTION *instr3 = make_instruction_popl(edi, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx);
+	IR_INSTRUCTION *instr2 = make_instruction_popl(esi);
+	IR_INSTRUCTION *instr3 = make_instruction_popl(edi);
 	append_element(ir_lines, instr3);
 	append_element(ir_lines, instr2);
 	append_element(ir_lines, instr1);
@@ -1498,7 +1483,7 @@ void moveStackpointer(int i){
 void buildForm(char *name, char *actual){
 
 	ARGUMENT *arg1 = make_argument_label(name);
-	IR_INSTRUCTION *instr1 = make_instruction_globl(arg1, NULL);
+	IR_INSTRUCTION *instr1 = make_instruction_globl(arg1);
 	append_element(ir_lines, instr1);
 
 	ARGUMENT *arg2 = make_argument_label(actual);
@@ -1679,7 +1664,7 @@ void assign_instructionnumber(linked_list *ir_lines){
 void build_data_section(){
 
 	append_element(ir_lines, 
-	make_instruction_globl(make_argument_label(".data"),NULL));
+	make_instruction_globl(make_argument_label(".data")));
 
 	buildForm("formNUM:", ".string \"%d\\n\" ");
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");

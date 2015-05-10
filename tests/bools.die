@@ -1,18 +1,13 @@
 func BooleanFunction ( a : bool ) : bool
 	var ak : int, akd : bool;
-	func annoyingFunc() : int
-		var boolean : bool;
 
-		func isItFriday(): bool
-			var damsn : int;
+	func annoyingFunc() : bool
 
-			return false;
+		var lk : bool;
 
-		end isItFriday
-
-		write isItFriday();
+		lk = false;
 		
-		return 42;
+		return lk == a;
 	end annoyingFunc
 	
 

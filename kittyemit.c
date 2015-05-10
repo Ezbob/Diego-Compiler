@@ -64,7 +64,7 @@ void IR_printer(linked_list *ir_lines){
 				printf("\t%s", "xorl ");
 				IR_print_arguments(instr_to_print->arg1);
 				printf(", ");
-				IR_print_arguments(instr_to_print->arg1);
+				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
 				break;
 
@@ -76,7 +76,7 @@ void IR_printer(linked_list *ir_lines){
 
 			case call:
 				printf("\t%s", "call ");
-				IR_print_arguments(instr_to_print->arg2);
+				IR_print_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
 
@@ -99,7 +99,7 @@ void IR_printer(linked_list *ir_lines){
 			case cmp:
 				printf("\t%s", "cmp ");
 				IR_print_arguments(instr_to_print->arg1);
-				printf("%s", ", ");
+				printf(", ");
 				IR_print_arguments(instr_to_print->arg2);
 				printf("\n");
 				break;
@@ -205,12 +205,12 @@ void IR_print_arguments(ARGUMENT *arg){
 			break;
 
 		case register_arg:
-			printf("%s", "%");
+			printf("%%");
 			printf("%s", arg->charConst);
 			break;
 
 		case tempreg_arg:
-			printf("%s", "%");
+			printf("%%");
 			printf("%s%i", "temp", arg->tempid);
 			break;
 
@@ -223,7 +223,8 @@ void IR_print_arguments(ARGUMENT *arg){
 			break;
 
 		case indexing_arg:
-			printf("%s(,",arg->dispLabel);
+			IR_print_arguments(arg->displace);
+			printf("(,");
 			IR_print_arguments(arg->index);
 			printf(",4)");
 			break;

@@ -120,33 +120,33 @@ IR_INSTRUCTION *make_instruction_je(char *c) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_call(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_call(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = call;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_pushl(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_pushl(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = pushl;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_popl(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_popl(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = popl;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
@@ -188,13 +188,13 @@ IR_INSTRUCTION *make_instruction_decl(ARGUMENT *arg1) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_div(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_div(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = divl;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
@@ -218,23 +218,23 @@ IR_INSTRUCTION *make_instruction_xor(ARGUMENT *arg1, ARGUMENT *arg2) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_globl(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_globl(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = globl;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_label(ARGUMENT *arg1, ARGUMENT *arg2) {
+IR_INSTRUCTION *make_instruction_label(ARGUMENT *arg1) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = label;
 	new_instruction->arg1 = arg1;
-	new_instruction->arg2 = arg2;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
@@ -244,6 +244,7 @@ IR_INSTRUCTION *make_instruction_string(ARGUMENT *arg1) {
 	new_instruction->id = 0;
 	new_instruction->op_code = string;
 	new_instruction->arg1 = arg1;
+	new_instruction->arg2 = NULL;
 	return new_instruction;
 }
 
@@ -321,11 +322,11 @@ ARGUMENT *make_argument_tempregister(int i){
 	new_argument->tempid = i;
 	return new_argument;
 }
-//
-ARGUMENT *make_argument_labelAddring(char *dispLabel, ARGUMENT *index){
+
+ARGUMENT *make_argument_indexing(ARGUMENT *displ, ARGUMENT *index){
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
-	new_argument->dispLabel = dispLabel;
+	new_argument->displace = displ;
 	new_argument->index = index;
 	new_argument->kind = indexing_arg;
 	return new_argument;
