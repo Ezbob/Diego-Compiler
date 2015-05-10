@@ -25,6 +25,7 @@ SYMBOLTABLE *initSymbolTable(){
 	SYMBOLTABLE *tablePointer = NEW(SYMBOLTABLE);
 	tablePointer->next = NULL;
 	tablePointer->temps = 0;
+	tablePointer->localVars = 0;
 	int i;
 
 	for (i = 0; i < HASH_SIZE; i++){

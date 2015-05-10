@@ -8,13 +8,11 @@
 static int current_temporary = 1;
 static int current_label = 0;
 static int function_label = 0;
-static int local_variable_size = 0;
 static int instructionnumber = 0;
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
 
-extern BODY *_main_;
 extern SYMBOLTABLE *globalTable;
 extern SECTION *mainSection;
 
@@ -46,7 +44,6 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	initRegisters();
 
 	globalTable = symboltable;
-	_main_ = program;
 
 	append_element(ir_lines, // adding text section for completion
 		make_instruction_globl(
@@ -62,7 +59,8 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	
 	sprintf(mainSection->sectionName, "%s", "main");
 	SECTION *tmp2 = mainSection;
-	IR_builder_decl_list(_main_->decl_list);
+
+	IR_builder_decl_list(program->decl_list);
 
 	// make ".globl main" directive
 	ARGUMENT *global_label = make_argument_label(".globl main");
@@ -79,17 +77,17 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	calleeStart();
 	calleeSave();
 
-	localVariableAllocation();
+	localVariableAllocation(program->symboltable);
 
 	callerSave();
 	
-	IR_builder_statement_list(_main_->statement_list);
+	IR_builder_statement_list(program->statement_list);
 	
 	calleeRestore();
 	callerRestore();
 	calleeEnd();
 
-	local_variable_size = 0;
+	program->symboltable->localVars = 0; // reseting local variables counter
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	mainSection->last = ret;
 
@@ -171,7 +169,7 @@ void IR_builder_function(FUNC *func) {
 	calleeRestore();
 	callerRestore();
 	calleeEnd();
-	local_variable_size = 0;
+	func->symboltable->localVars = 0; // reset local variables in scope 
 	IR_INSTRUCTION *ret = make_instruction_ret();
 	mainSection->last = ret;
 
@@ -221,7 +219,7 @@ void IR_builder_body (BODY *body) {
  	calleeStart(); // shift in stackframe
 
 	calleeSave();
-	localVariableAllocation();
+	localVariableAllocation(body->symboltable);
 	callerSave();
 
 	IR_builder_statement_list(body->statement_list);
@@ -243,18 +241,19 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
-			local_variable_size += WORDSIZE;
+			vtype->symboltable->localVars += WORDSIZE;
 			break;
  
 		case bool_TY_K:
-			local_variable_size += WORDSIZE; 
+			vtype->symboltable->localVars += WORDSIZE;
 			break;
 
 		case arrayof_TY_K:
-			// local_variable_size += WORDSIZE; // parse by reference but we have to find out if it's parameters 
+			// vtype->symboltable->localVars += WORDSIZE; 
+			// parse by reference but we have to find out if it's parameters 
 			break;
 		case recordof_TY_K:
-			// local_variable_size += WORDSIZE; // like arrays
+			// vtype->symboltable->localVars += WORDSIZE; // like arrays
 			break;
 		default:
 			break;
@@ -527,12 +526,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 						.assignS.variable->value.id);
 
 					if( symbol->offset == 0 && 
-						local_variable_size >= WORDSIZE && symbol != NULL ) { 
+						st->symboltable->localVars >= WORDSIZE 
+						&& symbol != NULL ) { 
 						// assigning offsets in stack
 					
-						symbol->offset = -1 * (local_variable_size / 
+						symbol->offset = -1 * (st->symboltable->localVars / 
 																	WORDSIZE);
-						local_variable_size -= WORDSIZE;
+						st->symboltable->localVars -= WORDSIZE;
 					}
 					append_element( // actual assignment
 						ir_lines,
@@ -1418,10 +1418,10 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 /* Adding allocation of local variables, this is by convention 
  *	a subtration of the stack pointer 
  */
-IR_INSTRUCTION *localVariableAllocation() {
-	if (local_variable_size > 0){
+IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *currentScope) {
+	if (currentScope->localVars > 0){
 		IR_INSTRUCTION *instr = make_instruction_subl(
-				make_argument_constant(local_variable_size),
+				make_argument_constant(currentScope->localVars),
 				esp);
 		append_element(ir_lines, instr);
 		return instr; 

@@ -46,6 +46,7 @@ typedef struct SYMBOLTABLE {
     SYMBOL *table[HASH_SIZE];
     struct SYMBOLTABLE *next;
     int temps;
+    int localVars;
 } SYMBOLTABLE;
 
 int Hash(char *str);

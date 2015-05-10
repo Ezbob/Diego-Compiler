@@ -1,8 +1,20 @@
-func annoyingFunc() : int
-	return 42;
-end annoyingFunc
-
 func BooleanFunction ( a : bool ) : bool
+	var ak : int, akd : bool;
+	func annoyingFunc() : int
+		var boolean : bool;
+
+		func isItFriday(): bool
+			var damsn : int;
+
+			return false;
+
+		end isItFriday
+
+		write isItFriday();
+		
+		return 42;
+	end annoyingFunc
+	
 
 	write annoyingFunc();
 

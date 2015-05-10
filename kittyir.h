@@ -80,7 +80,7 @@ void calleeRestore();
 void calleeStart();
 void calleeEnd();
 int getNextLabel();
-IR_INSTRUCTION *localVariableAllocation();
+IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *);
 int getNextFunction();
 void moveStackpointer(int i);
 void IR_print_arguments(ARGUMENT *arg);

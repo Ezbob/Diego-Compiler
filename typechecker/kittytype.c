@@ -16,10 +16,11 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
-	function->symboltable = st;	
+
 
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st);
+	function->symboltable = scope;	
 	/* The head does not belong to the next scope but the current
 	 * so the head type must be put in current scopes symboltable
 	 */
