@@ -80,14 +80,13 @@ void IR_printer(linked_list *ir_lines){
 				printf("\n");
 				break;
 
-			case globl:
-				IR_print_arguments(instr_to_print->arg1);
+			case directive:
+				printf("%s", instr_to_print->label);
 				printf("\n");
 				break;
 
 			case label:
-				IR_print_arguments(instr_to_print->arg1);
-				printf(":\n");
+				printf("%s:\n",instr_to_print->label);
 				break;
 
 			case string:

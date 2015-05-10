@@ -43,32 +43,32 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	data_lines = initialize_list();
 	initRegisters();
 
+	char *mainLabel = calloc(MAXLABELSIZE,sizeof(char));
+	sprintf(mainLabel, "%s", "main");
+
 	globalTable = symboltable;
 
-	append_element(ir_lines, // adding text section for completion
-		make_instruction_globl(
-			make_argument_label(".text")
-			)
-		);
+	// adding text section for completion
+	append_element(ir_lines, make_instruction_directive(".text"));
 
 	mainSection = NEW(SECTION);
 	mainSection->symboltable = globalTable;
 	mainSection->temps = globalTable->temps;
 	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
 	
-	sprintf(mainSection->sectionName, "%s", "main");
+	mainSection->sectionName = mainLabel;
 	SECTION *tmp2 = mainSection;
 
 	IR_builder_decl_list(program->decl_list);
 
 	// make ".globl main" directive
-	ARGUMENT *global_label = make_argument_label(".globl main");
-	IR_INSTRUCTION *globl_directive = make_instruction_globl(global_label);
+	IR_INSTRUCTION *globl_directive =
+		 make_instruction_directive(".globl main");
 	append_element(ir_lines, globl_directive);
 
 	// make "main:" label line
-	ARGUMENT *main_label = make_argument_label("main");
-	IR_INSTRUCTION *globl_main = make_instruction_label(main_label);
+
+	IR_INSTRUCTION *globl_main = make_instruction_label(mainLabel);
 	mainSection->first = globl_main;
 	append_element(ir_lines, globl_main);
 
@@ -129,6 +129,7 @@ void IR_builder_function(FUNC *func) {
 	mainSection->nextSection->prevSection = mainSection;
 	mainSection = mainSection->nextSection;
 	mainSection->symboltable = globalTable; // sure this is correct?
+
 	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
 	sprintf(mainSection->sectionName, "%s", functionlabel);
 
@@ -137,10 +138,8 @@ void IR_builder_function(FUNC *func) {
 	// avoid nested function getting generated inside each others 
 	IR_builder_decl_list(func->functionF.body->decl_list);
 
-	IR_INSTRUCTION *func_main = 
-		make_instruction_label( // start function label
-			make_argument_label( functionlabel ) 
-		);
+	IR_INSTRUCTION *func_main = // start function label
+		make_instruction_label( functionlabel );
 
 	mainSection->first = func_main;
 
@@ -154,9 +153,7 @@ void IR_builder_function(FUNC *func) {
 
 	append_element( // end of function label
 		ir_lines,
-		make_instruction_label(
-			make_argument_label(functionendlabel)
-			)
+		make_instruction_label( functionendlabel )
 		);
 
 
@@ -380,9 +377,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					append_element( // false label section
 						ir_lines,
-						make_instruction_label(
-							make_argument_label(falselabel)
-							)
+						make_instruction_label(falselabel)
 						);
 
 					callerSave();
@@ -401,9 +396,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					append_element( // printing section
 						ir_lines,
-						make_instruction_label(
-							make_argument_label(printlabel)
-							)
+						make_instruction_label(printlabel)
 						);
 
 					append_element( // call to print
@@ -581,9 +574,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				append_element( // make else-label
 					ir_lines, 
-					make_instruction_label(
-						make_argument_label(elselabel)
-					)
+					make_instruction_label(elselabel)
 				);
 
 				IR_builder_statement( // build else statements
@@ -592,9 +583,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			
 			append_element( // end-of-if label
 				ir_lines, 
-				make_instruction_label(
-					make_argument_label(endlabelstring)
-					)
+				make_instruction_label(endlabelstring)
 			);
 
 			break;
@@ -796,9 +785,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 		
 			append_element( // while-start label insert 
 				ir_lines, 
-				make_instruction_label(
-					make_argument_label(truewhilestring)
-				)
+				make_instruction_label(truewhilestring)
 			);
 
 			// evaluting expressions
@@ -829,9 +816,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			
 			append_element( // insertion of while-end
 				ir_lines, 
-				make_instruction_label(
-					make_argument_label(endlabelstring)
-				)
+				make_instruction_label(endlabelstring)
 			);
 			break;
 
@@ -920,9 +905,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
-	ARGUMENT *truearg;
-	ARGUMENT *falsearg;
-	ARGUMENT *endarg;
 	ARGUMENT *result;
 	IR_INSTRUCTION *instr;
 	IR_INSTRUCTION *edxsave;
@@ -957,9 +939,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(zeroden, "zeroDen%d", tmp);
-			ARGUMENT *zerodenarg = make_argument_label(zeroden);
 			IR_INSTRUCTION *zerodenlabel = 
-				make_instruction_label(zerodenarg);
+				make_instruction_label(zeroden);
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
@@ -1030,12 +1011,10 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			char *boolendlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(booltruelabel, "booOPtrue%d", tmp);
-			truearg = make_argument_label(booltruelabel);
-			IR_INSTRUCTION *truelabel = make_instruction_label(truearg);
+			IR_INSTRUCTION *truelabel = make_instruction_label(booltruelabel);
 
 			sprintf(boolendlabel, "boolOPend%d", tmp);
-			endarg = make_argument_label(boolendlabel);
-			IR_INSTRUCTION *endlabel = make_instruction_label(endarg);
+			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
 
 			instr = make_instruction_cmp( argRight, argLeft);
 			append_element(ir_lines, instr);
@@ -1098,12 +1077,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			char *andEndlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(andFalselabel, "ANDfalse%d", tmp);
-			falsearg = make_argument_label(andFalselabel);
-			IR_INSTRUCTION *andFalseinstr = make_instruction_label(falsearg);
+			IR_INSTRUCTION *andFalseinstr = make_instruction_label(
+					andFalselabel);
 
 			sprintf(andEndlabel, "ANDend%d", tmp);
-			endarg = make_argument_label(andEndlabel);
-			IR_INSTRUCTION *andEndinstr = make_instruction_label(endarg);
+			IR_INSTRUCTION *andEndinstr = make_instruction_label(andEndlabel);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -1141,12 +1119,10 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			char *orEndlabel = calloc(MAXLABELSIZE,sizeof(char));
 
 			sprintf(orOKlabel, "ORtrue%d", tmp);
-			truearg = make_argument_label(orOKlabel);
-			IR_INSTRUCTION *oroklabel = make_instruction_label(truearg);
+			IR_INSTRUCTION *oroklabel = make_instruction_label(orOKlabel);
 
 			sprintf(orEndlabel, "ORend%d", tmp);
-			endarg = make_argument_label(orEndlabel);
-			IR_INSTRUCTION *orendlabel = make_instruction_label(endarg);
+			IR_INSTRUCTION *orendlabel = make_instruction_label(orEndlabel);
 
 			result = make_argument_tempregister(current_temporary++);
 
@@ -1186,8 +1162,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	ARGUMENT *arg2;
 	IR_INSTRUCTION *instr;
 	SYMBOL *symbol;
-	int params;
 	int tmp;
+	int params;
 	char *endlabelstring;
 	char *falselabel;
 
@@ -1286,9 +1262,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			append_element( // here goes the false label
 				ir_lines,
-				make_instruction_label(
-					make_argument_label(falselabel)
-					)
+				make_instruction_label(falselabel)
 				);
 
 			append_element( // since it's one make it zero
@@ -1301,9 +1275,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			append_element( // this is end (label) !
 				ir_lines,
-				make_instruction_label(
-					make_argument_label(endlabelstring)
-					)
+				make_instruction_label(endlabelstring)
 				);
 			
 			return arg1;
@@ -1312,8 +1284,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			params = 0;
 			char *pipeEnd = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
-			ARGUMENT *pipeArg = make_argument_label(pipeEnd);
-			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeArg);
+			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeEnd);
 
 			arg1 = IR_builder_expression(term->value.exp);
 			if(term->symboltype->type == SYMBOL_INT){
@@ -1482,8 +1453,7 @@ void moveStackpointer(int i){
 
 void buildForm(char *name, char *actual){
 
-	ARGUMENT *arg1 = make_argument_label(name);
-	IR_INSTRUCTION *instr1 = make_instruction_globl(arg1);
+	IR_INSTRUCTION *instr1 = make_instruction_directive(name);
 	append_element(ir_lines, instr1);
 
 	ARGUMENT *arg2 = make_argument_label(actual);
@@ -1663,8 +1633,7 @@ void assign_instructionnumber(linked_list *ir_lines){
 // cannot build in top because data_lines is not filled
 void build_data_section(){
 
-	append_element(ir_lines, 
-	make_instruction_globl(make_argument_label(".data")));
+	append_element(ir_lines, make_instruction_directive(".data"));
 
 	buildForm("formNUM:", ".string \"%d\\n\" ");
 	buildForm("formTRUE:", ".string \"TRUE\\n\" ");

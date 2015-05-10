@@ -218,23 +218,25 @@ IR_INSTRUCTION *make_instruction_xor(ARGUMENT *arg1, ARGUMENT *arg2) {
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_globl(ARGUMENT *arg1) {
+IR_INSTRUCTION *make_instruction_directive(char * dlabel) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
-	new_instruction->op_code = globl;
-	new_instruction->arg1 = arg1;
+	new_instruction->op_code = directive;
+	new_instruction->arg1 = NULL;
 	new_instruction->arg2 = NULL;
+	new_instruction->label = dlabel;
 	return new_instruction;
 }
 
-IR_INSTRUCTION *make_instruction_label(ARGUMENT *arg1) {
+IR_INSTRUCTION *make_instruction_label(char *clabel) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
 	new_instruction->op_code = label;
-	new_instruction->arg1 = arg1;
+	new_instruction->arg1 = NULL;
 	new_instruction->arg2 = NULL;
+	new_instruction->label = clabel;
 	return new_instruction;
 }
 
