@@ -3,17 +3,22 @@
 #define HASH_SIZE 317
 #include "../parserscanner/memory.h"
 
+typedef enum TYPES { // types valid in our compiles
+  SYMBOL_FUNCTION, 
+  SYMBOL_INT, 
+  SYMBOL_BOOL, 
+  SYMBOL_ID, 
+  SYMBOL_RECORD, 
+  SYMBOL_ARRAY, 
+  SYMBOL_NULL, 
+  SYMBOL_UNKNOWN
+} TYPES;
+
 typedef struct SYMBOLTYPE {
   int visited;
   struct SYMBOLTABLE *child;
-  enum {    SYMBOL_FUNCTION, 
-        SYMBOL_INT, 
-        SYMBOL_BOOL, 
-        SYMBOL_ID, 
-        SYMBOL_RECORD, 
-        SYMBOL_ARRAY, 
-        SYMBOL_NULL, 
-        SYMBOL_UNKNOWN } type;
+  struct SYMBOLTYPE *nextInArray;
+  TYPES type;
   union {
     struct TYPE *array;
     struct TYPE *declaration_type;
@@ -21,7 +26,7 @@ typedef struct SYMBOLTYPE {
     struct FUNCTION *func;
     struct VAR_DECL_LIST *parameters;
     int arguments;
-      } value;
+  } value;
 }SYMBOLTYPE;
 
 
@@ -30,6 +35,7 @@ typedef struct SYMBOL {
   int value;
   int noArguments;
   SYMBOLTYPE *symboltype;
+  SYMBOLTYPE *subtype;
   struct SYMBOL *next;
   struct PAR_DECL_LIST *parameters;
   struct FUNCTION *func;

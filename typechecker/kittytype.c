@@ -16,8 +16,6 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
-
-
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st);
 	function->symboltable = scope;	
@@ -61,7 +59,7 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 
 }
 
-void collect_type ( TYPE *type, SYMBOLTABLE *st){
+SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st){
 
 	type->symboltable = st;
 	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
@@ -70,33 +68,35 @@ void collect_type ( TYPE *type, SYMBOLTABLE *st){
 		case id_TY_K:
 			symboltype->type = SYMBOL_ID;
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case int_TY_K:
 			symboltype->type = SYMBOL_INT;
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case bool_TY_K:
 			symboltype->type = SYMBOL_BOOL;
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case arrayof_TY_K:
 			symboltype->type = SYMBOL_ARRAY;
+			symboltype->nextInArray = collect_type(type->value.type, st);
 			type->symboltype = symboltype;
-			collect_type(type->value.type, st);
 			type->symboltype->value.array = type->value.type;
-			break;
+			return symboltype;
 
 		case recordof_TY_K:
 			symboltype->type = SYMBOL_RECORD;
 			type->symboltype = symboltype;
-			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st));
+			collect_var_decl_list(type->value.var_decl_list, 
+				scopeSymbolTable(st));
 			symboltype->child = type->value.var_decl_list->symboltable;
-			//dumpSymbolTable(symboltype->child);
-			break;
+			return symboltype;
 	}
+
+	return NULL; // something went wrong
 }
 
 int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){

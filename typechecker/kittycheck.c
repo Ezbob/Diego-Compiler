@@ -300,15 +300,18 @@ void check_variable ( VAR *var){
 
 			//Expression must be int
 			if(var->value.indexingV.exp->symboltype->type != SYMBOL_INT){
-				check_error_report("Expression must evaluate to int", var->lineno);
+				check_error_report("Expression must evaluate to int", 
+					var->lineno);
 			}
 
 			//Variable must be array type
-			if(var->value.indexingV.variable->symboltype->type != SYMBOL_ARRAY){
+			if(var->value.indexingV.variable->symboltype->type != 
+					SYMBOL_ARRAY){
 				check_error_report("Variable is not an array", var->lineno);
 			}
 
-			var->symboltype = var->value.indexingV.variable->symboltype->value.array->symboltype;
+			var->symboltype = var->value.indexingV.variable->symboltype->
+				value.array->symboltype;
 			break;
 
 		/*TODO*/
@@ -321,6 +324,8 @@ void check_variable ( VAR *var){
 void check_expression ( EXPRES *exp){
 
 	SYMBOLTYPE *symbolT;
+	SYMBOLTYPE *symbolTRight;
+	SYMBOLTYPE *symbolTLeft;
 
 	switch(exp->kind){
 		case term_E_K:
@@ -332,9 +337,25 @@ void check_expression ( EXPRES *exp){
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
+			
+			// probably depends on the number of indexing ??
+
+			// unwinds the symboltype chain for both sides
+			// to get the "primitive" type  
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
+
+			if (symbolTLeft->type != SYMBOL_INT || 
+					symbolTRight->type != SYMBOL_INT  ) {
+				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
@@ -346,10 +367,20 @@ void check_expression ( EXPRES *exp){
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
 
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
+			if (symbolTLeft->type != SYMBOL_INT || 
+					symbolTRight->type != SYMBOL_INT  ) {
+				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
@@ -361,9 +392,20 @@ void check_expression ( EXPRES *exp){
 			check_expression(exp->value.sides.right);
 			check_expression(exp->value.sides.left);
 
-			if(exp->value.sides.left->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.right->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
+
+			if (symbolTLeft->type != SYMBOL_INT || 
+					symbolTRight->type != SYMBOL_INT  ) {
+				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
@@ -375,9 +417,20 @@ void check_expression ( EXPRES *exp){
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
+
+			if (symbolTLeft->type != SYMBOL_INT || 
+					symbolTRight->type != SYMBOL_INT  ) {
+				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
@@ -385,7 +438,8 @@ void check_expression ( EXPRES *exp){
 			}
 			break;
 
-		//array og record må være null, bool skal være med bool, int skal være med int 
+		//array og record maa vaere null, bool skal vaere med bool, 
+		// int skal vaere med int 
 		//Copy paste her symboltype ind
 		case booleq_E_K:
 		case boolneq_E_K:
@@ -454,13 +508,27 @@ void check_expression ( EXPRES *exp){
 			check_error_report("Invalid comparison types", exp->lineno);
 			break;
 
+		case boolgeq_E_K:
+		case boolleq_E_K:
+		case boolless_E_K:
 		case boolgreater_E_K:
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT ||
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) {
-				check_error_report("Expected exp int", exp->lineno);
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
+
+			if (symbolTLeft->type != SYMBOL_INT || 
+					symbolTRight->type != SYMBOL_INT  ) {
+				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
@@ -468,70 +536,29 @@ void check_expression ( EXPRES *exp){
 			}
 			break;
 
-		case boolless_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT ||
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) {
-				check_error_report("Expected exp int", exp->lineno);
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-				exp->symboltype = symbolT;
-			}
-			break;
-
-		case boolleq_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-			}
-			break;
-
-		case boolgeq_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-
-			if(exp->value.sides.right->symboltype->type != SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_INT ) { 
-				check_error_report("Expected exp int", exp->lineno);
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-			}
-			break;
-
+		case boolor_E_K:
 		case booland_E_K:
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
-			if(exp->value.sides.right->symboltype->type != SYMBOL_BOOL || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_BOOL) { 
+
+			symbolTRight = exp->value.sides.right->symboltype;
+			// fastforward in linked list
+			while (symbolTRight->nextInArray != NULL){
+				symbolTRight = symbolTRight->nextInArray;
+			}
+			symbolTLeft = exp->value.sides.left->symboltype;
+			// fastforward in linked list
+			while (symbolTLeft->nextInArray != NULL){
+				symbolTLeft = symbolTLeft->nextInArray;
+			}
+
+			if(symbolTRight->type != SYMBOL_BOOL || 
+			   symbolTLeft->type != SYMBOL_BOOL) { 
 				check_error_report("Expected exp bool", exp->lineno);
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
                 exp->symboltype = symbolT;
-			}
-			break;
-		case boolor_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-			if(exp->value.sides.right->symboltype->type != SYMBOL_BOOL || 
-			   exp->value.sides.left->symboltype->type != SYMBOL_BOOL) { 
-				check_error_report("Expected exp bool", exp->lineno);
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-				exp->symboltype = symbolT;
 			}
 			break;
 	}
