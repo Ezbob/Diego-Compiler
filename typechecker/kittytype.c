@@ -19,7 +19,7 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
 
 	/*Variables only lives in function, so new scope*/
-	SYMBOLTABLE *scope = scopeSymbolTable(st);
+	SYMBOLTABLE *scope = scopeSymbolTable(st, st->id);
 	function->symboltable = scope;	
 	/* The head does not belong to the next scope but the current
 	 * so the head type must be put in current scopes symboltable
@@ -92,7 +92,7 @@ void collect_type ( TYPE *type, SYMBOLTABLE *st){
 		case recordof_TY_K:
 			symboltype->type = SYMBOL_RECORD;
 			type->symboltype = symboltype;
-			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st));
+			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st, st->id));
 			symboltype->child = type->value.var_decl_list->symboltable;
 			//dumpSymbolTable(symboltype->child);
 			break;
@@ -289,7 +289,6 @@ void collect_opt_else ( OPT_ELSE *opel, SYMBOLTABLE *st ){
 void collect_variable ( VAR *var, SYMBOLTABLE *st ){
 
 	var->symboltable = st;
-
 	switch(var->kind){
 		case id_V_K:
 			break;

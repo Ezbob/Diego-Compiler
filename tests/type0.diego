@@ -1,18 +1,13 @@
 func func1( a : int) : int
-	type myrecord = record of {
-		x : int,
-		y : int
-	};
-	
-	var p : myrecord;
 
-	allocate p;
-
-	p.x = a;
-
-	return p.x;
+	write i;
+	i = 10;
+	write i;
+	return a;
 
 end func1
 
+var i : int;
+i = 0;
 
 write func1(2);

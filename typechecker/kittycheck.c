@@ -137,17 +137,20 @@ void check_statement ( STATEMENT *st){
 			SYMBOL *symbol = NEW(SYMBOL);
 
 			if(st->value.returnS.exp->value.term->kind == var_T_K){
+
 				if((symbol = getSymbol(st->symboltable, st->value.returnS.exp->value.term->value.var->value.id)) != NULL){
 
-				if(symbol->symboltype->type != st->value.returnS.function->symboltype->value.return_type->
-														   symboltype->type){
-					check_error_report("Return type does not match function", 
-																	st->lineno);
-				}
-			   }
-			}	else if (st->value.returnS.exp->symboltype->type !=
+					if(symbol->symboltype->type != st->value.returnS.function->symboltype->value.return_type->
+															   symboltype->type){
+						check_error_report("Return type does not match function", 
+																		st->lineno);
+					}
+			   	}
+			}else if (st->value.returnS.exp->symboltype->type !=
 			   st->value.returnS.function->symboltype->value.return_type->
 														   symboltype->type) {
+
+					printf("%p\n", (void *) st->value.returnS.function->symboltype->value.return_type->symboltype->type);
 					check_error_report("Return type does not match function", 
 																st->lineno);
 			}

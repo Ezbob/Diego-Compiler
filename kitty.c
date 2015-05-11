@@ -32,7 +32,7 @@ struct linked_list *ir_codes;
 
 int main(void) {
 
-	globalTable = initSymbolTable();
+	globalTable = initSymbolTable(SUCCESS);
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){
 		case PARSE_ERROR:

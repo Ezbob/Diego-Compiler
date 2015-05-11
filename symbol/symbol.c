@@ -21,11 +21,12 @@ int Hash(char *str){
 }
 
 //Returns a pointer to a new initialized hash table
-SYMBOLTABLE *initSymbolTable(){
+SYMBOLTABLE *initSymbolTable(int id){
 	SYMBOLTABLE *tablePointer = NEW(SYMBOLTABLE);
 	tablePointer->next = NULL;
 	tablePointer->temps = 0;
 	tablePointer->localVars = 0;
+	tablePointer->id = id;
 	int i;
 
 	for (i = 0; i < HASH_SIZE; i++){
@@ -39,10 +40,10 @@ SYMBOLTABLE *initSymbolTable(){
  * Takes a pointer to a hash table t as argument and returns
  * a new hash table with a pointer to t in its next field.
  */
-SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t){
-	SYMBOLTABLE *tablePointer;	
-
-	if ((tablePointer = initSymbolTable()) == NULL){
+SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t, int parentid){
+	SYMBOLTABLE *tablePointer;
+	int newid = parentid + 1;
+	if ((tablePointer = initSymbolTable(newid)) == NULL){
 		fprintf(stderr,
 			"Error: Table not allocated, memory not available \n");
 		return NULL;	
@@ -75,6 +76,8 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 	PutSymbol->symboltype = symbolT;
 	PutSymbol->uniquename = calloc(11,sizeof(char));
 	PutSymbol->offset = 0;
+	PutSymbol->arraySize = 0;
+	PutSymbol->tableid = t->id;
 
 	Placeholder = t->table[HashValue]; 
 	if (Placeholder != NULL){ // has a SYMBOL in field 
@@ -183,7 +186,30 @@ void dumpSymbolTable(SYMBOLTABLE *t){
  
  	dumpSymbolTable(t->next); // recursively print the next SYMBOLTABLE 
 }
+void dumpTable(SYMBOLTABLE *t){
 
+	SYMBOL *symbol;
+		
+	if (t == NULL) { //Nothing or top node
+ 		return;
+ 	}
+ 
+	printf("Reading hashtable located: %p\n",(void*) t );
+
+ 	for (int i = 0; i < HASH_SIZE; ++i){
+ 		symbol = t->table[i];
+ 
+ 		if (symbol != NULL) { // there is a symbol here 
+			dumpSymbol(symbol);
+			
+ 			while(symbol->next != NULL){ // print whole chain
+ 				dumpSymbol(symbol);				
+				symbol = symbol->next; 
+ 			}printf("\n");
+ 		}
+		
+ 	}
+}
 void dumpSymbol(SYMBOL *symbol){
 				
 			switch(symbol->symboltype->type){

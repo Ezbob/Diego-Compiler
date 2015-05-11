@@ -40,6 +40,7 @@ typedef struct SYMBOL {
   char *uniquename;
   int offset;
   int arraySize;
+  int tableid;
 } SYMBOL;
 
 typedef struct SYMBOLTABLE {
@@ -47,19 +48,22 @@ typedef struct SYMBOLTABLE {
     struct SYMBOLTABLE *next;
     int temps;
     int localVars;
+    int id;
 } SYMBOLTABLE;
 
 int Hash(char *str);
 
-SYMBOLTABLE *initSymbolTable(void);
+SYMBOLTABLE *initSymbolTable(int id);
 
-SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t);
+SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t, int parentid);
 
 SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT);
 
 SYMBOL *getSymbol(SYMBOLTABLE *t, char *name);
 
 void dumpSymbolTable(SYMBOLTABLE *t);
+
+void dumpTable(SYMBOLTABLE *t);
 
 void destroySymbolTable(SYMBOLTABLE *t);
 

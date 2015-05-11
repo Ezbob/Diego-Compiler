@@ -16,6 +16,8 @@ static linked_list *data_lines; // for allocates
 extern SYMBOLTABLE *globalTable;
 extern SECTION *mainSection;
 
+struct SYMBOLTABLE *currentTable;
+
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
 void initRegisters(){
@@ -36,12 +38,92 @@ int getNextLabel(){
 int getNextFunction(){
 	return function_label++;
 }
+void initStaticLink(){
+	if(get_length(data_lines) == 0)	{ // init heap counter
+		append_element(
+			ir_lines, 
+			make_instruction_movl(
+				make_argument_label("$heap"),
+				make_argument_label("(heapNext)")		
+			)
+		);
+	}
+
+	char *address_of_id = calloc(20, sizeof(char));
+
+	sprintf(address_of_id, "(%s)","staticLinks");
+
+	append_element(
+		ir_lines,
+		make_instruction_movl(
+			make_argument_label("$heapNext"),
+			make_argument_label(address_of_id)
+		)
+	);
+
+	ARGUMENT *arg1 = make_argument_constant(function_label);
+	ARGUMENT *arg2 = make_argument_tempregister(current_temporary++);
+
+	append_element(
+		ir_lines,
+		make_instruction_movl(
+			arg1,
+			arg2
+		)
+	);
+
+	// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+	append_element(
+		ir_lines,
+		make_instruction_imul(
+			make_argument_constant(WORDSIZE),
+			arg2
+		)
+	);
+
+	append_element(
+		ir_lines, // add to the next pointer
+		make_instruction_addl(
+			arg2, 
+			make_argument_label("(heapNext)")
+		)
+	);
+
+}
+
+void addStaticLink(int id){
+	char *address_of_id = calloc(20, sizeof(char));
+	sprintf(address_of_id, "(%s)","staticLinks");
+	ARGUMENT *arg = make_argument_label(address_of_id);
+	ARGUMENT *place = make_argument_constant(id);
+
+	append_element(ir_lines, make_instruction_pushl(ebx));
+
+	append_element(ir_lines, make_instruction_movl(place, ebx));	
+
+	append_element(ir_lines, make_instruction_movl(ebp,make_argument_indexing( make_argument_label("staticLinks"),ebx)));
+
+	append_element(ir_lines,make_instruction_popl(ebx));
+}
+
 
 linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	fprintf(stderr, "%s\n", "Initializing intermediate code generation");
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	initRegisters();
+
+	int offsetcount = -1;
+
+	SYMBOL *symbol;
+
+	for(int i = 0; i < HASH_SIZE; i++){
+		symbol = symboltable->table[i];
+
+		if(symbol != NULL && symbol->symboltype->type != SYMBOL_FUNCTION){
+			symbol->offset = offsetcount--;
+		}
+	}
 
 	char *mainLabel = calloc(MAXLABELSIZE,sizeof(char));
 	sprintf(mainLabel, "%s", "main");
@@ -77,8 +159,9 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	localVariableAllocation(program->symboltable);
 
+
 	callerSave();
-	
+	initStaticLink();
 	IR_builder_statement_list(program->statement_list);
 	
 	calleeRestore();
@@ -108,6 +191,8 @@ void IR_builder_function(FUNC *func) {
 	int functiondId = getNextFunction();
 	char *functionlabel = calloc(MAXLABELSIZE ,sizeof(char));
 	char *functionendlabel = calloc(MAXLABELSIZE ,sizeof(char));
+
+	addStaticLink(func->symboltable->id);
 
 	SYMBOL *symbol = getSymbol(func->symboltable, 
 		func->functionF.head->headH.id);
@@ -206,7 +291,8 @@ void IR_builder_head (HEAD *header) {
 }
 
 void IR_builder_body (BODY *body) {
-
+	SYMBOLTABLE *temptable = currentTable;
+	currentTable = body->symboltable;
  	calleeStart(); // shift in stackframe
 
 	calleeSave();
@@ -214,6 +300,7 @@ void IR_builder_body (BODY *body) {
 	callerSave();
 
 	IR_builder_statement_list(body->statement_list);
+	currentTable = temptable;
 }
 
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
@@ -230,6 +317,8 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 }
 
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
+
+ 	SYMBOL *symbol;
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
 			vtype->symboltable->localVars += WORDSIZE;
@@ -352,7 +441,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-					callerSave();
+					//callerSave();
 
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
@@ -380,7 +469,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						make_instruction_label(falselabel)
 						);
 
-					callerSave();
+					//callerSave();
 					
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
@@ -844,7 +933,52 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	
 	switch (var->kind){
 		case id_V_K:
+
 			symbol = getSymbol(var->symboltable, var->value.id);
+			printf("%s\n", symbol->name);
+			printf("%d\n", symbol->offset);
+			if(symbol->tableid != var->symboltable->id){
+				append_element(ir_lines, make_instruction_pushl(ecx));
+				append_element(ir_lines, make_instruction_movl(make_argument_constant(symbol->tableid), ecx));
+
+				append_element(ir_lines, 
+					make_instruction_movl(
+						make_argument_indexing(
+							make_argument_label(
+								"staticLinks"),ecx
+						), eax
+					)
+				);
+
+				append_element(
+					ir_lines,
+					make_instruction_movl(
+						eax,
+						ebp
+					)
+				);
+
+				append_element(ir_lines, make_instruction_movl(make_argument_constant(var->symboltable->id), ecx));
+
+				append_element(ir_lines, 
+					make_instruction_movl(
+						make_argument_indexing(
+							make_argument_label(
+								"staticLinks"),ecx
+						), eax
+					)
+				);
+
+				append_element(
+					ir_lines,
+					make_instruction_movl(
+						eax,
+						ebp
+					)
+				);
+
+				append_element(ir_lines, make_instruction_popl(ecx));
+			}
 			arg = make_argument_address(WORDSIZE*(symbol->offset));
 			break;
 		case indexing_V_K:
@@ -920,18 +1054,24 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case plus_E_K:
-			instr = make_instruction_addl(argLeft, argRight);
+			append_element(ir_lines, make_instruction_movl(argLeft, eax));
+			instr = make_instruction_addl(argRight, eax);
 			append_element(ir_lines, instr);
+			append_element(ir_lines, make_instruction_movl(eax, argRight));
 			return argRight; 
 
 		case minus_E_K:
-			instr = make_instruction_subl( argRight, argLeft);
+			append_element(ir_lines, make_instruction_movl(argRight, eax));
+			instr = make_instruction_subl( argLeft, eax);
 			append_element(ir_lines, instr);
+			append_element(ir_lines, make_instruction_movl(eax, argLeft));
 			return argLeft; 
 
 		case times_E_K:
-			instr = make_instruction_imul(argLeft, argRight);
+			append_element(ir_lines, make_instruction_movl(argLeft, eax));
+			instr = make_instruction_imul(argRight, eax);
 			append_element(ir_lines, instr);
+			append_element(ir_lines, make_instruction_movl(eax, argRight));
 			return argRight;
 
 		case divide_E_K:
@@ -944,8 +1084,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
+			append_element(
+				ir_lines,
+				make_instruction_movl(
+					argRight,
+					eax
+				)
+			);
+
 			IR_INSTRUCTION *cmpvszero = 
-				make_instruction_cmp(zeroArg, argRight);
+				make_instruction_cmp(zeroArg, eax);
 			append_element(ir_lines, cmpvszero);
 
 			IR_INSTRUCTION *notzero = make_instruction_jne(zeroden);
@@ -1170,25 +1318,25 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	switch(term->kind){
 		case num_T_K:
 			arg1 = make_argument_constant(term->value.intconst);
-			arg2 = make_argument_tempregister(current_temporary++);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2; //Return arg2 to keep track of temps
+			//arg2 = make_argument_tempregister(current_temporary++);
+			//instr = make_instruction_movl(arg1, arg2);
+			//append_element(ir_lines, instr);
+			return arg1;//arg2; //Return arg2 to keep track of temps
 
 		case boolTrue_T_K:
 			arg1 = make_argument_constant(1);
-			arg2 = make_argument_tempregister(current_temporary++);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2; //Return arg2 to keep track of temps
+			//arg2 = make_argument_tempregister(current_temporary++);
+			//instr = make_instruction_movl(arg1, arg2);
+			//append_element(ir_lines, instr);
+			return arg1;//arg2; //Return arg2 to keep track of temps
 
 		case null_T_K:
 		case boolFalse_T_K:
 			arg1 = make_argument_constant(0);
-			arg2 = make_argument_tempregister(current_temporary++);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2; //Return arg2 to keep track of temps
+			//arg2 = make_argument_tempregister(current_temporary++);
+			//instr = make_instruction_movl(arg1, arg2);
+			//append_element(ir_lines, instr);
+			return arg1;//arg2; //Return arg2 to keep track of temps
 
 		case expresParent_T_K: // paranteses just parses
 			return IR_builder_expression(term->value.exp);
@@ -1196,13 +1344,13 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 		case var_T_K:
 			
 			arg1 = IR_builder_variable(term->value.var);
-			arg2 = make_argument_tempregister(current_temporary++);
-			instr = make_instruction_movl(arg1, arg2);
-			append_element(ir_lines, instr);
-			return arg2; //Return arg2 to keep track of temps			
+			//arg2 = make_argument_tempregister(current_temporary++);
+			//instr = make_instruction_movl(arg1, arg2);
+			//append_element(ir_lines, instr);
+			return arg1;//arg2; //Return arg2 to keep track of temps			
 
 		case actList_T_K:
-			// static link ?
+			addStaticLink(term->symboltable->id);
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
 
 			// push parameters on stack recursively
