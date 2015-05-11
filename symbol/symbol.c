@@ -69,7 +69,7 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 		return NULL;		
 	}
 	PutSymbol->name = calloc(strlen(name)+1,sizeof(char));
-	PutSymbol->name = name;
+	strncpy(PutSymbol->name,name,strlen(name)+1);
 	PutSymbol->value = value;
 	PutSymbol->next = NULL;
 	PutSymbol->symboltype = symbolT;

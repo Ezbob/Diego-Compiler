@@ -1,6 +1,7 @@
 #ifndef _KITTY_CHECK_H
 #define _KITTY_CHECK_H
 #include "../parserscanner/kittytree.h"
+#include "../symbol/symbol.h"
 
 void begin_check(BODY *main);
 
@@ -24,5 +25,7 @@ void check_variable ( VAR *);
 void check_act_list ( ACT_LIST *);
 void check_expression_list ( EXP_LIST *);
 void check_var_type(VAR_TYPE *);
+
+int array_type_check_base(const SYMBOLTYPE *, TYPES);
 
 #endif

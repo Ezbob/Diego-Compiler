@@ -1,9 +1,9 @@
 #include "kittycheck.h"
 #include "kittytype.h"
-#include "../symbol/symbol.h"
 #include <stdio.h>
 
 int counter;
+static int parameterCounter = 0;
 
 void check_error_report(const char* errorMsg, int lineno){
 	if (lineno < 0){
@@ -53,17 +53,6 @@ void check_type ( TYPE *type){
 		case recordof_TY_K:
 			check_var_decl_list(type->value.var_decl_list);
 			break;
-	}
-}
-
-void check_par_decl_list ( PAR_DECL_LIST *pdecl){
-	switch(pdecl->kind){
-		case varType_PDL_K:
-			check_var_decl_list(pdecl->value.var_decl_list);
-			break;
-		case empty_PDL_K:
-			break;
-
 	}
 }
 
@@ -131,25 +120,32 @@ void check_statement_list ( STATEMENT_LIST *slst){
 }
 
 void check_statement ( STATEMENT *st){
+
+	SYMBOLTYPE *rightHand;
+	SYMBOLTYPE *leftHand;
+
 	switch(st->kind){
 		case return_S_K:
 			check_expression(st->value.returnS.exp);
-			SYMBOL *symbol = NEW(SYMBOL);
+			SYMBOL *symbol;
 
 			if(st->value.returnS.exp->value.term->kind == var_T_K){
-				if((symbol = getSymbol(st->symboltable, st->value.returnS.exp->value.term->value.var->value.id)) != NULL){
+				if((symbol = getSymbol(st->symboltable, st->value.returnS.
+					exp->value.term->value.var->value.id)) != NULL){
 
-				if(symbol->symboltype->type != st->value.returnS.function->symboltype->value.return_type->
-														   symboltype->type){
-					check_error_report("Return type does not match function", 
-																	st->lineno);
+				if( !array_type_check_base(symbol->symboltype, st->value.
+					returnS.function->symboltype->value.return_type->
+						symboltype->type) ){
+					check_error_report(
+						"Return type does not match function", st->lineno);
 				}
 			   }
 			}	else if (st->value.returnS.exp->symboltype->type !=
 			   st->value.returnS.function->symboltype->value.return_type->
 														   symboltype->type) {
-					check_error_report("Return type does not match function", 
-																st->lineno);
+
+					check_error_report(
+						"Return type does not match function", st->lineno);
 			}
 
 			break;
@@ -169,15 +165,19 @@ void check_statement ( STATEMENT *st){
 			check_opt_length(st->value.allocateS.opt_length);
 			
 			if(st->value.allocateS.opt_length->kind == empty_OL_K &&
-			   st->value.allocateS.variable->symboltype->type != SYMBOL_RECORD) {
-				check_error_report("Only records can be allocated without length", st->lineno);
+			   st->value.allocateS.variable->symboltype->type 
+			   			!= SYMBOL_RECORD) {
+				check_error_report(
+				"Only records can be allocated without length",st->lineno);
 			} else if (st->value.allocateS.opt_length->kind == empty_OL_K &&
-			   st->value.allocateS.variable->symboltype->type == SYMBOL_RECORD){
+			   st->value.allocateS.variable->symboltype->type
+			   			 == SYMBOL_RECORD){
 
 				SYMBOL *childSymbol;
-				if((childSymbol = getSymbol(st->symboltable, st->value.allocateS.variable->value.id)) != NULL){
+				if((childSymbol = getSymbol(st->symboltable, 
+						st->value.allocateS.variable->value.id)) != NULL){
 					st->value.allocateS.opt_length->emptyLength = 
-													childSymbol->symboltype->child->temps;
+					childSymbol->symboltype->child->temps;
 				}
 
 			}
@@ -200,13 +200,32 @@ void check_statement ( STATEMENT *st){
 			//Checking if assignments are OK with record types
 			if(st->value.assignS.variable->kind == dot_V_K){
 
-				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.dotV.variable->value.id)) != NULL){
+				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.
+					variable->value.dotV.variable->value.id)) != NULL){
+					// a hack, only works with recursive depth of 1
 					tmpTable = temp_sym->symboltype->child;
 				}
-				
-				if((temp_sym = getSymbol(tmpTable, st->value.assignS.variable->value.id)) != NULL){
 
-					if(temp_sym->symboltype->type != st->value.assignS.exp->symboltype->type){
+
+				
+				if((temp_sym = getSymbol(tmpTable, st->value.
+					assignS.variable->value.id)) != NULL){
+
+					SYMBOLTYPE stl;
+					SYMBOLTYPE str;
+
+					stl = *temp_sym->symboltype;
+					str = *st->value.assignS.exp->symboltype;
+
+					while (stl.nextInArray != NULL) {
+						stl = *stl.nextInArray;
+					}
+
+					while (str.nextInArray != NULL) {
+						str = *str.nextInArray;
+					}
+
+					if(str.type != stl.type){
 						check_error_report("Invalid assignment", st->lineno);
 					} 
 				}
@@ -220,10 +239,27 @@ void check_statement ( STATEMENT *st){
 					i++;
 				}
 			} else { //Standard check
+				temp_sym = getSymbol(st->symboltable, st->value.assignS.
+					variable->value.id);
 
-				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.id)) != NULL){
-					if(temp_sym->symboltype->type != st->value.assignS.exp->symboltype->type){
-							check_error_report("Invalid assignment", st->lineno);
+				if(temp_sym != NULL){
+					rightHand = temp_sym->symboltype;
+					leftHand = st->value.assignS.exp->symboltype;
+
+					SYMBOLTYPE *iteratorR = rightHand;
+					SYMBOLTYPE *iteratorL = leftHand;
+
+					// get the primitive type of a array again
+					while (iteratorR->nextInArray != NULL) {
+						iteratorR = iteratorR->nextInArray;
+					}
+
+					while (iteratorL->nextInArray != NULL) {
+						iteratorL = iteratorL->nextInArray;
+					}
+
+					if( iteratorR->type != iteratorL->type){
+						check_error_report("Invalid assignment", st->lineno);
 					} 
 				}
 			}
@@ -294,7 +330,6 @@ void check_variable ( VAR *var){
 			break;
 
 		case indexing_V_K:
-
 			check_variable(var->value.indexingV.variable);
 			check_expression(var->value.indexingV.exp);
 
@@ -310,6 +345,7 @@ void check_variable ( VAR *var){
 				check_error_report("Variable is not an array", var->lineno);
 			}
 
+	
 			var->symboltype = var->value.indexingV.variable->symboltype->
 				value.array->symboltype;
 			break;
@@ -321,251 +357,125 @@ void check_variable ( VAR *var){
 	}
 }
 
-void check_expression ( EXPRES *exp){
 
+void check_expression ( EXPRES *exp){
 	SYMBOLTYPE *symbolT;
 	SYMBOLTYPE *symbolTRight;
 	SYMBOLTYPE *symbolTLeft;
 
 	switch(exp->kind){
 		case term_E_K:
+	
 			check_term(exp->value.term);
-			 exp->symboltype = exp->value.term->symboltype;
-			break;
-
-		case plus_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-
-			
-			// probably depends on the number of indexing ??
-
-			// unwinds the symboltype chain for both sides
-			// to get the "primitive" type  
-			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
-			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
-
-			if (symbolTLeft->type != SYMBOL_INT || 
-					symbolTRight->type != SYMBOL_INT  ) {
-				check_error_report("Expected exp int", exp->lineno);			
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_INT;
-				exp->symboltype = symbolT;
-			}
-			break;
-
-		case minus_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-
-			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
-			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
-
-			if (symbolTLeft->type != SYMBOL_INT || 
-					symbolTRight->type != SYMBOL_INT  ) {
-				check_error_report("Expected exp int", exp->lineno);			
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_INT;
-				exp->symboltype = symbolT;
-			}
+	
+			exp->symboltype = exp->value.term->symboltype;
+	
 			break;
 
 		case times_E_K:
-			check_expression(exp->value.sides.right);
-			check_expression(exp->value.sides.left);
-
-			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
-			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
-
-			if (symbolTLeft->type != SYMBOL_INT || 
-					symbolTRight->type != SYMBOL_INT  ) {
-				check_error_report("Expected exp int", exp->lineno);			
-			} else {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_INT;
-				exp->symboltype = symbolT;
-			}
-			break;
-
+		case minus_E_K:
+		case plus_E_K:
 		case divide_E_K:
+			
 			check_expression(exp->value.sides.left);
+			
 			check_expression(exp->value.sides.right);
+			
 
 			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
 			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
 
-			if (symbolTLeft->type != SYMBOL_INT || 
-					symbolTRight->type != SYMBOL_INT  ) {
+			if (!array_type_check_base(symbolTLeft, SYMBOL_INT) || 
+					!array_type_check_base(symbolTRight, SYMBOL_INT) ) {
 				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_INT;
 				exp->symboltype = symbolT;
 			}
-			break;
-
-		//array og record maa vaere null, bool skal vaere med bool, 
-		// int skal vaere med int 
-		//Copy paste her symboltype ind
-		case booleq_E_K:
-		case boolneq_E_K:
-			check_expression(exp->value.sides.left);
-			check_expression(exp->value.sides.right);
-			if(exp->value.sides.right->symboltype->type == SYMBOL_INT || 
-			   exp->value.sides.left->symboltype->type == SYMBOL_INT ) { 
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-				exp->symboltype = symbolT;
-				break;
-			}
-			if(exp->value.sides.right->symboltype->type == SYMBOL_BOOL || 
-			   exp->value.sides.left->symboltype->type == SYMBOL_BOOL ) { 
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-			if(exp->value.sides.right->symboltype->type == SYMBOL_ARRAY || 
-			   exp->value.sides.left->symboltype->type == SYMBOL_NULL ) { 
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-			if(exp->value.sides.right->symboltype->type == SYMBOL_NULL || 
-			   exp->value.sides.left->symboltype->type == SYMBOL_ARRAY ) { 
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-			if(exp->value.sides.right->symboltype->type == SYMBOL_ARRAY || 
-			   exp->value.sides.left->symboltype->type == SYMBOL_ARRAY ) { 
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-
-			if(exp->value.sides.right->symboltype->type == SYMBOL_RECORD ||
-			   exp->value.sides.left->symboltype->type == SYMBOL_NULL ) {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-
-			if(exp->value.sides.right->symboltype->type == SYMBOL_NULL ||
-			   exp->value.sides.left->symboltype->type == SYMBOL_RECORD ) {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-
-			if(exp->value.sides.right->symboltype->type == SYMBOL_RECORD ||
-			   exp->value.sides.left->symboltype->type == SYMBOL_RECORD ) {
-				symbolT = NEW(SYMBOLTYPE);
-				symbolT->type = SYMBOL_BOOL;
-                exp->symboltype = symbolT;
-				break;
-			}
-
-			check_error_report("Invalid comparison types", exp->lineno);
 			break;
 
 		case boolgeq_E_K:
 		case boolleq_E_K:
 		case boolless_E_K:
 		case boolgreater_E_K:
+			
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
 			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
 			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
 
-			if (symbolTLeft->type != SYMBOL_INT || 
-					symbolTRight->type != SYMBOL_INT  ) {
+			// check both sides for array type
+			if ( !array_type_check_base(symbolTRight, SYMBOL_INT) || 
+					!array_type_check_base(symbolTLeft, SYMBOL_INT) ) {
 				check_error_report("Expected exp int", exp->lineno);			
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
                 exp->symboltype = symbolT;
 			}
+			
 			break;
 
 		case boolor_E_K:
 		case booland_E_K:
+			
 			check_expression(exp->value.sides.left);
 			check_expression(exp->value.sides.right);
 
-			symbolTRight = exp->value.sides.right->symboltype;
-			// fastforward in linked list
-			while (symbolTRight->nextInArray != NULL){
-				symbolTRight = symbolTRight->nextInArray;
-			}
-			symbolTLeft = exp->value.sides.left->symboltype;
-			// fastforward in linked list
-			while (symbolTLeft->nextInArray != NULL){
-				symbolTLeft = symbolTLeft->nextInArray;
-			}
 
-			if(symbolTRight->type != SYMBOL_BOOL || 
-			   symbolTLeft->type != SYMBOL_BOOL) { 
+			symbolTRight = exp->value.sides.right->symboltype;
+			symbolTLeft = exp->value.sides.left->symboltype;
+
+			if( !array_type_check_base(symbolTRight, SYMBOL_BOOL) || 
+			   !array_type_check_base(symbolTLeft, SYMBOL_BOOL) ) { 
 				check_error_report("Expected exp bool", exp->lineno);
 			} else {
 				symbolT = NEW(SYMBOLTYPE);
 				symbolT->type = SYMBOL_BOOL;
                 exp->symboltype = symbolT;
 			}
+			
+			break;
+
+		//array og record maa vaere null, bool skal vaere med bool, 
+		// int skal vaere med int 
+		//Copy paste her symboltype ind
+		case booleq_E_K:
+	
+		case boolneq_E_K:
+	
+	
+			check_expression(exp->value.sides.left);
+	
+	
+			check_expression(exp->value.sides.right);
+	
+			symbolTRight = exp->value.sides.right->symboltype;
+			symbolTLeft = exp->value.sides.left->symboltype;
+
+			// negative cases 
+			if(  (symbolTRight->type == SYMBOL_NULL  && 
+				(symbolTLeft->type == SYMBOL_INT    || 
+				 symbolTLeft->type == SYMBOL_BOOL )) ||
+				((symbolTRight->type == SYMBOL_INT   || 
+				symbolTRight->type == SYMBOL_BOOL ) && 
+				symbolTLeft->type == SYMBOL_NULL )) {
+
+				check_error_report("Invalid comparison types", exp->lineno);	
+			
+			}else{ // else
+				symbolT = NEW(SYMBOLTYPE);
+				symbolT->type = SYMBOL_BOOL;
+                exp->symboltype = symbolT;
+			}
+	
 			break;
 	}
 }
 
 int check_term ( TERM *term){
-
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
 	SYMBOLTABLE *tmpTable;
@@ -574,9 +484,11 @@ int check_term ( TERM *term){
 
 	switch(term->kind){
 		case var_T_K:
+	
 			check_variable(term->value.var);
 			if(term->value.var->kind == dot_V_K){
-				tmpTable = getSymbol(term->symboltable, term->value.var->value.dotV.variable->value.id)->symboltype->child;
+				tmpTable = getSymbol(term->symboltable, 
+					term->value.var->value.dotV.variable->value.id)->symboltype->child;
 				symbol = getSymbol(tmpTable, term->value.var->value.dotV.id);
 				term->symboltype = symbol->symboltype;
 			} else{
@@ -591,10 +503,15 @@ int check_term ( TERM *term){
 			break;
 
 		case actList_T_K:
+			
 			check_act_list(term->value.actlistT.actlist);
 			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
-			if(symbol == NULL || symbol->symboltype->type != SYMBOL_FUNCTION ){
-				check_error_report("Function not defined or not a function", term->lineno);
+			int paraCount = 0;
+
+			if(symbol == NULL || symbol->symboltype->type 
+				!= SYMBOL_FUNCTION ){
+				check_error_report(
+					"Function not defined or not a function", term->lineno);
 			}
 
 
@@ -608,36 +525,50 @@ int check_term ( TERM *term){
 				check_error_report("Wrong no. of parameters", term->lineno);
 			}
 
-			EXP_LIST *callParameters = term->value.actlistT.actlist->value.exp_list;
-			VAR_DECL_LIST *functionParameters = symbol->parameters->value.var_decl_list;
+			
+			EXP_LIST *callParameters = 
+				term->value.actlistT.actlist->value.exp_list;
+			
+			VAR_DECL_LIST *functionParameters = 
+				symbol->parameters->value.var_decl_list;
 
+			while( callParameters != NULL && functionParameters != NULL 
+					&& count < symbol->noArguments){
 
-			while( callParameters != NULL && functionParameters != NULL && count < symbol->noArguments){
-				
+				/// TODO: fix symboltype allocation here
+				printf("->%p\n", callParameters->value.commaEL.exp->symboltype);
 				if(callParameters->kind == commalist_EL_K &&
 				   functionParameters->kind == comma_VDL_K){
+
 					if(callParameters->value.commaEL.exp->symboltype->type !=
-					   functionParameters->value.commaVDL.var_type->symbol->symboltype->type){
+					   functionParameters->value.commaVDL.var_type->
+					   		symbol->symboltype->type){
 						check_error_report("Wrong parameter type", term->lineno);
 					}
+
 				} else if(callParameters->kind == exp_EL_K &&
 					      functionParameters->kind == var_VDL_typeK){
+					
 					if(callParameters->value.exp->symboltype->type !=
-					   functionParameters->value.var_type->symbol->symboltype->type)
-						check_error_report("Wrong parameter type", term->lineno);
+					   functionParameters->value.var_type->symbol->
+					   			symboltype->type){
+						check_error_report("Wrong parameter type", 
+							term->lineno);
+					}
 				} 
 				callParameters = callParameters->value.commaEL.explist;
-				functionParameters = functionParameters->value.commaVDL.var_decl_list;
+				functionParameters = functionParameters->value.
+					commaVDL.var_decl_list;
 				
 				count++;
 			}
 
-			if(count != symbol->noArguments ){
+			if( paraCount != symbol->noArguments ){
 				check_error_report("Wrong no. of parameters", term->lineno);
 			}
 
-			symbolT = symbol->symboltype->value.return_type->symboltype;
-			term->symboltype = symbolT;
+			term->symboltype = symbol->symboltype->
+												value.return_type->symboltype;
 			break;
 
 		case termBang_T_K:
@@ -690,7 +621,18 @@ int check_term ( TERM *term){
 	return count;
 }
 
-void check_act_list ( ACT_LIST *actlst){
+void check_par_decl_list ( PAR_DECL_LIST *pdecl){
+	switch(pdecl->kind){
+		case varType_PDL_K:
+			check_var_decl_list(pdecl->value.var_decl_list);
+			break;
+		case empty_PDL_K:
+			break;
+	}
+}
+
+void check_act_list ( ACT_LIST *actlst ) {
+	parameterCounter = 0; // reset parameter since there could be 
 	switch(actlst->kind){
 		case explist_AL_K:
 			check_expression_list(actlst->value.exp_list);
@@ -700,14 +642,29 @@ void check_act_list ( ACT_LIST *actlst){
 	}
 }
 
-void check_expression_list ( EXP_LIST *explst){
+void check_expression_list ( EXP_LIST *explst ) {
 	switch(explst->kind){
 		case exp_EL_K:
 			check_expression(explst->value.exp);
 			break;
 		case commalist_EL_K:
+			parameterCounter++;
 			check_expression_list(explst->value.commaEL.explist);
 			check_expression(explst->value.commaEL.exp);
 			break;
+	}
+}
+
+//checks if the base of the array is of type 
+int array_type_check_base(const SYMBOLTYPE *sym, TYPES type) {
+
+	const SYMBOLTYPE *iterator = sym;
+
+	for(; iterator->nextInArray != NULL ; iterator = iterator->nextInArray);
+
+	if (type == iterator->type){
+		return 1;
+	} else {
+		return 0;
 	}
 }

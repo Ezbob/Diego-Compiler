@@ -135,22 +135,26 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 
 void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 	vtype->symboltable = st;
-	collect_type(vtype->type, st);
-	//dumpSymbolTable(vtype->type->value.var_decl_list->symboltable);
+
 	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
 	if(vtype->symbol == NULL){
 		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 		exit(1);
 	}
-	SYMBOL *check;
-	if((check = getSymbol(vtype->symboltable, vtype->type->value.idconst)) != NULL){
+
+	collect_type(vtype->type, st);
+	//dumpSymbolTable(vtype->type->value.var_decl_list->symboltable);
+	//printf("vtype id %s\n", vtype->id);
+
+	//printf("%s\n", vtype->type->value.idconst);
+	/*SYMBOL *check = getSymbol(vtype->symboltable, vtype->type->value.idconst);
+	// setting the type def SYMBOLTYPE
+	if(check != NULL ){
 		vtype->symbol->symboltype = check->symboltype;
-		//dumpSymbolTable(vtype->symbol->symboltype->child);
 	} else {
 		vtype->symbol->realtype = vtype->type;
-	}
+	}*/
 	st->temps++;
-	
 
 }
 
@@ -184,8 +188,10 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ){
 			symboltype = decl->value.typedeclID.type->symboltype;
 			symboltype->value.declaration_type = decl->value.typedeclID.type;
 
-			if((test = putSymbol(st, decl->value.typedeclID.id, 0, symboltype)) == NULL ){
-				fprintf(stderr, "fejl\n");
+			if((test = putSymbol(st, decl->value.typedeclID.id, 0, symboltype)) 
+					== NULL ){
+				fprintf(stderr, 
+					"Error: cannot place new type in symbol table\n");
 			}
 
 			test->declarationtype = decl->value.typedeclID.type;

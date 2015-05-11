@@ -96,7 +96,7 @@ IR_INSTRUCTION *make_instruction_jl(char *c) {
 	new_instruction->id = 0;
 	new_instruction->op_code = jl;
 	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
-	new_instruction->label = c;
+	strcpy(new_instruction->label,c);
 	return new_instruction;
 }
 

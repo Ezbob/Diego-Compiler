@@ -656,6 +656,8 @@ OPT_ELSE *make_OPT_ELSE_empty(){
 TYPE *make_TYPE_id(char *id){
 
 	TYPE *tid = NEW(TYPE);
+	tid->symboltype = NULL;
+	tid->symboltable = NULL;
 	tid->lineno = lineno;
 	tid->kind = id_TY_K;
 	tid->value.idconst = id;
@@ -668,6 +670,8 @@ TYPE *make_TYPE_int(){
 	
 	TYPE *int_type = NEW(TYPE);
 	int_type->lineno = lineno;
+	int_type->symboltype = NULL;
+	int_type->symboltable = NULL;
 	int_type->kind = int_TY_K;
 	int_type->value.typeconst = NEW_SHORT_STR;
 

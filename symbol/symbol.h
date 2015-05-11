@@ -35,7 +35,6 @@ typedef struct SYMBOL {
   int value;
   int noArguments;
   SYMBOLTYPE *symboltype;
-  SYMBOLTYPE *subtype;
   struct SYMBOL *next;
   struct PAR_DECL_LIST *parameters;
   struct FUNCTION *func;
