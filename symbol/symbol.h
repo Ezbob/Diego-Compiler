@@ -3,25 +3,29 @@
 #define HASH_SIZE 317
 #include "../parserscanner/memory.h"
 
+typedef enum TYPES_SUPPORTED {
+    SYMBOL_FUNCTION, 
+    SYMBOL_INT, 
+    SYMBOL_BOOL, 
+    SYMBOL_ID, 
+    SYMBOL_RECORD, 
+    SYMBOL_ARRAY, 
+    SYMBOL_NULL, 
+    SYMBOL_UNKNOWN 
+} TYPES_SUPPORTED;
+
+
 typedef struct SYMBOLTYPE {
   int visited;
+  struct SYMBOLTYPE *nextArrayType; // for arrays
+  struct SYMBOLTYPE *return_type; // for functions
   struct SYMBOLTABLE *child;
-  enum {    SYMBOL_FUNCTION, 
-        SYMBOL_INT, 
-        SYMBOL_BOOL, 
-        SYMBOL_ID, 
-        SYMBOL_RECORD, 
-        SYMBOL_ARRAY, 
-        SYMBOL_NULL, 
-        SYMBOL_UNKNOWN } type;
-  union {
-    struct TYPE *array;
-    struct TYPE *declaration_type;
-    struct TYPE *return_type;
-    struct FUNCTION *func;
-    struct VAR_DECL_LIST *parameters;
-    int arguments;
-      } value;
+  TYPES_SUPPORTED type;
+  struct TYPE *array;
+  struct TYPE *declaration_type;
+  struct FUNCTION *func;
+  struct VAR_DECL_LIST *parameters;
+  int arguments;
 }SYMBOLTYPE;
 
 

@@ -24,5 +24,6 @@ void check_variable ( VAR *);
 void check_act_list ( ACT_LIST *);
 void check_expression_list ( EXP_LIST *);
 void check_var_type(VAR_TYPE *);
+SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *);
 
 #endif

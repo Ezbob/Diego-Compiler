@@ -16,8 +16,6 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 
-
-
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st, st->id);
 	function->symboltable = scope;	
@@ -33,9 +31,8 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 
 	header->symboltable = st;
-	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
+	SYMBOLTYPE *symboltype = make_SYMBOLTYPE(SYMBOL_FUNCTION);
 	SYMBOL *symbol;
-	symboltype->type = SYMBOL_FUNCTION;
 	
 	header->symboltype = symboltype;
 
@@ -47,10 +44,9 @@ void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 	symbol->parameters = header->headH.pdeclist;
 	symbol->returntype = header->headH.returntype;
 	symbol->noArguments = noArguments;
-	collect_type(header->headH.returntype, st);
 
-	symboltype->value.return_type = header->headH.returntype;
-
+	// return_type is now a SYMBOLTYPE struct
+	symboltype->return_type = collect_type(header->headH.returntype, st);
 }
 
 void collect_body (BODY *body, SYMBOLTABLE *st){
@@ -61,42 +57,44 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 
 }
 
-void collect_type ( TYPE *type, SYMBOLTABLE *st){
+SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st){
 
 	type->symboltable = st;
-	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
+	SYMBOLTYPE *symboltype = NULL;
 
 	switch(type->kind){
 		case id_TY_K:
-			symboltype->type = SYMBOL_ID;
+			symboltype = make_SYMBOLTYPE(SYMBOL_ID);
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case int_TY_K:
-			symboltype->type = SYMBOL_INT;
+			symboltype = make_SYMBOLTYPE(SYMBOL_INT);
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case bool_TY_K:
-			symboltype->type = SYMBOL_BOOL;
+			symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
 			type->symboltype = symboltype;
-			break;
+			return symboltype;
 
 		case arrayof_TY_K:
-			symboltype->type = SYMBOL_ARRAY;
+			symboltype = make_SYMBOLTYPE(SYMBOL_ARRAY);
 			type->symboltype = symboltype;
-			collect_type(type->value.type, st);
-			type->symboltype->value.array = type->value.type;
-			break;
+			symboltype->nextArrayType = collect_type(type->value.type, st);
+			type->symboltype->array = type->value.type;
+			return symboltype; 
 
 		case recordof_TY_K:
-			symboltype->type = SYMBOL_RECORD;
+			symboltype = make_SYMBOLTYPE(SYMBOL_RECORD);
 			type->symboltype = symboltype;
-			collect_var_decl_list(type->value.var_decl_list,  scopeSymbolTable(st, st->id));
+			collect_var_decl_list(type->value.var_decl_list, 
+				scopeSymbolTable(st, st->id));
 			symboltype->child = type->value.var_decl_list->symboltable;
-			//dumpSymbolTable(symboltype->child);
-			break;
+			return symboltype;
 	}
+
+	return symboltype; // null if a error case
 }
 
 int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
@@ -135,15 +133,27 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 
 void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 	vtype->symboltable = st;
-	collect_type(vtype->type, st);
-	//dumpSymbolTable(vtype->type->value.var_decl_list->symboltable);
-	vtype->symbol = putSymbol(st, vtype->id, 0, vtype->type->symboltype);
-	if(vtype->symbol == NULL){
-		fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
+	SYMBOLTYPE *symboltype;
+
+	symboltype = collect_type(vtype->type, st);
+	
+	if(symboltype != NULL){
+		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
+		if(vtype->symbol == NULL){
+			fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
+			exit(1);
+		}
+	} else {
+		fprintf(stderr, "Error at line %i: type of symbol not recognized \n"
+			, vtype->lineno);
 		exit(1);
 	}
+	
+
 	SYMBOL *check;
-	if((check = getSymbol(vtype->symboltable, vtype->type->value.idconst)) != NULL){
+	if(vtype->type->kind == id_TY_K && 
+		(check = getSymbol(vtype->symboltable, vtype->type->value.idconst)) 
+			!= NULL){
 		vtype->symbol->symboltype = check->symboltype;
 		//dumpSymbolTable(vtype->symbol->symboltype->child);
 	} else {
@@ -151,7 +161,6 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 	}
 	st->temps++;
 	
-
 }
 
 void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ){
@@ -173,19 +182,21 @@ void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ){
 void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ){
 
 	decl->symboltable = st;
-	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
+	SYMBOLTYPE *symboltype;
 	SYMBOL *test;
 
 	switch(decl->kind){
 		case typeassign_D_K:
-			symboltype->type = SYMBOL_ID;
+			symboltype = make_SYMBOLTYPE(SYMBOL_ID);
+
 			collect_type(decl->value.typedeclID.type, st);
 
 			symboltype = decl->value.typedeclID.type->symboltype;
-			symboltype->value.declaration_type = decl->value.typedeclID.type;
+			symboltype->declaration_type = decl->value.typedeclID.type;
 
-			if((test = putSymbol(st, decl->value.typedeclID.id, 0, symboltype)) == NULL ){
-				fprintf(stderr, "fejl\n");
+			if((test = putSymbol(st, decl->value.typedeclID.id, 0, 
+					symboltype)) == NULL ){
+				fprintf(stderr, "Error: in collecting new type assign\n");
 			}
 
 			test->declarationtype = decl->value.typedeclID.type;
@@ -379,7 +390,7 @@ void collect_expression ( EXPRES *exp, SYMBOLTABLE *st ){
 void collect_term ( TERM *term, SYMBOLTABLE *st ){
 
 	term->symboltable = st;
-	SYMBOLTYPE *symboltype = NEW(SYMBOLTYPE);
+	SYMBOLTYPE *symboltype;
 
 	switch(term->kind){
 		case var_T_K:
@@ -403,18 +414,18 @@ void collect_term ( TERM *term, SYMBOLTABLE *st ){
 			break;
 
 		case null_T_K:
-			symboltype->type = SYMBOL_NULL;
+			symboltype = make_SYMBOLTYPE(SYMBOL_NULL);
 			term->symboltype = symboltype;
 			break;
 
 		case boolTrue_T_K:
 		case boolFalse_T_K:
-			symboltype->type = SYMBOL_BOOL;
+			symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
 			term->symboltype = symboltype;
 			break;
 
 		case num_T_K:
-			symboltype->type = SYMBOL_INT;
+			symboltype = make_SYMBOLTYPE(SYMBOL_INT);
 			term->symboltype = symboltype;
 			break;
 	}
@@ -446,4 +457,22 @@ void collect_expression_list ( EXP_LIST *explst, SYMBOLTABLE *st){
 			collect_expression(explst->value.commaEL.exp, st);
 			break;
 	}
+}
+
+// initializing all members of the SYMBOLTYPE struct
+SYMBOLTYPE *make_SYMBOLTYPE(TYPES_SUPPORTED type){
+	SYMBOLTYPE *new_type;
+	new_type = NEW(SYMBOLTYPE);
+
+	new_type->nextArrayType = NULL;
+	new_type->return_type = NULL;
+	new_type->child = NULL;
+	new_type->array = NULL;
+  	new_type->declaration_type = NULL;
+  	new_type->func = NULL;
+  	new_type->parameters = NULL;
+  	new_type->arguments = 0;
+  	new_type->type = type;
+
+	return new_type;
 }

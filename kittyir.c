@@ -92,16 +92,17 @@ void initStaticLink(){
 }
 
 void addStaticLink(int id){
-	char *address_of_id = calloc(20, sizeof(char));
-	sprintf(address_of_id, "(%s)","staticLinks");
-	ARGUMENT *arg = make_argument_label(address_of_id);
+
 	ARGUMENT *place = make_argument_constant(id);
 
 	append_element(ir_lines, make_instruction_pushl(ebx));
 
 	append_element(ir_lines, make_instruction_movl(place, ebx));	
 
-	append_element(ir_lines, make_instruction_movl(ebp,make_argument_indexing( make_argument_label("staticLinks"),ebx)));
+	append_element(ir_lines, 
+		make_instruction_movl(ebp,
+			make_argument_indexing( 
+				make_argument_label("staticLinks"),ebx)));
 
 	append_element(ir_lines,make_instruction_popl(ebx));
 }
@@ -318,7 +319,6 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
 
- 	SYMBOL *symbol;
 	switch(vtype->type->kind){ // note: switching on type kind
 		case int_TY_K:
 			vtype->symboltable->localVars += WORDSIZE;
