@@ -204,21 +204,7 @@ void IR_builder_function(FUNC *func) {
 	strcpy(symbol->uniquename, functionlabel);
 
 	sprintf(functionlabel, "%s", functionlabel);
-
-	//Switching scope begins new section
-	SECTION *temp = mainSection;
-	while(mainSection->nextSection != NULL){
-		mainSection = mainSection->nextSection;
-	}
-
-	mainSection->nextSection = NEW(SECTION);
-	mainSection->nextSection->prevSection = mainSection;
-	mainSection = mainSection->nextSection;
-	mainSection->symboltable = globalTable; // sure this is correct?
-
-	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
-	sprintf(mainSection->sectionName, "%s", functionlabel);
-
+	
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
@@ -227,15 +213,10 @@ void IR_builder_function(FUNC *func) {
 	IR_INSTRUCTION *func_main = // start function label
 		make_instruction_label( functionlabel );
 
-	mainSection->first = func_main;
-
 	append_element(ir_lines, func_main);
 
 	IR_builder_head(func->functionF.head);
 	IR_builder_body(func->functionF.body);
-
-	//Section is done, restore old section
-	mainSection = temp;
 
 	append_element( // end of function label
 		ir_lines,
@@ -247,10 +228,8 @@ void IR_builder_function(FUNC *func) {
 	callerRestore();
 	calleeEnd();
 	func->symboltable->localVars = 0; // reset local variables in scope 
-	IR_INSTRUCTION *ret = make_instruction_ret();
-	mainSection->last = ret;
 
-	append_element(ir_lines, ret);
+	append_element(ir_lines, make_instruction_ret());
 
 }
 
