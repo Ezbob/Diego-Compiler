@@ -3,30 +3,29 @@
 #define HASH_SIZE 317
 #include "../parserscanner/memory.h"
 
-typedef enum TYPES { // types valid in our compiles
-  SYMBOL_FUNCTION, 
-  SYMBOL_INT, 
-  SYMBOL_BOOL, 
-  SYMBOL_ID, 
-  SYMBOL_RECORD, 
-  SYMBOL_ARRAY, 
-  SYMBOL_NULL, 
-  SYMBOL_UNKNOWN
-} TYPES;
+
+typedef enum TYPES_SUPPORTED {
+    SYMBOL_FUNCTION, 
+    SYMBOL_INT, 
+    SYMBOL_BOOL, 
+    SYMBOL_ID, 
+    SYMBOL_RECORD, 
+    SYMBOL_ARRAY, 
+    SYMBOL_NULL, 
+    SYMBOL_UNKNOWN 
+} TYPES_SUPPORTED;
 
 typedef struct SYMBOLTYPE {
   int visited;
+  struct SYMBOLTYPE *nextArrayType; // for arrays
+  struct SYMBOLTYPE *return_type; // for functions
   struct SYMBOLTABLE *child;
-  struct SYMBOLTYPE *nextInArray;
-  TYPES type;
-  union {
-    struct TYPE *array;
-    struct TYPE *declaration_type;
-    struct TYPE *return_type;
-    struct FUNCTION *func;
-    struct VAR_DECL_LIST *parameters;
-    int arguments;
-  } value;
+  TYPES_SUPPORTED type;
+  struct TYPE *array;
+  struct TYPE *declaration_type;
+  struct FUNCTION *func;
+  struct VAR_DECL_LIST *parameters;
+  int arguments;
 }SYMBOLTYPE;
 
 
@@ -45,6 +44,7 @@ typedef struct SYMBOL {
   char *uniquename;
   int offset;
   int arraySize;
+  int tableid;
 } SYMBOL;
 
 typedef struct SYMBOLTABLE {
@@ -52,19 +52,22 @@ typedef struct SYMBOLTABLE {
     struct SYMBOLTABLE *next;
     int temps;
     int localVars;
+    int id;
 } SYMBOLTABLE;
 
 int Hash(char *str);
 
-SYMBOLTABLE *initSymbolTable(void);
+SYMBOLTABLE *initSymbolTable(int id);
 
-SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t);
+SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t, int parentid);
 
 SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT);
 
 SYMBOL *getSymbol(SYMBOLTABLE *t, char *name);
 
 void dumpSymbolTable(SYMBOLTABLE *t);
+
+void dumpTable(SYMBOLTABLE *t);
 
 void destroySymbolTable(SYMBOLTABLE *t);
 

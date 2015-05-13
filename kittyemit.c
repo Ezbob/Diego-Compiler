@@ -221,6 +221,10 @@ void IR_print_arguments(ARGUMENT *arg){
 			IR_print_arguments(arg->index);
 			printf(",4)");
 			break;
+			
+		case staticlink_arg:
+			printf("%d(%%ebx)", arg->intConst);
+			break;
 		default:
 			break;
 	}

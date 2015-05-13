@@ -33,7 +33,7 @@ typedef struct ARGUMENT {
 	int tempid;
 	ARGUMENTTYPE type;
 	enum { address_arg, register_arg, label_arg, 
-		constant_arg, tempreg_arg, indexing_arg } kind;
+		constant_arg, tempreg_arg, indexing_arg, staticlink_arg } kind;
 	char *label;
 	int intConst;
 	REGISTERS reg;

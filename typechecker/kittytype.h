@@ -26,5 +26,6 @@ void collect_expression ( EXPRES *exp, SYMBOLTABLE *st);
 void collect_term ( TERM *term, SYMBOLTABLE *st);
 void collect_act_list ( ACT_LIST *actlst, SYMBOLTABLE *st);
 void collect_expression_list ( EXP_LIST *explst, SYMBOLTABLE *st);
+SYMBOLTYPE *make_SYMBOLTYPE(TYPES_SUPPORTED);
 
 #endif

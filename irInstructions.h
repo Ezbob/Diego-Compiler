@@ -39,5 +39,6 @@ ARGUMENT *make_argument_constant(int i);
 ARGUMENT *make_argument_temp(int i);
 ARGUMENT *make_argument_tempregister(int i);
 ARGUMENT *make_argument_indexing(ARGUMENT *, ARGUMENT *);
+ARGUMENT *make_argument_static(int i);
 
 #endif
