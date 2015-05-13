@@ -14,7 +14,6 @@ static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
 
 extern SYMBOLTABLE *globalTable;
-extern SECTION *mainSection;
 
 struct SYMBOLTABLE *currentTable;
 
@@ -134,25 +133,14 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
 
-	mainSection = NEW(SECTION);
-	mainSection->symboltable = globalTable;
-	mainSection->temps = globalTable->temps;
-	mainSection->sectionName = calloc(MAXLABELSIZE,sizeof(char));
-	
-	mainSection->sectionName = mainLabel;
-	SECTION *tmp2 = mainSection;
-
 	IR_builder_decl_list(program->decl_list);
 
 	// make ".globl main" directive
-	IR_INSTRUCTION *globl_directive =
-		 make_instruction_directive(".globl main");
-	append_element(ir_lines, globl_directive);
+	append_element(ir_lines, make_instruction_directive(".globl main"));
 
 	// make "main:" label line
 
 	IR_INSTRUCTION *globl_main = make_instruction_label(mainLabel);
-	mainSection->first = globl_main;
 	append_element(ir_lines, globl_main);
 
 	calleeStart();
@@ -170,18 +158,15 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	calleeEnd();
 
 	program->symboltable->localVars = 0; // reseting local variables counter
-	IR_INSTRUCTION *ret = make_instruction_ret();
-	mainSection->last = ret;
-
-	append_element(ir_lines, ret);
+	append_element(ir_lines, make_instruction_ret());
 
 	build_data_section();
 
-	mainSection = tmp2;
 	linked_list *save = ir_lines;
 	assign_instructionnumber(ir_lines);
 	basic_assign(ir_lines);
 	ir_lines = save;
+
 	IR_printer(ir_lines);
 	
 	return ir_lines;
@@ -237,7 +222,6 @@ void IR_builder_head (HEAD *header) {
 
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
-	mainSection->temps = args->noArguments;
 	int count = 0;
 	int offset = 2; 
 
@@ -1017,18 +1001,25 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 }
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
-	int tmp = 0;
-
+	
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
-	ARGUMENT *result;
-	IR_INSTRUCTION *instr;
-	IR_INSTRUCTION *edxsave;
-	IR_INSTRUCTION *edxrestore;
+	ARGUMENT *truth;
+	ARGUMENT *falsehood;
+	char *notZeroDenom;
+	char *trueLabel;
+	char *falseLabel;
+	char *endLabel;
+	int tmp = 0;
 
 	if(exp->kind != term_E_K){
 		argLeft = IR_builder_expression(exp->value.sides.left);
 		argRight = IR_builder_expression(exp->value.sides.right);
+
+		append_element(ir_lines, make_instruction_movl(argLeft,ebx));
+			// left arg in ebx
+		append_element(ir_lines, make_instruction_movl(argRight,ecx));
+			// right arg in ecx
 	}
 
 	switch(exp->kind){
@@ -1036,97 +1027,75 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case plus_E_K:
-			append_element(ir_lines, make_instruction_movl(argLeft, eax));
-			instr = make_instruction_addl(argRight, eax);
-			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argLeft));
-			return argRight; 
+			append_element(ir_lines, make_instruction_addl(ebx, ecx));
+			append_element(ir_lines, make_instruction_movl(ecx, eax));
+			return eax; 
 
 		case minus_E_K:
-			append_element(ir_lines, make_instruction_movl(argRight, eax));
-			instr = make_instruction_subl( argLeft, eax);
-			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
-			return argLeft; 
+			append_element(ir_lines, make_instruction_subl(ebx, ecx));
+			append_element(ir_lines, make_instruction_movl(ecx, eax));
+			return eax; 
 
 		case times_E_K:
-			append_element(ir_lines, make_instruction_movl(argLeft, eax));
-			instr = make_instruction_imul(argRight, eax);
-			append_element(ir_lines, instr);
-			//append_element(ir_lines, make_instruction_movl(eax, argLeft));
-			return eax;//argRight;
+			append_element(ir_lines, make_instruction_imul(ebx, ecx));
+			append_element(ir_lines, make_instruction_movl(ecx, eax));
+			return eax;
 
 		case divide_E_K:
 			tmp = getNextLabel();
 
-			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
-			sprintf(zeroden, "zeroDen%d", tmp);
-			IR_INSTRUCTION *zerodenlabel = 
-				make_instruction_label(zeroden);
+			notZeroDenom = calloc(MAXLABELSIZE,sizeof(char));
+			sprintf(notZeroDenom, "notZeroDen%d", tmp);
+			
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
-			append_element(
-				ir_lines,
+			// compaire denominator with zero
+			append_element(ir_lines, make_instruction_cmp(zeroArg, ebx));
+
+			append_element(ir_lines, make_instruction_jne(notZeroDenom)); 
+									// if not zero jump to notZeroDenom
+ 
+ 			// prepare to deliver error code "divistion with zero"
+			// by convention put 3 in ebx and 1 in eax
+			append_element(ir_lines, 
 				make_instruction_movl(
-					argRight,
-					eax
-				)
-			);
+					make_argument_constant(3), 
+					ebx
+					)
+				);
 
-			IR_INSTRUCTION *cmpvszero = 
-				make_instruction_cmp(zeroArg, eax);
-			append_element(ir_lines, cmpvszero);
+			append_element(ir_lines,
+					make_instruction_movl(
+						make_argument_constant(1), 
+						eax
+						)
+					);
 
-			IR_INSTRUCTION *notzero = make_instruction_jne(zeroden);
-			append_element(ir_lines, notzero);
+			append_element( // kernel call code
+				ir_lines, 
+				make_instruction_intcode("0x80")
+				);
 
-			ARGUMENT *exitARG1 = make_argument_constant(3);
-			IR_INSTRUCTION *moveExitArg1 = 
-				make_instruction_movl(exitARG1, ebx);
-			append_element(ir_lines, moveExitArg1);
+			// else jump to the real divition
+			append_element(ir_lines, make_instruction_label(notZeroDenom));
 
-			ARGUMENT *exitARG2 = make_argument_constant(1);
-			IR_INSTRUCTION *moveExitArg2 = 
-				make_instruction_movl(exitARG2, eax);
-			append_element(ir_lines, moveExitArg2);
+			//Saving edx register has modulo
+			append_element(ir_lines, make_instruction_pushl(edx));
 
-			IR_INSTRUCTION *sysexit = make_instruction_intcode("0x80");
-			append_element(ir_lines, sysexit);
+			//Clear edx setting to zero
+			append_element(ir_lines, make_instruction_xor(edx, edx));
 
-			append_element(ir_lines, zerodenlabel);
+			// left arg is in ebx as nominator
+			append_element(ir_lines, make_instruction_movl(ebx, eax));
 
-			//HACK -------------------------
+			// right arg is in ecx as demoninator
+			append_element(ir_lines, make_instruction_div(ecx));
 
-			IR_INSTRUCTION *hack1 = make_instruction_pushl(ebx);
-			append_element(ir_lines, hack1);
-
-			IR_INSTRUCTION *hack2 = make_instruction_movl(argRight, ebx);
-			append_element(ir_lines, hack2);
-
-			//------------------------------
-			edxsave = make_instruction_pushl(edx); //Saving edx register
-			append_element(ir_lines, edxsave);
-
-			instr = make_instruction_xor(edx, edx); //Clear edx for DIV
-			append_element(ir_lines, instr);
-
-			IR_INSTRUCTION *instr1 = make_instruction_movl(argLeft, eax);
-			append_element(ir_lines, instr1);
-
-			IR_INSTRUCTION *instr2 = make_instruction_div(ebx);
-			append_element(ir_lines, instr2);
-
-			IR_INSTRUCTION *instr3 = make_instruction_movl(eax, argLeft);
-			append_element(ir_lines, instr3);
-
-			IR_INSTRUCTION *hack3 = make_instruction_popl(ebx);
-			append_element(ir_lines, hack3);
-
-			edxrestore = make_instruction_popl(edx);
-			append_element(ir_lines, edxrestore); //Restoring edx register
-
-			return argLeft;
+			// restoring state of edx register
+			append_element(ir_lines, make_instruction_popl(edx)); 
+				
+			return eax;
 
 		case booleq_E_K:
 		case boolneq_E_K:
@@ -1134,161 +1103,173 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case boolless_E_K:
 		case boolleq_E_K:
 		case boolgeq_E_K:
-			result = make_argument_tempregister(current_temporary++);
+			//result = make_argument_tempregister(current_temporary++);
 			tmp = getNextLabel();
 
-			char *booltruelabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *boolendlabel = calloc(MAXLABELSIZE,sizeof(char));
+			trueLabel = calloc(MAXLABELSIZE,sizeof(char));
+			endLabel = calloc(MAXLABELSIZE,sizeof(char));
 
-			sprintf(booltruelabel, "booOPtrue%d", tmp);
-			IR_INSTRUCTION *truelabel = make_instruction_label(booltruelabel);
+			sprintf(trueLabel, "booOPtrue%d", tmp);
+			sprintf(endLabel, "boolOPend%d", tmp);
 
-			sprintf(boolendlabel, "boolOPend%d", tmp);
-			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
-
-
-			instr = make_instruction_cmp( argRight, argLeft);
-			append_element(ir_lines, instr);
+			// compaire right with left
+			append_element(ir_lines, make_instruction_cmp(ecx, ebx));
 	
 			IR_INSTRUCTION *truejmp;
 
+			// decide on which what kind of compairison we have 
 			switch(exp->kind){
 				case booleq_E_K:
-					truejmp = make_instruction_je(booltruelabel);
+					truejmp = make_instruction_je(trueLabel);
 					break;
 
 				case boolneq_E_K:
-					truejmp = make_instruction_jne(booltruelabel);
+					truejmp = make_instruction_jne(trueLabel);
 					break;
 
 				case boolgreater_E_K:
-					truejmp = make_instruction_jg(booltruelabel);
+					truejmp = make_instruction_jg(trueLabel);
 					break;
 
 				case boolless_E_K:
-					truejmp = make_instruction_jl(booltruelabel);
+					truejmp = make_instruction_jl(trueLabel);
 					break;
 
 				case boolleq_E_K:
-					truejmp = make_instruction_JLE(booltruelabel);
+					truejmp = make_instruction_JLE(trueLabel);
 					break;
 
 				case boolgeq_E_K:
-					truejmp = make_instruction_JGE(booltruelabel);
+					truejmp = make_instruction_JGE(trueLabel);
 					break;
 
 				default:
-					return argRight;
+					return ecx;
 			}
 
+			// append jump to true case
 			append_element(ir_lines, truejmp);
-			append_element(ir_lines, make_instruction_popl(edx));
-			//false
-			IR_INSTRUCTION *falsesave = make_instruction_movl(
-				make_argument_constant(0), result);
-			append_element(ir_lines, falsesave);
 
+			// else we're in the false case
 
-			IR_INSTRUCTION *endjmp = make_instruction_jmp(boolendlabel);
-			append_element(ir_lines, endjmp);
+			// 0 to eax
+			append_element(ir_lines, make_instruction_movl(
+				make_argument_constant(0), eax));
 
-			//true
-			append_element(ir_lines, truelabel);
-			append_element(ir_lines, make_instruction_popl(edx));
-			IR_INSTRUCTION *truesave = make_instruction_movl(
-				make_argument_constant(1), result);
-			append_element(ir_lines, truesave);
+			// jump to end
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 
-			append_element(ir_lines, endlabel);
-			return result;
+			// we're in the true case 
+			append_element(ir_lines, make_instruction_label(trueLabel));
 
-		case booland_E_K: //Checked
+			append_element( // move 1 (true) to eax
+				ir_lines, 
+				make_instruction_movl(
+					make_argument_constant(1), 
+					eax
+					)
+				);
+
+			append_element( // end label
+				ir_lines, 
+				make_instruction_label(
+						endLabel
+					)
+				);
+			
+			return eax; // return the results
+
+		case booland_E_K:
 			tmp = getNextLabel();
 
-			char *andFalselabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *andEndlabel = calloc(MAXLABELSIZE,sizeof(char));
+			falseLabel = calloc(MAXLABELSIZE,sizeof(char));
+			endLabel = calloc(MAXLABELSIZE,sizeof(char));
 
-			sprintf(andFalselabel, "ANDfalse%d", tmp);
-			IR_INSTRUCTION *andFalseinstr = make_instruction_label(
-					andFalselabel);
+			sprintf(falseLabel, "ANDfalse%d", tmp);
+			sprintf(endLabel, "ANDend%d", tmp);
 
-			sprintf(andEndlabel, "ANDend%d", tmp);
-			IR_INSTRUCTION *andEndinstr = make_instruction_label(andEndlabel);
+			// results in eax
 
-			result = make_argument_tempregister(current_temporary++);
+			truth = make_argument_constant(1);
+			falsehood = make_argument_constant(0);
 
-			ARGUMENT *cmpARG = make_argument_constant(1);
-
-
-			IR_INSTRUCTION *cmp1 = make_instruction_cmp(cmpARG, argLeft);
-			append_element(ir_lines, cmp1);
+			// compaire true with right arg and left and jump if either of
+			// them are not equal
 			
+			// jump if not equal instruction
+			IR_INSTRUCTION *jmpfalse = make_instruction_jne(falseLabel);
 
-			IR_INSTRUCTION *jmpfalse = make_instruction_jne(andFalselabel);
+			append_element(ir_lines, make_instruction_cmp(truth, ebx));
+			
 			append_element(ir_lines, jmpfalse);
 
-			IR_INSTRUCTION *cmp2 = make_instruction_cmp(cmpARG, argRight);
-			append_element(ir_lines, cmp2);
+			append_element(ir_lines, make_instruction_cmp(truth, ecx));
 	
-
 			append_element(ir_lines, jmpfalse);
 
-			IR_INSTRUCTION *trueand = 
-			make_instruction_movl(make_argument_constant(1), result);
-			append_element(ir_lines, trueand);
+			// true case
 
-			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
-			append_element(ir_lines, andjmpend);
+			append_element(ir_lines, make_instruction_movl(truth, eax));
 
-			append_element(ir_lines, andFalseinstr);
-			IR_INSTRUCTION *falseand = 
-				make_instruction_movl(make_argument_constant(0), result);
-			append_element(ir_lines, falseand);
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 
-			append_element(ir_lines, andEndinstr);
-			append_element(ir_lines, make_instruction_popl(edx));
-			break;
+			// false case
+
+			append_element(ir_lines, make_instruction_label(falseLabel));
+	
+			append_element(ir_lines, make_instruction_movl(falsehood , eax));
+
+			append_element(ir_lines, make_instruction_label(endLabel));
+
+			return eax; // return false
+
 		case boolor_E_K:
 			tmp = getNextLabel();
 
-			char *orOKlabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *orEndlabel = calloc(MAXLABELSIZE,sizeof(char));
+			trueLabel = calloc(MAXLABELSIZE,sizeof(char));
+			endLabel = calloc(MAXLABELSIZE,sizeof(char));
 
-			sprintf(orOKlabel, "ORtrue%d", tmp);
-			IR_INSTRUCTION *oroklabel = make_instruction_label(orOKlabel);
+			sprintf(trueLabel, "ORtrue%d", tmp);
+			sprintf(endLabel, "ORend%d", tmp);
 
-			sprintf(orEndlabel, "ORend%d", tmp);
-			IR_INSTRUCTION *orendlabel = make_instruction_label(orEndlabel);
+			// results in eax
 
-			result = make_argument_tempregister(current_temporary++);
+			truth = make_argument_constant(1);
+			falsehood = make_argument_constant(0);
 
-			ARGUMENT *cmporARG = make_argument_constant(1);
+			// compaire true with right arg and left and jump if either of
+			// them are not equal
+			
+			// jump if not equal instruction
+			IR_INSTRUCTION *jmptrue = make_instruction_je(trueLabel);
 
-			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(cmporARG, argLeft);
-			append_element(ir_lines, cmpor1);
+			append_element(ir_lines, make_instruction_cmp(truth, ebx));
+			
+			append_element(ir_lines, jmptrue);
 
-			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKlabel);
-			append_element(ir_lines, jmpOK);
+			append_element(ir_lines, make_instruction_cmp(truth, ecx));
+	
+			append_element(ir_lines, jmptrue);
 
-			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(cmporARG, argRight);
-			append_element(ir_lines, cmpor2);
-			append_element(ir_lines, jmpOK);
+			// false case
 
-			IR_INSTRUCTION *orfalsesave = make_instruction_movl(make_argument_constant(0), result);
-			append_element(ir_lines, orfalsesave);
+			append_element(ir_lines, make_instruction_movl(falsehood, eax));
 
-			IR_INSTRUCTION *jmpend = make_instruction_jmp(orEndlabel);
-			append_element(ir_lines, jmpend);
-			append_element(ir_lines, oroklabel);
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 
-			IR_INSTRUCTION *ortruesave = make_instruction_movl(make_argument_constant(1), result);
-			append_element(ir_lines, ortruesave);
+			// true case
 
-			append_element(ir_lines, orendlabel);
-			break;
+			append_element(ir_lines, make_instruction_label(trueLabel));
+	
+			append_element(ir_lines, make_instruction_movl(truth, eax));
+
+			append_element(ir_lines, make_instruction_label(endLabel));
+
+			return eax; // return false
 	}
 
-	return argLeft;
+	fprintf(stderr, "Error: Expression not recognized \n");
+	return NULL;
 
 }
 
@@ -1296,7 +1277,6 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
-	IR_INSTRUCTION *instr;
 	SYMBOL *symbol;
 	int tmp;
 	int params;
