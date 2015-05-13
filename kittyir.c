@@ -722,6 +722,15 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
+						ARGUMENT *movArg = make_argument_tempregister(current_temporary++);
+
+						append_element(
+							ir_lines,
+							make_instruction_pushl(
+								movArg
+							)
+						);
+
 						append_element( // xored to get zero
 							ir_lines,
 							make_instruction_xor(
@@ -734,6 +743,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 							ir_lines,
 							make_instruction_movl(
 								arg1,
+								movArg
+							)
+						);
+
+						append_element(
+							ir_lines,
+							make_instruction_movl(
+								movArg,
 								make_argument_indexing(
 									make_argument_label(
 										st->value.allocateS.variable->value.id
@@ -746,7 +763,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element( // first element is the length so incl
 							ir_lines,
 							make_instruction_incl(
-								arg1
+								movArg
 							)
 						);
 
@@ -755,15 +772,22 @@ void IR_builder_statement ( STATEMENT *st ) {
 							ir_lines,
 							make_instruction_imul(
 								make_argument_constant(WORDSIZE),
-								arg1
+								movArg
 							)
 						);
 
 						append_element(
 							ir_lines, // add to the next pointer
 							make_instruction_addl(
-								arg1, 
+								movArg, 
 								make_argument_label("(heapNext)")
+							)
+						);
+
+						append_element(
+							ir_lines,
+							make_instruction_popl(
+								movArg
 							)
 						);
 
@@ -879,7 +903,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			// evaluting expressions
 			arg1 = IR_builder_expression(st->value.whileS.exp);
-			
+
 			append_element( //Compare evaluted expression with true
 				ir_lines, 
 				make_instruction_cmp(
@@ -887,7 +911,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					arg1
 				)
 			);
-			
+	
 			append_element( // jump to end if while condition is false 
 				ir_lines, 
 				make_instruction_jne(
@@ -935,8 +959,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case id_V_K:
 
 			symbol = getSymbol(var->symboltable, var->value.id);
-			printf("%s\n", symbol->name);
-			printf("%d\n", symbol->offset);
+
 			if(symbol->tableid != var->symboltable->id){
 				append_element(ir_lines, make_instruction_pushl(ecx));
 				append_element(ir_lines, make_instruction_movl(make_argument_constant(symbol->tableid), ecx));
@@ -946,55 +969,35 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						make_argument_indexing(
 							make_argument_label(
 								"staticLinks"),ecx
-						), eax
+						), ebx
 					)
 				);
 
-				append_element(
-					ir_lines,
-					make_instruction_movl(
-						eax,
-						ebp
-					)
-				);
-
-				append_element(ir_lines, make_instruction_movl(make_argument_constant(var->symboltable->id), ecx));
-
-				append_element(ir_lines, 
-					make_instruction_movl(
-						make_argument_indexing(
-							make_argument_label(
-								"staticLinks"),ecx
-						), eax
-					)
-				);
-
-				append_element(
-					ir_lines,
-					make_instruction_movl(
-						eax,
-						ebp
-					)
-				);
 
 				append_element(ir_lines, make_instruction_popl(ecx));
+
+				arg = make_argument_static(WORDSIZE*(symbol->offset));
+			} else{
+				arg = make_argument_address(WORDSIZE*(symbol->offset));
 			}
-			arg = make_argument_address(WORDSIZE*(symbol->offset));
 			break;
 		case indexing_V_K:
 				resultOfSubExp = IR_builder_expression(var->value.indexingV.exp);
 				arg = make_argument_tempregister(current_temporary++);
 
+				append_element(ir_lines, make_instruction_movl(resultOfSubExp, arg));
+
 				append_element(ir_lines,
-					make_instruction_incl(resultOfSubExp)
+					make_instruction_incl(arg)
 				);
 
 				arg1 = make_argument_indexing(
 							make_argument_label(var->value.indexingV.
 								variable->value.id), 
 								// arrays in records problem
-							resultOfSubExp
+							arg
 						);
+
 			return arg1;
 		case dot_V_K:
 
@@ -1057,22 +1060,22 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_movl(argLeft, eax));
 			instr = make_instruction_addl(argRight, eax);
 			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
+			append_element(ir_lines, make_instruction_movl(eax, argLeft));
 			return argRight; 
 
 		case minus_E_K:
 			append_element(ir_lines, make_instruction_movl(argRight, eax));
 			instr = make_instruction_subl( argLeft, eax);
 			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argLeft));
+			append_element(ir_lines, make_instruction_movl(eax, argRight));
 			return argLeft; 
 
 		case times_E_K:
 			append_element(ir_lines, make_instruction_movl(argLeft, eax));
 			instr = make_instruction_imul(argRight, eax);
 			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
-			return argRight;
+			//append_element(ir_lines, make_instruction_movl(eax, argLeft));
+			return eax;//argRight;
 
 		case divide_E_K:
 			tmp = getNextLabel();
@@ -1164,9 +1167,10 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			sprintf(boolendlabel, "boolOPend%d", tmp);
 			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
 
+
 			instr = make_instruction_cmp( argRight, argLeft);
 			append_element(ir_lines, instr);
-
+	
 			IR_INSTRUCTION *truejmp;
 
 			switch(exp->kind){
@@ -1199,7 +1203,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			}
 
 			append_element(ir_lines, truejmp);
-
+			append_element(ir_lines, make_instruction_popl(edx));
 			//false
 			IR_INSTRUCTION *falsesave = make_instruction_movl(
 				make_argument_constant(0), result);
@@ -1211,6 +1215,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			//true
 			append_element(ir_lines, truelabel);
+			append_element(ir_lines, make_instruction_popl(edx));
 			IR_INSTRUCTION *truesave = make_instruction_movl(
 				make_argument_constant(1), result);
 			append_element(ir_lines, truesave);
@@ -1218,7 +1223,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, endlabel);
 			return result;
 
-		case booland_E_K:
+		case booland_E_K: //Checked
 			tmp = getNextLabel();
 
 			char *andFalselabel = calloc(MAXLABELSIZE,sizeof(char));
@@ -1235,18 +1240,22 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			ARGUMENT *cmpARG = make_argument_constant(1);
 
+
 			IR_INSTRUCTION *cmp1 = make_instruction_cmp(cmpARG, argLeft);
 			append_element(ir_lines, cmp1);
+			
 
 			IR_INSTRUCTION *jmpfalse = make_instruction_jne(andFalselabel);
 			append_element(ir_lines, jmpfalse);
 
 			IR_INSTRUCTION *cmp2 = make_instruction_cmp(cmpARG, argRight);
 			append_element(ir_lines, cmp2);
+	
+
 			append_element(ir_lines, jmpfalse);
 
 			IR_INSTRUCTION *trueand = 
-				make_instruction_movl(make_argument_constant(1), result);
+			make_instruction_movl(make_argument_constant(1), result);
 			append_element(ir_lines, trueand);
 
 			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
@@ -1258,7 +1267,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, falseand);
 
 			append_element(ir_lines, andEndinstr);
-
+			append_element(ir_lines, make_instruction_popl(edx));
 			break;
 		case boolor_E_K:
 			tmp = getNextLabel();

@@ -156,13 +156,13 @@ void check_statement ( STATEMENT *st){
 			check_variable(st->value.allocateS.variable);
 			check_opt_length(st->value.allocateS.opt_length);
 
-			if( (st->value.allocateS.variable->symboltype->type 
+	/*		if( (st->value.allocateS.variable->symboltype->type 
 					!= SYMBOL_ARRAY) ||
 			    (st->value.allocateS.variable->symboltype->type 
 			   		!= SYMBOL_RECORD) ){
-				check_error_report("Only" 
+				check_error_report("Only " 
 					"arrays and records can be allocated", st->lineno);
-			}
+			}*/
 			
 			if(st->value.allocateS.opt_length->kind == empty_OL_K &&
 			   st->value.allocateS.variable->symboltype->type 
@@ -212,7 +212,7 @@ void check_statement ( STATEMENT *st){
 						index++;
 					}
 					i++;
-				}
+				}	
 			} else { //Standard check
 
 				if((temp_sym = getSymbol(st->symboltable, st->value.assignS.variable->value.id)) != NULL){
@@ -238,14 +238,13 @@ void check_statement ( STATEMENT *st){
 		case while_S_K:
 			check_expression(st->value.whileS.exp);
 			check_statement(st->value.whileS.statement);
-
 			if(st->value.whileS.exp->symboltype->type != SYMBOL_BOOL){
 				check_error_report("Invalid condition for Loop", st->lineno);
 			}
 			break;
 
 		case statement_list_S_K:
-			check_statement_list(st->value.statement_list);
+			//check_statement_list(st->value.statement_list);
 			break;
 
 	}

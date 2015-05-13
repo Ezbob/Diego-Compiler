@@ -323,3 +323,11 @@ ARGUMENT *make_argument_indexing(ARGUMENT *displ, ARGUMENT *index){
 	new_argument->kind = indexing_arg;
 	return new_argument;
 }
+
+ARGUMENT *make_argument_static(int i){
+	ARGUMENT *new_argument;
+	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
+	new_argument->kind = staticlink_arg;
+	new_argument->intConst = i;
+	return new_argument;
+}
