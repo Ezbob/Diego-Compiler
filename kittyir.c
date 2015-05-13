@@ -37,57 +37,59 @@ int getNextLabel(){
 int getNextFunction(){
 	return function_label++;
 }
+
 void initStaticLink(){
-	if(get_length(data_lines) == 0)	{ // init heap counter
+	if ( function_label > 0 ){
+		if(get_length(data_lines) == 0)	{ // init heap counter
+			append_element(
+				ir_lines, 
+				make_instruction_movl(
+					make_argument_label("$heap"),
+					make_argument_label("(heapNext)")		
+				)
+			);
+		}
+
+		char *address_of_id = calloc(20, sizeof(char));
+
+		sprintf(address_of_id, "(%s)","staticLinks");
+
 		append_element(
-			ir_lines, 
+			ir_lines,
 			make_instruction_movl(
-				make_argument_label("$heap"),
-				make_argument_label("(heapNext)")		
+				make_argument_label("$heapNext"),
+				make_argument_label(address_of_id)
+			)
+		);
+
+		ARGUMENT *arg1 = make_argument_constant(function_label);
+		ARGUMENT *arg2 = make_argument_tempregister(current_temporary++);
+
+		append_element(
+			ir_lines,
+			make_instruction_movl(
+				arg1,
+				arg2
+			)
+		);
+
+		// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+		append_element(
+			ir_lines,
+			make_instruction_imul(
+				make_argument_constant(WORDSIZE),
+				arg2
+			)
+		);
+
+		append_element(
+			ir_lines, // add to the next pointer
+			make_instruction_addl(
+				arg2, 
+				make_argument_label("(heapNext)")
 			)
 		);
 	}
-
-	char *address_of_id = calloc(20, sizeof(char));
-
-	sprintf(address_of_id, "(%s)","staticLinks");
-
-	append_element(
-		ir_lines,
-		make_instruction_movl(
-			make_argument_label("$heapNext"),
-			make_argument_label(address_of_id)
-		)
-	);
-
-	ARGUMENT *arg1 = make_argument_constant(function_label);
-	ARGUMENT *arg2 = make_argument_tempregister(current_temporary++);
-
-	append_element(
-		ir_lines,
-		make_instruction_movl(
-			arg1,
-			arg2
-		)
-	);
-
-	// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
-	append_element(
-		ir_lines,
-		make_instruction_imul(
-			make_argument_constant(WORDSIZE),
-			arg2
-		)
-	);
-
-	append_element(
-		ir_lines, // add to the next pointer
-		make_instruction_addl(
-			arg2, 
-			make_argument_label("(heapNext)")
-		)
-	);
-
 }
 
 void addStaticLink(int id){
