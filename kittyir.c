@@ -159,6 +159,9 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	callerRestore();
 	calleeEnd();
 
+	append_element(ir_lines, make_instruction_movl(
+		make_argument_constant(0),eax));
+
 	program->symboltable->localVars = 0; // reseting local variables counter
 	append_element(ir_lines, make_instruction_ret());
 
