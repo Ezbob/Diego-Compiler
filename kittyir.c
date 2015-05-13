@@ -146,7 +146,7 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 
 	// make ".globl main" directive
 	IR_INSTRUCTION *globl_directive =
-		 make_instruction_directive(".globl main");
+	make_instruction_directive(".globl main");
 	append_element(ir_lines, globl_directive);
 
 	// make "main:" label line
@@ -181,6 +181,8 @@ linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
 	linked_list *save = ir_lines;
 	assign_instructionnumber(ir_lines);
 	basic_assign(ir_lines);
+	ir_lines = save;
+	repairMem(ir_lines);
 	ir_lines = save;
 	IR_printer(ir_lines);
 	
@@ -616,16 +618,16 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case ifbranch_S_K:
-			tmp = getNextLabel();
+			// generate code for boolean expression(s)
+			arg1 = IR_builder_expression(st->value.ifbranchS.exp); 
 
 			elselabel = calloc(MAXLABELSIZE,sizeof(char));
 			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
 
-			sprintf(elselabel, "else%d", tmp);
-			sprintf(endlabelstring, "endIf%d", tmp);
+			int labelno = getNextLabel();
 
-			arg1 = IR_builder_expression(st->value.ifbranchS.exp); 
-				// generate code for boolean expression(s)
+			sprintf(elselabel, "else%d", labelno);
+			sprintf(endlabelstring, "endIf%d", labelno);
 
 			append_element( //Comparison with "true" boolean value
 				ir_lines, 
@@ -669,11 +671,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 				IR_builder_statement( // build else statements
 					st->value.ifbranchS.opt_else->value.statement);
 			}
-			
+
+
+			IR_INSTRUCTION *test = make_instruction_label(endlabelstring);			
 			append_element( // end-of-if label
 				ir_lines, 
-				make_instruction_label(endlabelstring)
+				test
 			);
+
 
 			break;
 
@@ -1060,15 +1065,15 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_movl(argLeft, eax));
 			instr = make_instruction_addl(argRight, eax);
 			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argLeft));
-			return argRight; 
+			//append_element(ir_lines, make_instruction_movl(eax, argLeft));
+			return eax; 
 
 		case minus_E_K:
 			append_element(ir_lines, make_instruction_movl(argRight, eax));
 			instr = make_instruction_subl( argLeft, eax);
 			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
-			return argLeft; 
+			//append_element(ir_lines, make_instruction_movl(eax, argRight));
+			return eax; 
 
 		case times_E_K:
 			append_element(ir_lines, make_instruction_movl(argLeft, eax));
@@ -1166,7 +1171,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			sprintf(boolendlabel, "boolOPend%d", tmp);
 			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
-
 
 			instr = make_instruction_cmp( argRight, argLeft);
 			append_element(ir_lines, instr);
@@ -1667,7 +1671,7 @@ void basic_assign(linked_list *ir_lines){
 
 				temp = temp->next;
 			} 
-			if(++count > 5){
+			if(++count > 4){
 				count = 1;
 			}
 			instr1->arg1 = reg;
@@ -1719,7 +1723,7 @@ void basic_assign(linked_list *ir_lines){
 
 				temp = temp->next;
 			} 
-			if(++count > 5){
+			if(++count > 4){
 				count = 1;
 			}
 			instr1->arg2 = reg;
@@ -1845,5 +1849,121 @@ void build_data_section(){
 		}
 		
 		terminate_list(&data_lines);
+	}
+}
+
+
+void repairMem(linked_list *ir_code){
+
+	linked_list *temp;
+	temp = ir_lines->next;
+	IR_INSTRUCTION *instr1;
+
+	while(temp != ir_lines){
+
+		instr1 = (IR_INSTRUCTION *) temp->data;
+
+		if(instr1->op_code == movl){
+			switch(instr1->arg2->kind){
+
+				case address_arg:
+				case constant_arg:
+				case indexing_arg:
+				case staticlink_arg:
+					//remove line from code
+
+					append_element(
+						temp,
+						make_instruction_pushl(
+							edi
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_movl(
+							instr1->arg1,
+							edi
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_movl(
+							edi,
+							instr1->arg2
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_popl(
+							edi
+						)
+					);
+
+					temp->previous->next = temp->next;
+					temp->next->previous = temp->previous;
+
+
+				default:
+					break;
+
+			}
+
+
+		}
+
+		if(instr1->op_code == cmp){
+			switch(instr1->arg2->kind){
+
+				case address_arg:
+				case constant_arg:
+				case indexing_arg:
+				case staticlink_arg:
+					//remove line from code
+
+					append_element(
+						temp,
+						make_instruction_pushl(
+							edi
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_movl(
+							instr1->arg2,
+							edi
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_cmp(
+							instr1->arg1,
+							edi
+						)
+					);
+
+					append_element(
+						temp,
+						make_instruction_popl(
+							edi
+						)
+					);
+
+					temp->previous->next = temp->next->next;
+					temp->next->previous = temp->previous;
+
+
+				default:
+					break;
+
+				}
+
+		}
+
+		temp = temp->next;
 	}
 }

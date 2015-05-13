@@ -14,7 +14,7 @@ void collect_tail ( TAIL *tail, SYMBOLTABLE *st);
 SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st);
 int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st);
 int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st);
-void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st);
+void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset);
 void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st);
 void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st);
 void collect_statement_list ( STATEMENT_LIST *slst, SYMBOLTABLE *st);
