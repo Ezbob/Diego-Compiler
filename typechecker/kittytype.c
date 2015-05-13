@@ -56,7 +56,6 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
-	dumpSymbolTable(st);
 }
 
 SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st){
