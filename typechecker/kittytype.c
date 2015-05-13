@@ -12,6 +12,8 @@ void collect(BODY *main, SYMBOLTABLE *symboltable){
 	//Start collecting
 	collect_body(main, symboltable);
 
+
+
 }
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
@@ -54,7 +56,7 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
-
+	dumpSymbolTable(st);
 }
 
 SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st){
@@ -124,18 +126,18 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 	switch(vdecl->kind){
 		case comma_VDL_K:
 			no += collect_var_decl_list(vdecl->value.commaVDL.var_decl_list, st);
-			collect_var_type(vdecl->value.commaVDL.var_type, st);
+			collect_var_type(vdecl->value.commaVDL.var_type, st, no);
 			break;
 
 		case var_VDL_typeK:
-			collect_var_type(vdecl->value.var_type, st);
+			collect_var_type(vdecl->value.var_type, st, no);
 			break;
 	}
 
 	return no;
 }
 
-void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
+void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset){
 	vtype->symboltable = st;
 
 	SYMBOLTYPE *symboltype;
@@ -148,6 +150,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st){
 			fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
 			exit(1);
 		}
+		vtype->symbol->offset = offset;
 	} else {
 		fprintf(stderr, "Error at line %i: type of symbol not recognized \n"
 			, vtype->lineno);

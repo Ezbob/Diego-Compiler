@@ -88,7 +88,7 @@ void IR_printer(linked_list *ir_lines);
 ARGUMENT *get_register(int n);
 void basic_assign(linked_list *ir_lines);
 void assign_instructionnumber(linked_list *ir_lines);
-
+void repairMem(linked_list *ir_code);
 void build_data_section();
 
 ARGUMENT *IR_builder_variable ( VAR *var);
@@ -97,5 +97,6 @@ ARGUMENT *IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen);
 
 ARGUMENT *address_resolver(VAR *, int);
+
 
 #endif

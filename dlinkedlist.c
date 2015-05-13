@@ -52,6 +52,7 @@ void append_element(linked_list *list, void *element){
 
 	list->previous->next = new_list_element;
 	list->previous = new_list_element;
+
 }
 
 /*
