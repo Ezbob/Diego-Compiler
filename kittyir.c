@@ -38,6 +38,7 @@ int getNextFunction(){
 	return function_label++;
 }
 void initStaticLink(){
+
 	if(get_length(data_lines) == 0)	{ // init heap counter
 		append_element(
 			ir_lines, 
@@ -1049,24 +1050,18 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case plus_E_K:
-			append_element(ir_lines, make_instruction_movl(argLeft, eax));
-			instr = make_instruction_addl(argRight, eax);
+			instr = make_instruction_addl(argLeft, argRight);
  			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
  			return argRight;
 
 		case minus_E_K:
-			append_element(ir_lines, make_instruction_movl(argRight, eax));
-			instr = make_instruction_subl( argLeft, eax);
+			instr = make_instruction_subl( argRight, argLeft);
  			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argLeft));
  			return argLeft; 
 
 		case times_E_K:
-			append_element(ir_lines, make_instruction_movl(argLeft, eax));
-			instr = make_instruction_imul(argRight, eax);
+			instr = make_instruction_imul(argLeft, argRight);
  			append_element(ir_lines, instr);
-			append_element(ir_lines, make_instruction_movl(eax, argRight));
  			return argRight;
 
 		case divide_E_K:
@@ -1194,11 +1189,9 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 					return argRight;
 			}
 
-			append_element(ir_lines, truejmp);
-			append_element(ir_lines, make_instruction_popl(edx));
-			//false
+			append_element(ir_lines, truejmp); //false
 			IR_INSTRUCTION *falsesave = make_instruction_movl(
-				make_argument_constant(0), result);
+			make_argument_constant(0), result);
 			append_element(ir_lines, falsesave);
 
 
@@ -1207,7 +1200,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			//true
 			append_element(ir_lines, truelabel);
-			append_element(ir_lines, make_instruction_popl(edx));
+
 			IR_INSTRUCTION *truesave = make_instruction_movl(
 				make_argument_constant(1), result);
 			append_element(ir_lines, truesave);
@@ -1509,6 +1502,7 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 				); 
 			break;
 		case commalist_EL_K:
+		
 			IR_builder_expression_list(explst->value.commaEL.explist);
 			append_element(
 				ir_lines, make_instruction_pushl(
@@ -1787,7 +1781,7 @@ void build_data_section(){
 		make_instruction_directive("formNULL: \n\t.string \"NULL\\n\" ")
 	);
 
-	if( function_label > 0 || get_length(data_lines) > 0){
+
 		// if there is allocation to the heap or a function is declared
 		// (need heap for the static link)
 		append_element(ir_lines,
@@ -1803,9 +1797,7 @@ void build_data_section(){
 				make_argument_label("4")
 				)
 			);			
-	}
 
-	if ( function_label > 0 ){
 		// make static link pointer (pointer to a array of static links)
 		append_element(ir_lines,
 		make_instruction_space(
@@ -1813,7 +1805,7 @@ void build_data_section(){
 			make_argument_label("4")
 			)
 		);	
-	}	
+	
 	
 	if(get_length(data_lines) > 0){
 		// make pointers to records / arrays in heap
@@ -1859,35 +1851,10 @@ void repairMem(linked_list *ir_lines){
 				case staticlink_arg:
 					//remove line from code
 
-					append_element(
-						temp,
-						make_instruction_pushl(
-							edi
-						)
-					);
-
-					append_element(
-						temp,
-						make_instruction_movl(
-							instr1->arg1,
-							edi
-						)
-					);
-
-					append_element(
-						temp,
-						make_instruction_movl(
-							edi,
-							instr1->arg2
-						)
-					);
-
-					append_element(
-						temp,
-						make_instruction_popl(
-							edi
-						)
-					);
+					append_element(temp, make_instruction_pushl(edi));
+					append_element(temp, make_instruction_movl(instr1->arg1,edi));
+					append_element(temp, make_instruction_movl(edi,instr1->arg2));
+					append_element(temp, make_instruction_popl(edi));
 
 					temp->previous->next = temp->next;
 					temp->next->previous = temp->previous;
@@ -1915,7 +1882,7 @@ void repairMem(linked_list *ir_lines){
 					append_element(temp, make_instruction_cmp(instr1->arg1, edi));
 					append_element(temp, make_instruction_popl(edi));
 
-					temp->previous->next = temp->next->next;
+					temp->previous->next = temp->next;
 					temp->next->previous = temp->previous;
 
 				default:
@@ -1931,14 +1898,13 @@ void repairMem(linked_list *ir_lines){
 				case indexing_arg:
 				case staticlink_arg:
 					//remove line from code
-
 					append_element(temp, make_instruction_pushl(edi));
 					append_element(temp, make_instruction_movl(instr1->arg2, edi));
 					append_element(temp, make_instruction_addl(instr1->arg1, edi));
 					append_element(temp, make_instruction_movl(edi, instr1->arg2));
 					append_element(temp, make_instruction_popl(edi));
 
-					temp->previous->next = temp->next->next;
+					temp->previous->next = temp->next;
 					temp->next->previous = temp->previous;
 
 				default:
@@ -1954,14 +1920,13 @@ void repairMem(linked_list *ir_lines){
 				case indexing_arg:
 				case staticlink_arg:
 					//remove line from code
-
 					append_element(temp, make_instruction_pushl(edi));
 					append_element(temp, make_instruction_movl(instr1->arg2, edi));
 					append_element(temp, make_instruction_imul(instr1->arg1, edi));
 					append_element(temp, make_instruction_movl(edi, instr1->arg2));
 					append_element(temp, make_instruction_popl(edi));
 
-					temp->previous->next = temp->next->next;
+					temp->previous->next = temp->next;
 					temp->next->previous = temp->previous;
 
 				default:

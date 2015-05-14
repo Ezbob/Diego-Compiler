@@ -77,7 +77,7 @@ WHITESPACE [\ \t]*
 "="	{ return '='; } 
 
 "&&"	{ return BOOL_AND_TOK; } 
-"||"	{ return BOOL_OR_TOK; }
+"| "	{ return BOOL_OR_TOK; }
 "=="	{ return BOOL_EQUAL_TOK; }
 "!="	{ return BOOL_NOT_EQUAL_TOK; }
 "<="	{ return BOOL_LESS_EQ_TOK; }

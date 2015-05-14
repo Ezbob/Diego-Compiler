@@ -2,14 +2,14 @@
 #include <string.h>
 #include "parserscanner/y.tab.h"
 #include "parserscanner/kittytree.h"
-#include "typechecker/kittyweed.h"
+/*#include "typechecker/kittyweed.h"
 #include "typechecker/kittytype.h"
 #include "typechecker/kittycheck.h"
 #include "typechecker/kittyprinter.h"
 #include "typechecker/kittysettype.h"
 #include "symbol/symbol.h"
 #include "kittyir.h"
-#include "kittyregister.h"
+#include "kittyregister.h"*/
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
@@ -27,12 +27,12 @@
 int lineno = 1;
 struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
-struct SECTION *mainSection;
-struct linked_list *ir_codes;
+//struct SECTION *mainSection;
+//struct linked_list *ir_codes;
 
 int main(void) {
 
-	globalTable = initSymbolTable(SUCCESS);
+	//globalTable = initSymbolTable(SUCCESS);
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){
 		case PARSE_ERROR:
@@ -44,15 +44,15 @@ int main(void) {
 			return FAILURE;
 			break;
 		case PARSE_SUCCESS:
-			begin_weed(_main_);
-			collect(_main_, globalTable);
+		//	begin_weed(_main_);
+		//	collect(_main_, globalTable);
 			//begin_set(_main_);
-			fprintf(stderr, "%s\n", "Initializing typecheck phase");
-			begin_check(_main_);
+		//	fprintf(stderr, "%s\n", "Initializing typecheck phase");
+		//	begin_check(_main_);
 
-			//printer_body(_main_);	
+			printer_body(_main_);	
 			
-			ir_codes = IR_build(_main_, globalTable);
+			//ir_codes = IR_build(_main_, globalTable);
 			//begin_register(ir_codes);
 			break;
 		default:
