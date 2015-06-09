@@ -59,7 +59,7 @@ typedef struct SECTION {
 /*
  * stores all IR code in a linked_list
  */
-linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable);
+linked_list *IR_build(BODY *program);
 void IR_builder_function(FUNC *func);
 void IR_builder_head (HEAD *header);
 void IR_builder_body (BODY *body);

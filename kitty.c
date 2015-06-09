@@ -13,8 +13,8 @@
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
-#define SUCCESS 0
-#define FAILURE -1
+#define COMPILATION_SUCCESS 0
+#define COMPILATION_FAILURE -1
 #endif
 
 #ifndef PARSE_MSGS
@@ -30,36 +30,34 @@ struct SYMBOLTABLE *globalTable;
 struct SECTION *mainSection;
 struct linked_list *ir_codes;
 
-int main(void) {
+int main(int argc, char *argv[]) {
 
-	globalTable = initSymbolTable(SUCCESS);
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){
 		case PARSE_ERROR:
 			fprintf(stderr, "Error: Parse error detected\n");
-			return FAILURE;
+			return COMPILATION_FAILURE;
 			break;
 		case PARSE_OUT_OF_MEM:
 			fprintf(stderr, "Error: Parse out of memory\n");
-			return FAILURE;
+			return COMPILATION_FAILURE;
 			break;
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
-			collect(_main_, globalTable);
-			//begin_set(_main_);
-			fprintf(stderr, "%s\n", "Initializing typecheck phase");
+			collect(_main_);
 			begin_check(_main_);
-
-			//printer_body(_main_);	
-			
-			ir_codes = IR_build(_main_, globalTable);
-			//begin_register(ir_codes);
+			if( argc > 1 && ( strcmp(argv[1],"--print") 
+				|| strcmp(argv[1],"-p") ) ) {
+				printer_body(_main_);
+			} else {
+				ir_codes = IR_build(_main_);	
+			}
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");
-			return FAILURE;
+			return COMPILATION_FAILURE;
 			break;
 	}
 
-	return SUCCESS;
+	return COMPILATION_SUCCESS;
 }

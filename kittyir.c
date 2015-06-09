@@ -109,11 +109,13 @@ void addStaticLink(int id){
 }
 
 
-linked_list *IR_build(BODY *program, SYMBOLTABLE *symboltable) {
+linked_list *IR_build( BODY *program ) {
 	fprintf(stderr, "%s\n", "Initializing intermediate code generation");
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	initRegisters();
+
+	SYMBOLTABLE *symboltable = program->symboltable;
 
 	int offsetcount = -1;
 
@@ -378,6 +380,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case print_S_K: 
+			printf("Nice\n");
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_BOOL:
@@ -471,7 +474,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
-
+					printf("this is it\n");
 					//Push arguments for print then form for print
 					callerSave();
 					arg1 = IR_builder_expression(st->value.exp);
@@ -670,8 +673,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 				ir_lines, 
 				test
 			);
-
-
 			break;
 
 		case allocate_S_K:
@@ -885,6 +886,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case while_S_K:
 
 			tmp = getNextLabel();
+			printf("Hello there\n");
 
 			truewhilestring = calloc(MAXLABELSIZE,sizeof(char));
 			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));

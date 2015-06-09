@@ -15,15 +15,14 @@ void check_error_report(const char* errorMsg, int lineno){
 }
 
 void begin_check(BODY *main){
+	fprintf(stderr, "%s\n", "Initializing typecheck phase");
 	check_body(main);
-
 }
 
 void check_function(FUNC *func) {
 
 	check_head(func->functionF.head);
 	check_body(func->functionF.body);
-
 }
 
 void check_head (HEAD *header){
@@ -433,8 +432,9 @@ int check_term ( TERM *term){
 
 	switch(term->kind){
 		case var_T_K:
-	
+
 			check_variable(term->value.var);
+			
 			if(term->value.var->kind == dot_V_K) {
 				tmpTable = getSymbol(term->symboltable, term->value.var->
 					value.dotV.variable->value.id)->symboltype->child;

@@ -7,9 +7,5 @@ var a : int;
 
 a = negativeSquare(2);
 
-write a;
-#write |a+a|;
-#write | |a| + a|;
-
-# forslag: \|[^\|][a-z]*\|
-#
+write ||a| + a|;
+write true || false;

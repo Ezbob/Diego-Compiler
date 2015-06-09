@@ -1,19 +1,14 @@
 #include "kittytype.h"
 #include "../parserscanner/kittytree.h"
 #include <stdio.h>
+#define FIRST_TABLE_ID 0
 
 /*
  * Collecting types
  */
-extern SYMBOLTABLE *loltable;
-
-void collect(BODY *main, SYMBOLTABLE *symboltable){
+void collect(BODY *main){
 	fprintf(stderr, "Initializing Type collection\n");
-	//Start collecting
-	collect_body(main, symboltable);
-
-
-
+	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
 }
 
 void collect_function ( FUNC *function, SYMBOLTABLE *st) {
@@ -27,7 +22,6 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 	collect_head(function->functionF.head, scope, st);
 	collect_body(function->functionF.body, scope);
 	function->symboltype = function->functionF.head->symboltype;
-	
 }
 
 void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
@@ -52,7 +46,6 @@ void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 }
 
 void collect_body (BODY *body, SYMBOLTABLE *st){
-
 	body->symboltable = st;
 	collect_decl_list(body->decl_list, st);
 	collect_statement_list(body->statement_list, st);
@@ -99,7 +92,6 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st){
 	}
 
 	return symboltype; // null if a error case
-
 }
 
 int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){

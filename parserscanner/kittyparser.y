@@ -1,4 +1,3 @@
-
 %{
 	#include <stdlib.h>
 	#include <stdio.h>
@@ -10,7 +9,6 @@
 	extern struct BODY *_main_;
 	extern int lineno;
 %}
-
 
 %union {
 	int int_val;
@@ -52,7 +50,6 @@
 %token NULL_TOK 
 %token BOOL_TRUE_TOK 
 %token BOOL_FALSE_TOK 
-%token BOOL_OR_TOK 
 %token BOOL_EQUAL_TOK 
 %token BOOL_NOT_EQUAL_TOK 
 %token BOOL_LESS_EQ_TOK 
@@ -85,11 +82,13 @@
 %type <act_list> act_list
 %type <exp_list> exp_list
 
-%left BOOL_AND_TOK BOOL_OR_TOK
+%nonassoc '|'
+%left BOOL_AND_TOK
 %left BOOL_NOT_EQUAL_TOK BOOL_EQUAL_TOK
 %left BOOL_GREATER_EQ_TOK BOOL_LESS_EQ_TOK '<' '>'
 %left '+' '-'
 %left '*' '/'
+%left "unary_minus"
 
 %nonassoc "no_else" // no binds weaker than else case
 %nonassoc ELSE_TOK
@@ -97,7 +96,6 @@
 %start program
 
 %%
-
 program	: body { _main_ = $1;}
 		;
 
@@ -179,12 +177,14 @@ exp		: exp '+' exp {$$ = make_EXPRESS_plus($1,$3);}
 		| exp '<' exp {$$ = make_EXPRESS_boolless($1,$3); }
 		| exp '>' exp {$$ = make_EXPRESS_boolgreater($1,$3);}
 		| exp BOOL_AND_TOK exp {$$ = make_EXPRESS_booland($1,$3);}
-		| exp BOOL_OR_TOK exp {$$ = make_EXPRESS_boolor($1,$3);}
+		| exp '|''|' exp {$$ = make_EXPRESS_boolor($1,$4);}
 		| exp BOOL_LESS_EQ_TOK exp {$$ = make_EXPRESS_boolleq($1,$3);}
 		| exp BOOL_GREATER_EQ_TOK exp {$$ = make_EXPRESS_boolgeq($1,$3);}
 		| exp BOOL_NOT_EQUAL_TOK exp {$$ = make_EXPRESS_boolneq($1,$3);}
 		| exp BOOL_EQUAL_TOK exp {$$ = make_EXPRESS_booleq($1,$3);}
 		| term {$$ = make_EXPRESS_term($1);}
+		| '-' term {$$ = make_EXPRESS_term($2);} %prec "unary_minus"
+			// TODO: make a new constructor that makes unary minus terms
 		;
 
 opt_else	: ELSE_TOK stm {$$ = make_OPT_ELSE_elsestatement($2);}
