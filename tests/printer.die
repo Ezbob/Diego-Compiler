@@ -1,5 +1,4 @@
-var a : record of {
-	values : array of int
-};
+var a : b;
+var b : a;
 
-write a.values[1];
+write 42;

@@ -8,8 +8,6 @@
 #include "typechecker/kittyprinter.h"
 #include "typechecker/kittysettype.h"
 #include "symbol/symbol.h"
-#include "kittyir.h"
-#include "kittyregister.h"
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
@@ -25,9 +23,9 @@
 #endif
 
 int lineno = 1;
+int DEBUG = 0;
 struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
-struct SECTION *mainSection;
 struct linked_list *ir_codes;
 
 int main(int argc, char *argv[]) {

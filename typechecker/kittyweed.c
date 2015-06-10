@@ -3,7 +3,6 @@
 #include <string.h>
 #include "kittyweed.h"
 #include "../symbol/symbol.h"
-#include "stack.h"
 #define TRUE 1 
 #define FALSE 0
  
@@ -41,27 +40,26 @@ FUNC *weed_function ( FUNC *function ){
 
 	funcStackPush(the_stack, function);
 
-	if(strcmp(function->functionF.head->headH.id, 
-					function->functionF.tail->id) != 0){
+	if(strcmp(function->head->id, 
+					function->tail->id) != 0){
 		weed_error_report("Mismatch in header and tail id of function",
-											function->functionF.head->lineno);
+											function->head->lineno);
 	}
 
-	weed_head(function->functionF.head);
-	weed_body(function->functionF.body);
+	weed_head(function->head);
+	weed_body(function->body);
 
 
-	if( function->functionF.body->statement_list->value.compoundSL.
-		statement->foundReturn == 0 || function->functionF.body->
-		statement_list == NULL ){
+	if( function->body->statement_list->statement->foundReturn == 0 
+		|| function->body->statement_list == NULL ){
 
 		weed_error_report("No return in function", 
-						function->functionF.head->lineno);
+						function->head->lineno);
 	}
 
 	if((assertion = funcStackPop(the_stack)) == NULL){
 		weed_error_report("Cant pop function pointer from stack, empty",
-											function->functionF.head->lineno);
+											function->head->lineno);
 	}
 
 	return function;
@@ -70,8 +68,8 @@ FUNC *weed_function ( FUNC *function ){
 
 HEAD *weed_head ( HEAD *header){
 
-	header->headH.pdeclist = weed_par_decl_list(header->headH.pdeclist);
-	header->headH.returntype = weed_type(header->headH.returntype);
+	header->pdlist = weed_par_decl_list(header->pdlist);
+	header->returntype = weed_type(header->returntype);
 
 	return header;
 
@@ -80,11 +78,11 @@ HEAD *weed_head ( HEAD *header){
 TYPE *weed_type ( TYPE *type){
 	switch(type->kind){
 
-		case arrayof_TY_K:
+		case TYPE_ARRAY:
 			type->value.type = weed_type(type->value.type);
 			break;
 
-		case recordof_TY_K:
+		case TYPE_RECORD:
 			type->value.var_decl_list = 
 				weed_var_decl_list(type->value.var_decl_list);
 			break;
@@ -100,12 +98,12 @@ PAR_DECL_LIST *weed_par_decl_list ( PAR_DECL_LIST *pdecl){
 
 	switch(pdecl->kind){
 
-		case varType_PDL_K:
-			pdecl->value.var_decl_list = weed_var_decl_list(
-				pdecl->value.var_decl_list);
+		case PAR_DECL_LIST_LIST:
+			pdecl->var_decl_list = weed_var_decl_list(
+				pdecl->var_decl_list);
 			break;
 
-		case empty_PDL_K:
+		case PAR_DECL_LIST_EMPTY:
 			break;
 	}
 
@@ -115,13 +113,13 @@ PAR_DECL_LIST *weed_par_decl_list ( PAR_DECL_LIST *pdecl){
 
 VAR_DECL_LIST *weed_var_decl_list ( VAR_DECL_LIST *vdecl){ 
 	switch(vdecl->kind){
-		case comma_VDL_K:
-			weed_var_decl_list(vdecl->value.commaVDL.var_decl_list);
-			weed_var_type(vdecl->value.commaVDL.var_type);
+		case VAR_DECL_LIST_LIST:
+			weed_var_decl_list(vdecl->var_decl_list);
+			weed_var_type(vdecl->var_type);
 			break;
 
-		case var_VDL_typeK:
-			weed_var_type(vdecl->value.var_type);
+		case VAR_DECL_LIST_TYPE:
+			weed_var_type(vdecl->var_type);
 			break;
 
 	}
@@ -141,11 +139,11 @@ OPT_LENGTH *weed_opt_length ( OPT_LENGTH *oplen){
 
 	switch(oplen->kind){
 
-		case lengthof_OL_K:
-			weed_expression(oplen->value.exp);
+		case OPT_LENGTH_EXPRES:
+			weed_expression(oplen->exp);
 			break;
 
-		case empty_OL_K:
+		case OPT_LENGTH_EMPTY:
 			break;
 	}
 
@@ -157,19 +155,19 @@ OPT_LENGTH *weed_opt_length ( OPT_LENGTH *oplen){
 VAR *weed_variable ( VAR *var){
 
 	switch(var->kind){
-		case id_V_K:
+		case VAR_ID:
 			break;
 
-		case indexing_V_K:
-			var->value.indexingV.variable = 
-				weed_variable(var->value.indexingV.variable);
-			var->value.indexingV.exp = 
-				weed_expression(var->value.indexingV.exp);
+		case VAR_ARRAY:
+			var->value.var_array.var = 
+				weed_variable(var->value.var_array.var);
+			var->value.var_array.exp = 
+				weed_expression(var->value.var_array.exp);
 			break;
 
-		case dot_V_K:
-			var->value.dotV.variable = 
-				weed_variable(var->value.dotV.variable);
+		case VAR_RECORD:
+			var->value.var_record.var = 
+				weed_variable(var->value.var_record.var);
 			break;
 	}
 
@@ -182,10 +180,10 @@ ACT_LIST *weed_act_list ( ACT_LIST *actlst){
 
 	switch(actlst->kind){
 
-		case explist_AL_K:
-			actlst->value.exp_list = weed_expression_list(actlst->value.exp_list);
+		case ACT_LIST_EXPLIST:
+			actlst->exp_list = weed_expression_list(actlst->exp_list);
 			break;
-		case empty_AL_K:
+		case ACT_LIST_EMPTY:
 			break;
 	}
 
@@ -198,15 +196,14 @@ EXP_LIST *weed_expression_list ( EXP_LIST *explst){
 
 	switch(explst->kind){
 
-		case exp_EL_K:
-			explst->value.exp = weed_expression(explst->value.exp);
+		case EXP_LIST_EXP:
+			explst->exp = weed_expression(explst->exp);
 			break;
 
-		case commalist_EL_K:
-			explst->value.commaEL.exp = weed_expression(
-				explst->value.commaEL.exp);
-			explst->value.commaEL.explist = weed_expression_list(
-				explst->value.commaEL.explist);
+		case EXP_LIST_LIST:
+			explst->exp = weed_expression(explst->exp);
+			explst->explist = weed_expression_list(
+				explst->explist);
 			break;
 	}
 
@@ -225,12 +222,12 @@ BODY *weed_body ( BODY *body ){
 
 DECL_LIST *weed_decl_list ( DECL_LIST *dlst ){
 	switch(dlst->kind){
-		case compound_DL_K:
-			weed_decl_list(dlst->value.compoundDL.decl_list);
-			weed_declaration(dlst->value.compoundDL.declaration);
+		case DECL_LIST_LIST:
+			weed_decl_list(dlst->decl_list);
+			weed_declaration(dlst->declaration);
 			break;
 
-		case empty_DL_K:
+		case DECL_LIST_EMPTY:
 			break;
 	}
 
@@ -242,15 +239,15 @@ DECL_LIST *weed_decl_list ( DECL_LIST *dlst ){
 DECLARATION *weed_declaration ( DECLARATION *decl ){
 	switch(decl->kind){
 
-		case typeassign_D_K:
-			decl->value.typedeclID.type = weed_type(decl->value.typedeclID.type);
+		case DECLARATION_ID:
+			decl->value.declaration_id.type = weed_type(decl->value.declaration_id.type);
 			break;
 
-		case func_D_K:
+		case DECLARATION_FUNC:
 			decl->value.function = weed_function(decl->value.function);
 			break;
 
-		case var_D_K:
+		case DECLARATION_VAR:
 			decl->value.var_decl_list = weed_var_decl_list(decl->value.var_decl_list);
 			break;
 
@@ -264,28 +261,30 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 
 STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
 	
-	if(slst->kind == compound_SL_K){
-		slst->value.compoundSL.statement_list = 
-			weed_statement_list(slst->value.compoundSL.statement_list);
-		slst->value.compoundSL.statement = 
-			weed_statement(slst->value.compoundSL.statement);
+	if(slst->kind == STATEMENT_LIST_LIST){
+
+		slst->statement_list = weed_statement_list(slst->statement_list);
+		
+		slst->statement = weed_statement(slst->statement);
+
 	} else {
-			slst->value.statement = weed_statement(slst->value.statement);
+			slst->statement = weed_statement(slst->statement);
 	}
 		
 
-	if(slst->value.statement == NULL) {
-		return slst->value.compoundSL.statement_list;
+	if(slst->statement == NULL) {
+		return slst->statement_list;
 	 }
 
 	/*
 	 * Trying to remove statements after a return,
 	 * but returns after a return is still not weeded
 	 */
-	if(slst->kind == compound_SL_K &&
-	   slst->value.compoundSL.statement_list->value.
-	   		statement->foundReturn == 1) {
-		return slst->value.compoundSL.statement_list;
+	if(slst->kind == STATEMENT_LIST_LIST &&
+
+	   slst->statement_list->statement->foundReturn == 1) {
+
+		return slst->statement_list;
 	}
 
 	return slst;
@@ -299,61 +298,66 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 	TERM *ifTerm = NEW(TERM);
 
 	switch(st->kind){
-		case return_S_K:
+		case STATEMENT_RETURN:
 			
-			st->value.returnS.exp = weed_expression(st->value.returnS.exp);
+			st->value.statement_return.exp = 
+				weed_expression(st->value.statement_return.exp);
+
 			if(the_stack->top == NULL){
 				weed_error_report("Return not associated with function",
 																st->lineno);
 			}
 
-			st->value.returnS.function = the_stack->top->function;
+			st->value.statement_return.function = the_stack->top->function;
 			st->foundReturn = 1;
 			return st;
 
 
-		case ifbranch_S_K:
-			st->value.ifbranchS.exp = weed_expression(st->value.ifbranchS
-																		.exp);
-			st->value.ifbranchS.statement = weed_statement(st->value.ifbranchS
-																  .statement);
+		case STATEMENT_IFBRANCH:
+			st->value.statement_ifbranch.exp = 
+							weed_expression(st->value.statement_ifbranch.exp);
+
+			st->value.statement_ifbranch.statement = 
+							weed_statement(st->value.statement_ifbranch.statement);
 			
-			st->value.ifbranchS.opt_else = weed_opt_else(st->value.ifbranchS
-																   .opt_else);
+			st->value.statement_ifbranch.opt_else = 
+							weed_opt_else(st->value.statement_ifbranch.opt_else);
 			
-			if(st->value.ifbranchS.opt_else->kind == empty_OE_K &&
-			   st->value.ifbranchS.statement == NULL){
+
+			if(st->value.statement_ifbranch.opt_else->kind == OPT_ELSE_EMPTY &&
+			   st->value.statement_ifbranch.statement == NULL){
 					break;
 			}
 
 			// Case where there exists a return in both if and else, 
 			// can ignore everything after the if/else
-			if(st->value.ifbranchS.statement->foundReturn == 1 
-			   && st->value.ifbranchS.opt_else->kind != empty_OE_K 
-			   && st->value.ifbranchS.opt_else->value.statement->
-			   	foundReturn == 1 && st->value.ifbranchS.statement != NULL) {
+			if(st->value.statement_ifbranch.statement->foundReturn == 1 
+			   && st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY 
+			   && st->value.statement_ifbranch.opt_else->statement->
+			   	foundReturn == 1 && st->value.statement_ifbranch.statement != NULL) {
+			  
 			   st->foundReturn = 1;
 
 			}
-			if (st->value.ifbranchS.exp->kind == term_E_K){
+			if (st->value.statement_ifbranch.exp->kind == EXPRES_TERM){
 				// a term
-				ifTerm = weed_term(st->value.ifbranchS.exp->value.term);
-				if(ifTerm->kind == num_T_K){
+				ifTerm = weed_term(st->value.statement_ifbranch.exp->value.term);
+				if(ifTerm->kind == TERM_NUM){
 					weed_error_report("Invalid expression", st->lineno - 1);
 					break;
 				}
 
-				if (ifTerm->kind == boolFalse_T_K && (st->value.
-					ifbranchS.opt_else->kind != empty_OE_K)){
+				if (ifTerm->kind == TERM_FALSE && (st->value.
+					statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY)){
 					// if FALSE then we should only look at else
-					return st->value.ifbranchS.opt_else->value.statement;
-				}else if (ifTerm->kind == boolTrue_T_K){
+					return st->value.statement_ifbranch.opt_else->statement;
+				}else if (ifTerm->kind == TERM_TRUE){
 					// if TRUE then we should only look at if
-					return st->value.ifbranchS.statement;
+					return st->value.statement_ifbranch.statement;
 				}
 			}
 			break;
-		case statement_list_S_K:
+		case STATEMENT_LISTS:
 			st->value.statement_list = 
 				weed_statement_list(st->value.statement_list);
 			if(st->value.statement_list == NULL){
@@ -362,31 +366,33 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			//Look for returns
 			if(st->value.statement_list != NULL){
 				st->foundReturn = 
-					st->value.statement_list->value.statement->foundReturn;
+					st->value.statement_list->statement->foundReturn;
 			}
 			break;
 
-		case assign_S_K:
-			st->value.assignS.variable = 
-				weed_variable(st->value.assignS.variable);
-			st->value.assignS.exp = 
-				weed_expression(st->value.assignS.exp);
+		case STATEMENT_ASSIGN:
+			st->value.statement_assign.var = 
+				weed_variable(st->value.statement_assign.var);
+			st->value.statement_assign.exp = 
+				weed_expression(st->value.statement_assign.exp);
 			break;
 
-		case print_S_K:
+		case STATEMENT_WRITE:
 			st->value.exp = weed_expression(st->value.exp);
 			break;
 
-		case allocate_S_K:
-			st->value.allocateS.variable = 
-				weed_variable(st->value.allocateS.variable);
-			st->value.allocateS.opt_length = 
-				weed_opt_length(st->value.allocateS.opt_length);
+		case STATEMENT_ALLOCATE:
+			st->value.statement_allocate.var = 
+				weed_variable(st->value.statement_allocate.var);
+			st->value.statement_allocate.opt_length = 
+				weed_opt_length(st->value.statement_allocate.opt_length);
 			break;
 
-		case while_S_K:
-			st->value.whileS.statement = 
-				weed_statement(st->value.whileS.statement);
+		case STATEMENT_WHILE:
+			st->value.statement_while.exp = 
+				weed_expression(st->value.statement_while.exp);
+			st->value.statement_while.statement = 
+				weed_statement(st->value.statement_while.statement);
 		default:
 			break;
 
@@ -398,14 +404,14 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 /* TODO */
 OPT_ELSE *weed_opt_else ( OPT_ELSE *opel){
 	switch(opel->kind){
-		case else_OE_K:
-			opel->value.statement = weed_statement(opel->value.statement);
-			if (opel->value.statement == NULL){
-				opel->kind = empty_OE_K;
+		case OPT_ELSE_STATEMENT:
+			opel->statement = weed_statement(opel->statement);
+			if (opel->statement == NULL){
+				opel->kind = OPT_ELSE_EMPTY;
 			}
 			break;
 
-		case empty_OE_K:
+		case OPT_ELSE_EMPTY:
 			break;
 
 		default:
@@ -423,7 +429,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 	TERM *left_term;
 	TERM *right_term;
 
-	if(exp->kind == term_E_K ){
+	if(exp->kind == EXPRES_TERM ){
 		exp->value.term = weed_term(exp->value.term);
 		return exp;
 	}
@@ -436,113 +442,113 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 	switch(exp->kind){
 
-		case booland_E_K:
+		case EXPRES_AND:
 
 			left_term  = left_exp->value.term;
 			right_term = right_exp->value.term;
 
-			if((left_term->kind == boolTrue_T_K || left_term->kind 
-													== boolFalse_T_K) &&
-				 (right_term->kind == boolTrue_T_K || right_term->kind 
-				 									== boolFalse_T_K)){
+			if((left_term->kind == TERM_TRUE || left_term->kind 
+													== TERM_FALSE) &&
+				 (right_term->kind == TERM_TRUE || right_term->kind 
+				 									== TERM_FALSE)){
 
-				if(	left_exp->value.term->kind == boolTrue_T_K && 
-								right_exp->value.term->kind	== boolTrue_T_K){
-					exp->value.term = make_TERM_true();
-					exp->kind = term_E_K;
+				if(	left_exp->value.term->kind == TERM_TRUE && 
+								right_exp->value.term->kind	== TERM_TRUE){
+					exp->value.term = make_TERM_TRUE();
+					exp->kind = EXPRES_TERM;
 				} else {
-					exp->value.term = make_TERM_false();
-					exp->kind = term_E_K;
+					exp->value.term = make_TERM_FALSE();
+					exp->kind = EXPRES_TERM;
 				}
 		 	}
 			break;
 
-		case boolor_E_K:
+		case EXPRES_OR:
 
 			left_term  = left_exp->value.term;
 			right_term = right_exp->value.term;
 
-			if((left_term->kind == boolTrue_T_K || 
-										left_term->kind == boolFalse_T_K) &&
-				(right_term->kind == boolTrue_T_K || right_term->kind == 
-															boolFalse_T_K)){
-				if(	left_exp->value.term->kind == boolFalse_T_K && 
-								right_exp->value.term->kind	== boolFalse_T_K){
-					exp->value.term = make_TERM_false();
-					exp->kind = term_E_K;
+			if((left_term->kind == TERM_TRUE || 
+										left_term->kind == TERM_FALSE) &&
+				(right_term->kind == TERM_TRUE || right_term->kind == 
+															TERM_FALSE)){
+				if(	left_exp->value.term->kind == TERM_FALSE && 
+								right_exp->value.term->kind	== TERM_FALSE){
+					exp->value.term = make_TERM_FALSE();
+					exp->kind = EXPRES_TERM;
 				} else {
-					exp->value.term = make_TERM_true();
-					exp->kind = term_E_K;
+					exp->value.term = make_TERM_TRUE();
+					exp->kind = EXPRES_TERM;
 				}
 			}
 			break;
 
-		case plus_E_K:
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+		case EXPRES_PLUS:
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 
-				exp->value.term = make_TERM_num(left_term->value.intconst + 
+				exp->value.term = make_TERM_NUM(left_term->value.intconst + 
 												right_term->value.intconst);
 
-				exp->kind = term_E_K;
+				exp->kind = EXPRES_TERM;
 			}
 			break;
 
-		case minus_E_K:
+		case EXPRES_MINUS:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
-
-				left_term = left_exp->value.term;
-				right_term = right_exp->value.term;
-
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
-					break;
-				}
-
-				exp->value.term = make_TERM_num(left_term->value.intconst - 
-												right_term->value.intconst);
-
-				exp->kind = term_E_K;
-			}
-
-			break;
-
-		case times_E_K:
-
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 
-				exp->value.term = make_TERM_num(left_term->value.intconst * 
+				exp->value.term = make_TERM_NUM(left_term->value.intconst - 
 												right_term->value.intconst);
 
-				exp->kind = term_E_K;
+				exp->kind = EXPRES_TERM;
+			}
+
+			break;
+
+		case EXPRES_TIMES:
+
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+
+				left_term = left_exp->value.term;
+				right_term = right_exp->value.term;
+
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
+					break;
+				}
+
+				exp->value.term = make_TERM_NUM(left_term->value.intconst * 
+												right_term->value.intconst);
+
+				exp->kind = EXPRES_TERM;
 
 			}
 
 			break;
 
-		case divide_E_K:
+		case EXPRES_DIVIDE:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 					left_term = left_exp->value.term;
 					right_term = right_exp->value.term;
 
-					if(left_term->kind != num_T_K || 
-					   right_term->kind != num_T_K ) {
+					if(left_term->kind != TERM_NUM || 
+					   right_term->kind != TERM_NUM ) {
 						break;
 					}
 
@@ -553,140 +559,140 @@ EXPRES *weed_expression( EXPRES *exp ){
 					int temp_res = left_term->value.intconst / right_term->
 															value.intconst;			
 
-					exp->value.term = make_TERM_num(temp_res);
-					exp->kind = term_E_K;
+					exp->value.term = make_TERM_NUM(temp_res);
+					exp->kind = EXPRES_TERM;
 
 			}
 
 			break;
 
-		case boolleq_E_K:
+		case EXPRES_LEQ:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 
 				if( left_term->value.intconst <= right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 				} else {
-						exp->value.term = make_TERM_false();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();
+						exp->kind = EXPRES_TERM;
 				}
 
 			}
 
 			break;
 
-		case boolgeq_E_K:
+		case EXPRES_GEQ:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 
 				if( left_term->value.intconst >= right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 				} else {
-						exp->value.term = make_TERM_false();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();
+						exp->kind = EXPRES_TERM;
 				}
 
 			}
 
 			break;
 
-		case booleq_E_K:
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+		case EXPRES_EQ:
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
-				if(left_term->kind == num_T_K && 
-				    right_term->kind == num_T_K ) { 
+				if(left_term->kind == TERM_NUM && 
+				    right_term->kind == TERM_NUM ) { 
 					if( left_term->value.intconst == right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 					} else {
-						exp->value.term = make_TERM_false();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();
+						exp->kind = EXPRES_TERM;
 					}
 				}
 			}
 			break;
 
-		case boolneq_E_K:
+		case EXPRES_NEQ:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
-				if(left_term->kind == num_T_K && 
-				    right_term->kind == num_T_K ) { 
+				if(left_term->kind == TERM_NUM && 
+				    right_term->kind == TERM_NUM ) { 
 					if( left_term->value.intconst != 
 						right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 					} else {
-						exp->value.term = make_TERM_false();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();
+						exp->kind = EXPRES_TERM;
 					}
 				}
 			}
 			break;
 
-		case boolgreater_E_K:
+		case EXPRES_GREATER:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 
 				if( left_term->value.intconst > right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 				} else {
-						exp->value.term = make_TERM_false();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();
+						exp->kind = EXPRES_TERM;
 				}
 
 			}
 
 			break;
 
-		case boolless_E_K:
+		case EXPRES_LESS:
 
-			if( left_exp->kind == term_E_K && right_exp->kind == term_E_K ){
+			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != num_T_K || 
-				   right_term->kind != num_T_K ) {
+				if(left_term->kind != TERM_NUM || 
+				   right_term->kind != TERM_NUM ) {
 					break;
 				}
 				if( left_term->value.intconst < right_term->value.intconst ){
-						exp->value.term = make_TERM_true();
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_TRUE();
+						exp->kind = EXPRES_TERM;
 				} else {
-						exp->value.term = make_TERM_false();	
-						exp->kind = term_E_K;
+						exp->value.term = make_TERM_FALSE();	
+						exp->kind = EXPRES_TERM;
 				}
 	
 			}
@@ -706,45 +712,46 @@ TERM *weed_term ( TERM *term){
 
 	switch(term->kind){
 
-		case var_T_K:
+		case TERM_VAR:
 			term->value.var = weed_variable(term->value.var);
 			break;
 
-		case actList_T_K:
-			term->value.actlistT.actlist = weed_act_list(term->value.actlistT.actlist);
+		case TERM_ACT_LIST:
+			term->value.term_act_list.actlist = 
+					weed_act_list(term->value.term_act_list.actlist);
 			break;
 
-		case termBang_T_K:
+		case TERM_NOT:
 			term->value.term = weed_term(term->value.term);
 
-			if (term->value.term->kind == boolTrue_T_K){
-				term->kind = boolFalse_T_K;
+			if (term->value.term->kind == TERM_TRUE){
+				term->kind = TERM_FALSE;
 			}
 
-			if (term->value.term->kind == boolFalse_T_K){
-				term->kind = boolTrue_T_K;
+			if (term->value.term->kind == TERM_FALSE){
+				term->kind = TERM_TRUE;
 			}
 			
 			break;
 
-		case expresParent_T_K:
+		case TERM_PARENTESES:
 			term->value.exp = weed_expression(term->value.exp);
-			if (term->value.exp->kind == term_E_K){
+			if (term->value.exp->kind == EXPRES_TERM){
 				between = term->value.exp->value.term;
-				if(between->kind == var_T_K || between->kind == num_T_K 
-				   || between->kind == boolTrue_T_K || between->kind == 
-     				boolFalse_T_K || between->kind == null_T_K){
+				if(between->kind == TERM_VAR || between->kind == TERM_NUM 
+				   || between->kind == TERM_TRUE || between->kind == 
+     				TERM_FALSE || between->kind == TERM_NULL){
 
 					term->kind = between->kind;
 					term->value = between->value;
 				}
 			break; 
 
-		case expresPipes_T_K: //Absolut vaerdi |-vaerdi| = vaerdi
+		case TERM_ABS: //Absolut vaerdi |-vaerdi| = vaerdi
 			term->value.exp = weed_expression(term->value.exp);
-			if (term->value.exp->kind == term_E_K){
+			if (term->value.exp->kind == EXPRES_TERM){
 
-				if (term->value.exp->value.term->kind == num_T_K){
+				if (term->value.exp->value.term->kind == TERM_NUM){
 					
 					if(term->value.exp->value.term->value.intconst < 0){
 						term->value.exp->value.term->value.intconst *= (-1);
@@ -753,13 +760,13 @@ TERM *weed_term ( TERM *term){
 			}
 			break;
 
-		case null_T_K:
+		case TERM_NULL:
 			break;
-		case boolTrue_T_K:
+		case TERM_TRUE:
 			break;
-		case boolFalse_T_K:
+		case TERM_FALSE:
 			break;
-		case num_T_K:
+		case TERM_NUM:
 			break;
 
 		default:

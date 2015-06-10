@@ -1,9 +1,5 @@
-func NextRand(number:int, mult:int, incr:int, modulo:int) : int
-var temp:int;
-{
-  temp = number*mult+incr;
-  return temp - (temp/modulo)*modulo; (* modulo-operation *)
-}
-end NextRand
+var n : int;
 
-write NextRand(5,2,0,5);
+n = 2;
+
+write n - 1;

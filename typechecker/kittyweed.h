@@ -3,6 +3,7 @@
 #define INDENTATION_SIZE 4 //this might be used?
 #define WEEDER_FAILURE -1 //error code when exiting
 #include "../parserscanner/kittytree.h" // need types
+#include "stack.h"
 
 /*
  Special function we should call when 

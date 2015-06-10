@@ -8,23 +8,27 @@ typedef struct EXPRES {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
+	
 	enum {
-			term_E_K, 
-			plus_E_K, 
-			minus_E_K, 
-			times_E_K, 
-			divide_E_K, 
-			booleq_E_K,
-			boolneq_E_K,
-			boolgreater_E_K, 
-			boolless_E_K,
-			boolgeq_E_K,
-			boolleq_E_K,
-			booland_E_K,
-			boolor_E_K 
+			EXPRES_TERM, 
+			EXPRES_PLUS, 
+			EXPRES_MINUS, 
+			EXPRES_TIMES, 
+			EXPRES_DIVIDE, 
+			EXPRES_EQ,
+			EXPRES_NEQ,
+			EXPRES_GREATER, 
+			EXPRES_LESS,
+			EXPRES_GEQ,
+			EXPRES_LEQ,
+			EXPRES_AND,
+			EXPRES_OR 
 	} kind;
 	union {
-		struct { struct EXPRES *left; struct EXPRES *right; } sides;
+		struct { 
+			struct EXPRES *left; 
+			struct EXPRES *right; 
+		} sides; //Unique name due to all have sides except terms
 		struct TERM *term;
 	} value;
 } EXPRES;
@@ -33,13 +37,24 @@ typedef struct TERM {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	enum {var_T_K, actList_T_K, expresParent_T_K, expresPipes_T_K, 
-		termBang_T_K, num_T_K, boolTrue_T_K, boolFalse_T_K, 
-		null_T_K } kind;
+	enum {
+		TERM_VAR,
+		TERM_ACT_LIST,
+		TERM_PARENTESES,
+		TERM_ABS,
+		TERM_NOT,
+		TERM_NUM,
+		TERM_TRUE,
+		TERM_FALSE,
+		TERM_NULL
+	} kind;
 	union {
-		char *nullval;
 		int intconst;
-		struct { char *id; struct ACT_LIST *actlist; } actlistT;
+		struct { 
+			char *id; 
+			struct ACT_LIST *actlist; 
+		} term_act_list;
+
 		struct VAR *var;
 		struct EXPRES *exp;
 		struct TERM *term; 
@@ -49,28 +64,31 @@ typedef struct TERM {
 typedef struct ACT_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { explist_AL_K, empty_AL_K } kind;
-	union {
-		struct EXP_LIST *exp_list;
-	} value;
+	enum { 
+		ACT_LIST_EXPLIST, 
+		ACT_LIST_EMPTY 
+	} kind;
+	struct EXP_LIST *exp_list;
 } ACT_LIST;
 
 typedef struct EXP_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum {exp_EL_K,commalist_EL_K} kind;
-	union {
-		struct EXPRES *exp;
-		struct { struct EXP_LIST *explist; struct EXPRES *exp;} commaEL;
-	} value;
+	enum {
+		EXP_LIST_EXP,
+		EXP_LIST_LIST
+	} kind;
+	struct EXPRES *exp;
+	struct EXP_LIST *explist;
 } EXP_LIST;
 
 typedef struct FUNC {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	struct {struct HEAD *head; struct BODY *body; 
-		struct TAIL *tail;} functionF;
+	struct HEAD *head; 
+	struct BODY *body; 
+	struct TAIL *tail;
 } FUNC;
 
 typedef struct HEAD {
@@ -78,10 +96,9 @@ typedef struct HEAD {
 	int arguments;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	struct { char *id; 
-		     struct PAR_DECL_LIST *pdeclist;
-			 struct TYPE *returntype; 
-	} headH;
+	char *id; 
+	struct PAR_DECL_LIST *pdlist;
+	struct TYPE *returntype; 
 } HEAD;
 
 typedef struct TAIL {
@@ -94,10 +111,15 @@ typedef struct TYPE {
 	int lineno;
 	SYMBOLTYPE *symboltype;
 	SYMBOLTABLE *symboltable;
-	enum {id_TY_K,int_TY_K,bool_TY_K,arrayof_TY_K,recordof_TY_K} kind;
+	enum {
+		TYPE_ID,
+		TYPE_INT,
+		TYPE_BOOL,
+		TYPE_ARRAY,
+		TYPE_RECORD
+	} kind;
 	union {
-		char *idconst;
-		char *typeconst;
+		char *id;
 		struct TYPE *type;
 		struct VAR_DECL_LIST *var_decl_list;
 	} value;
@@ -106,21 +128,25 @@ typedef struct TYPE {
 typedef struct PAR_DECL_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { empty_PDL_K, varType_PDL_K } kind;
-	union {
-		struct VAR_DECL_LIST *var_decl_list;
-	} value;
+	enum { 
+		PAR_DECL_LIST_EMPTY,
+		PAR_DECL_LIST_LIST
+	} kind;
+
+	struct VAR_DECL_LIST *var_decl_list;
+
 } PAR_DECL_LIST;
 
 typedef struct VAR_DECL_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { comma_VDL_K , var_VDL_typeK } kind;
-	union {
-		struct { struct VAR_DECL_LIST *var_decl_list;
-			struct VAR_TYPE *var_type;} commaVDL;
-		struct VAR_TYPE *var_type;
-	} value;
+	enum { 
+		VAR_DECL_LIST_LIST,
+		VAR_DECL_LIST_TYPE
+	} kind;
+	struct VAR_DECL_LIST *var_decl_list;
+	struct VAR_TYPE *var_type;
+
 } VAR_DECL_LIST;
 
 typedef struct VAR_TYPE {
@@ -141,20 +167,28 @@ typedef struct BODY {
 typedef struct DECL_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { compound_DL_K, empty_DL_K } kind;
-	union {
-		struct { struct DECL_LIST *decl_list; 
-			struct DECLARATION *declaration; } compoundDL;
-	} value;
+	enum { 
+		DECL_LIST_LIST,
+		DECL_LIST_EMPTY
+	} kind;
+	struct DECL_LIST *decl_list; 
+	struct DECLARATION *declaration;
 } DECL_LIST;
 
-typedef struct DECLARATION
-{
+typedef struct DECLARATION{
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { typeassign_D_K, func_D_K, var_D_K } kind;
+	enum { 
+		DECLARATION_ID,
+		DECLARATION_FUNC,
+		DECLARATION_VAR
+	} kind;
 	union {
-		struct { char *id; struct TYPE *type; } typedeclID;
+		struct { 
+			char *id; 
+			struct TYPE *type; 
+		} declaration_id;
+
 		struct FUNC *function;
 		struct VAR_DECL_LIST *var_decl_list;
 	} value;
@@ -164,12 +198,14 @@ typedef struct STATEMENT_LIST
 {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { statement_SL_K, compound_SL_K } kind;
-	union {
-		struct {struct STATEMENT *statement;
-					  struct STATEMENT_LIST *statement_list; } compoundSL;
-		struct STATEMENT *statement;
-	} value;
+	enum { 
+		STATEMENT_LIST_LIST,
+		STATEMENT_LIST_STATEMENT
+	} kind;
+
+	struct STATEMENT *statement;
+	struct STATEMENT_LIST *statement_list; 
+
 } STATEMENT_LIST;
 
 typedef struct STATEMENT
@@ -177,141 +213,189 @@ typedef struct STATEMENT
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	int foundReturn;
-	struct STATEMENT *next;
+	struct STATEMENT *next; //??
 
-	enum { return_S_K, print_S_K, allocate_S_K, assign_S_K, ifbranch_S_K, 
-		while_S_K, statement_list_S_K } kind;
+	enum { 
+		STATEMENT_RETURN,
+		STATEMENT_WRITE,
+		STATEMENT_ALLOCATE,
+		STATEMENT_ASSIGN,
+		STATEMENT_IFBRANCH,
+		STATEMENT_WHILE,
+		STATEMENT_LISTS
+	} kind;
 	union { 
 		struct EXPRES *exp;
 		struct STATEMENT_LIST *statement_list;
-		struct {struct EXPRES *exp; FUNC *function; } returnS;
-		struct {struct VAR *variable; struct EXPRES *exp; } assignS;
-		struct {struct VAR *variable; 
-						struct OPT_LENGTH *opt_length; } allocateS;
-		struct {struct EXPRES *exp; 
-					  struct STATEMENT *statement;
-					  struct OPT_ELSE *opt_else; } ifbranchS;
-		struct {struct EXPRES *exp;
-						struct STATEMENT *statement; } whileS;
+		struct {
+			struct EXPRES *exp; 
+			FUNC *function; 
+		} statement_return;
+
+		struct {
+			struct VAR *var; 
+			struct EXPRES *exp; 
+		} statement_assign;
+
+		struct {
+			struct VAR *var; 
+			struct OPT_LENGTH *opt_length; 
+		} statement_allocate;
+
+		struct {
+			struct EXPRES *exp; 
+			struct STATEMENT *statement;
+			struct OPT_ELSE *opt_else; 
+		} statement_ifbranch;
+
+		struct {
+			struct EXPRES *exp;
+			struct STATEMENT *statement; 
+		} statement_while;
 	} value;
 } STATEMENT;
 
-typedef struct OPT_LENGTH
-{
+typedef struct OPT_LENGTH{
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	int emptyLength;
-	enum { lengthof_OL_K, empty_OL_K } kind;
-	union { 
-		struct EXPRES *exp;
-	} value;
+
+	enum { 
+		OPT_LENGTH_EXPRES,
+		OPT_LENGTH_EMPTY
+	} kind;
+	
+	struct EXPRES *exp;
+
 } OPT_LENGTH;
 
 typedef struct OPT_ELSE
 {
 	int lineno;
 	SYMBOLTABLE *symboltable;
-	enum { else_OE_K, empty_OE_K } kind;
-	union { 
-		struct STATEMENT *statement;
-	} value;
+	enum { 
+		OPT_ELSE_STATEMENT,
+		OPT_ELSE_EMPTY
+	} kind;
+
+	struct STATEMENT *statement;
+
 } OPT_ELSE;
 
 typedef struct VAR
 {
 	int lineno;
+	char *id;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	enum { id_V_K, indexing_V_K, dot_V_K } kind;
+	enum { 
+		VAR_ID,
+		VAR_ARRAY,
+		VAR_RECORD
+	} kind;
 	union { 
-		char *id;
-		struct {struct VAR *variable; struct EXPRES *exp;} indexingV;
-		struct {char *id; struct VAR *variable; } dotV;
+		struct {
+			struct VAR *var; 
+			struct EXPRES *exp;
+		} var_array;
+		struct {
+			char *id; 
+			struct VAR *var; 
+		} var_record;
 	} value;
 } VAR;
 
-/* functions */
+/* Functions constructors */
+FUNC *make_FUNC(HEAD*,BODY*,TAIL*);
+HEAD *make_HEAD(char *,PAR_DECL_LIST*,TYPE*);
+BODY *make_BODY(DECL_LIST *, STATEMENT_LIST *);
+TAIL *make_TAIL(char*);
 
-FUNC *make_FUNC_structure(HEAD*,BODY*,TAIL*);
-HEAD *make_HEAD_header(char *,PAR_DECL_LIST*,TYPE*);
-TAIL *make_TAIL_functail(char*);
+/* Type constructors */
+TYPE *make_TYPE_ID(char*);
+TYPE *make_TYPE_INT();
+TYPE *make_TYPE_BOOL();
+TYPE *make_TYPE_ARRAY(TYPE *);
+TYPE *make_TYPE_RECORD(VAR_DECL_LIST *);
 
-TYPE *make_TYPE_id(char*);
-TYPE *make_TYPE_int();
-TYPE *make_TYPE_bool();
-TYPE *make_TYPE_arrayof(TYPE *);
-TYPE *make_TYPE_recordof(VAR_DECL_LIST *);
+/* Parameter declaration list constructors */
+PAR_DECL_LIST *make_PAR_DECL_LIST_LIST(VAR_DECL_LIST *);
+PAR_DECL_LIST *make_PAR_DECL_LIST_EMPTY();
 
-PAR_DECL_LIST *make_PAR_DECL_LIST_vardecllist(VAR_DECL_LIST *);
-PAR_DECL_LIST *make_PAR_DECL_LIST_empty();
+/* Variable declaration list constructors */
+VAR_DECL_LIST *make_VAR_DECL_LIST_LIST(VAR_DECL_LIST *, VAR_TYPE *);
+VAR_DECL_LIST *make_VAR_DECL_LIST_TYPE(VAR_TYPE *);
 
-VAR_DECL_LIST *make_VAR_DECL_LIST_compound(VAR_DECL_LIST *, VAR_TYPE *);
-VAR_DECL_LIST *make_VAR_DECL_LIST_vartype(VAR_TYPE *);
+/* Variable type constructor */
+VAR_TYPE *make_VAR_TYPE(char *, TYPE *);
 
-VAR_TYPE *make_VAR_TYPE_id(char *, TYPE *);
+/* Declaration list constructors */
+DECL_LIST *make_DECL_LIST_LIST(DECL_LIST *, DECLARATION *);
+DECL_LIST *make_DECL_LIST_EMPTY();
 
-BODY *make_BODY_funcbody(DECL_LIST *, STATEMENT_LIST *);
+/* Decaration constructors */
+DECLARATION *make_DECLARATION_ID(char *,TYPE *);
+DECLARATION *make_DECLARATION_FUNC(FUNC*);
+DECLARATION *make_DECLARATION_VAR(VAR_DECL_LIST *);
 
-DECL_LIST *make_DECL_LIST_compound(DECL_LIST *, DECLARATION *);
-DECL_LIST *make_DECL_LIST_empty();
+/* Statement list constructors */
+STATEMENT_LIST *make_STATEMENT_LIST_STATEMENT(STATEMENT *);
+STATEMENT_LIST *make_STATEMENT_LIST_LIST(STATEMENT_LIST *, STATEMENT *);
 
-DECLARATION *make_DECLARATION_typeid(char *,TYPE *);
-DECLARATION *make_DECLARATION_func(FUNC*);
-DECLARATION *make_DECLARATION_var(VAR_DECL_LIST *);
+/* Statement constructors */
+STATEMENT *make_STATEMENT_RETURN(EXPRES *);
+STATEMENT *make_STATEMENT_WRITE(EXPRES *);
+STATEMENT *make_STATEMENT_ALLOCATE(VAR *, OPT_LENGTH *);
+STATEMENT *make_STATEMENT_ASSIGN(VAR *,EXPRES *);
+STATEMENT *make_STATEMENT_IFBRANCH(EXPRES *, STATEMENT *,OPT_ELSE *);
+STATEMENT *make_STATEMENT_WHILE(EXPRES *, STATEMENT *);
+STATEMENT *make_STATEMENT_LIST(STATEMENT_LIST *);
 
-STATEMENT_LIST *make_STATEMENT_LIST_statement(STATEMENT *);
-STATEMENT_LIST *make_STATEMENT_LIST_compound(STATEMENT_LIST *, STATEMENT *);
+/* Optional length allocation constructors */
+OPT_LENGTH *make_OPT_LENGTH_EXPRES(EXPRES *);
+OPT_LENGTH *make_OPT_LENGTH_EMPTY();
 
-STATEMENT *make_STATEMENT_return(EXPRES *);
-STATEMENT *make_STATEMENT_write(EXPRES *);
-STATEMENT *make_STATEMENT_allocate(VAR *, OPT_LENGTH *);
-STATEMENT *make_STATEMENT_assignment(VAR *,EXPRES *);
-STATEMENT *make_STATEMENT_ifbranch(EXPRES *, STATEMENT *,OPT_ELSE *);
-STATEMENT *make_STATEMENT_while(EXPRES *, STATEMENT *);
-STATEMENT *make_STATEMENT_compound(STATEMENT_LIST *);
+/* Optional else constructors */ 
+OPT_ELSE *make_OPT_ELSE_STATEMENT(STATEMENT *);
+OPT_ELSE *make_OPT_ELSE_EMPTY();
 
-OPT_LENGTH *make_OPT_LENGTH_oflength(EXPRES *);
-OPT_LENGTH *make_OPT_LENGTH_empty();
+/* Variable constructors */
+VAR *make_VAR_ID(char *);
+VAR *make_VAR_ARRAY(VAR *,EXPRES *);
+VAR *make_VAR_RECORD(VAR *, char*);
 
-OPT_ELSE *make_OPT_ELSE_elsestatement(STATEMENT *);
-OPT_ELSE *make_OPT_ELSE_empty();
-
-VAR *make_VAR_id(char *);
-VAR *make_VAR_indexing(VAR *,EXPRES *);
-VAR *make_VAR_dot(VAR *, char*);
-
-/*Expression constructor */
-EXPRES *make_EXPRESS_term(TERM *);
-EXPRES *make_EXPRESS_plus(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_minus(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_times(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_divide(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_booleq(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolneq(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolgreater(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolless(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolgeq(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolleq(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_booland(EXPRES *,EXPRES *);
-EXPRES *make_EXPRESS_boolor(EXPRES *,EXPRES *);
+/* Expression constructor */
+EXPRES *make_EXPRES_TERM(TERM *);
+EXPRES *make_EXPRES_PLUS(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_MINUS(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_TIMES(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_DIVIDE(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_EQ(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_NEQ(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_GREATER(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_LESS(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_GEQ(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_LEQ(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_AND(EXPRES *,EXPRES *);
+EXPRES *make_EXPRES_OR(EXPRES *,EXPRES *);
 
 /*TERM constructor */
+TERM *make_TERM_VAR(VAR *);
+TERM *make_TERM_ACT_LIST(char *,ACT_LIST *);
+TERM *make_TERM_NOT(TERM *);
+TERM *make_TERM_PARENTESES(EXPRES *);
+TERM *make_TERM_ABS(EXPRES *);
+TERM *make_TERM_NULL();
+TERM *make_TERM_TRUE();
+TERM *make_TERM_FALSE();
+TERM *make_TERM_NUM(int);
 
-TERM *make_TERM_var(VAR *);
-TERM *make_TERM_actlist(char *,ACT_LIST *);
-TERM *make_TERM_bangterm(TERM *);
-TERM *make_TERM_parenteseexp(EXPRES *);
-TERM *make_TERM_pipeexp(EXPRES *);
-TERM *make_TERM_null();
-TERM *make_TERM_true();
-TERM *make_TERM_false();
-TERM *make_TERM_num(int);
+/* Constructors for function calls */
+ACT_LIST *make_ACT_LIST_EXPLIST(EXP_LIST *);
+ACT_LIST *make_ACT_LIST_EMPTY();
 
-ACT_LIST *make_ACT_LIST_explist(EXP_LIST *);
-ACT_LIST *make_ACT_LIST_epsilon();
-
-EXP_LIST *make_EXP_LIST_expression(EXPRES *);
-EXP_LIST *make_EXP_LIST_commalist(EXP_LIST *,EXPRES *);
+/* Expression list constructors */
+EXP_LIST *make_EXP_LIST_EXP(EXPRES *);
+EXP_LIST *make_EXP_LIST_LIST(EXP_LIST *,EXPRES *);
 
 
 #endif /* END OF __KITTYTREE_H */

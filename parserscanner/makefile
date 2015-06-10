@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -std=c99 -Wall -Wextra -pedantic
-DEPS = memory.h kittytree.h y.tab.h
-OBJS = lex.yy.o kittytree.o y.tab.o memory.o
+DEPS = memory.h kittytree.h y.tab.h 
+OBJS = lex.yy.o kittytree.o y.tab.o memory.o 
 SCAN = kittyscanner.l
 PARS = kittyparser.y
 
