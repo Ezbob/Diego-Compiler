@@ -1,0 +1,13 @@
+func func1() : int
+
+	write i;
+	i = 10;
+	write i;
+	return 42;
+end func1
+
+var i : int;
+
+i = 0;
+
+write func1();

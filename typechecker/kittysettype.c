@@ -1,10 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "symbol/symbol.h"
-#include "parserscanner/kittytree.h"
-#include "kittytype.h"
 #include "kittysettype.h"
+
+char test[HASH_SIZE];
 
 void begin_set( BODY *body ){
 
@@ -13,15 +12,15 @@ void begin_set( BODY *body ){
 
 void set_function ( FUNC *function ){
 
-	set_head(function->functionF.head);
-	set_body(function->functionF.body);
+	set_head(function->head);
+	set_body(function->body);
 
 }
 
 void set_head ( HEAD *header ){
 
-	set_par_decl_list(header->headH.pdeclist);
-	set_type(header->headH.returntype);
+	set_par_decl_list(header->pdlist);
+	set_type(header->returntype);
 
 }
 	
@@ -34,10 +33,10 @@ void set_body ( BODY *body ) {
 void set_par_decl_list ( PAR_DECL_LIST *pdecl ) {
 
 	switch(pdecl->kind){
-		case varType_PDL_K:
-			set_var_decl_list(pdecl->value.var_decl_list);
+		case PAR_DECL_LIST_LIST:
+			set_var_decl_list(pdecl->var_decl_list);
 			break;
-		case empty_PDL_K:
+		case PAR_DECL_LIST_EMPTY:
 			break;
 	}
 }
@@ -45,16 +44,17 @@ void set_par_decl_list ( PAR_DECL_LIST *pdecl ) {
 void set_var_decl_list ( VAR_DECL_LIST *vdecl ) {
 
 	switch(vdecl->kind){
-		case comma_VDL_K:
-			set_var_decl_list(vdecl->value.commaVDL.var_decl_list);
-			set_var_type(vdecl->value.commaVDL.var_type);
+		case VAR_DECL_LIST_LIST:
+			set_var_decl_list(vdecl->var_decl_list);
+			set_var_type(vdecl->var_type);
 			break;
-		case var_VDL_typeK:
-			set_var_type(vdecl->value.var_type);
+		case VAR_DECL_LIST_TYPE:
+			set_var_type(vdecl->var_type);
 			break;
 	}
 }
 void set_var_type ( VAR_TYPE *vtype ) {
+	strcpy(test, vtype->id);
 	set_type(vtype->type);
 	vtype->symbol->symboltype = vtype->type->symboltype;
 
@@ -63,11 +63,11 @@ void set_var_type ( VAR_TYPE *vtype ) {
 void set_decl_list ( DECL_LIST *dlst ) {
 
 	switch(dlst->kind){
-		case compound_DL_K:
-			set_decl_list(dlst->value.compoundDL.decl_list);
-			set_declaration(dlst->value.compoundDL.declaration);
+		case DECL_LIST_LIST:
+			set_decl_list(dlst->decl_list);
+			set_declaration(dlst->declaration);
 			break;
-		case empty_DL_K:
+		case DECL_LIST_EMPTY:
 			break;
 	}	
 }
@@ -75,56 +75,98 @@ void set_decl_list ( DECL_LIST *dlst ) {
 void set_declaration ( DECLARATION *decl ) {
 
 	switch(decl->kind){
-		case typeassign_D_K:
-			set_type(decl->value.typedeclID.type);
+		case DECLARATION_ID:
+			set_type(decl->value.declaration_id.type);
 			break;
-		case func_D_K:
+		case DECLARATION_FUNC:
 			set_function(decl->value.function);
 			break;
-		case var_D_K:
+		case DECLARATION_VAR:
 			set_var_decl_list(decl->value.var_decl_list);
 			break;
 	}
 }
+//Types only have symbol types???
 void set_type ( TYPE *type ) {
 
 	SYMBOL *tmp;
 
+	printf("%p\n", (void *) type->symboltype->declaration_type);
+	dumpSymbolTable(type->symboltable);
 	switch(type->kind){
-		case id_TY_K:
-			tmp = getSymbol(type->symboltable, type->value.idconst);
+		case TYPE_ID:
+			tmp = getSymbol(type->symboltable, type->value.id);
+			printf("%s\n", tmp->name);
 
-			if(tmp->symboltype->type == SYMBOL_INT){
-				type->kind = int_TY_K;
-				type->symboltype->type = SYMBOL_INT;
-				type->symboltype->visited = 1;
+
+			switch(type->kind){
+				case TYPE_ID:
+
+				while (tmp != NULL && tmp->visited != 1){
+
+						if(tmp->visited == 1){
+							fprintf(stderr, "%s\n", "Recursive defined type");
+							exit(1);
+						}
+
+						if(strcmp(type->value.id, test) == 0){
+							fprintf(stderr, "%s\n", "Recursive defined type");
+							exit(1);
+						}
+
+						printf("%s\n", "ID");
+						tmp = getSymbol(type->symboltable, tmp->declarationtype->value.id);
+						printf("%s\n", "TEST 4");
+						tmp->visited = 1;
+				}
+				break;
+
+				case TYPE_INT:
+					printf("%s\n", "INT");
+					type->kind = TYPE_INT;
+					type->symboltype->type = SYMBOL_INT;
+					break;
+
+				case TYPE_BOOL:
+					printf("%s\n", "BOOL");
+					type->kind = TYPE_BOOL;
+					type->symboltype->type = SYMBOL_BOOL;			
+					break;
+				case TYPE_ARRAY:
+					printf("%s\n", "ARRAY");
+					type->kind = TYPE_ARRAY;
+					type->symboltype->type = SYMBOL_ARRAY;						
+					break;
+
+				case TYPE_RECORD:
+					printf("%s\n", "RECORD");
+					type->kind = TYPE_RECORD;
+					type->symboltype->type = SYMBOL_RECORD;
+					type->value.var_decl_list = tmp->declarationtype->value.var_decl_list;
+					break;
+
+				default:
+					printf("%s\n", "DEFAULT");
+					break;
 			}
 
-			if(tmp->symboltype->type == SYMBOL_BOOL){
-				type->kind = bool_TY_K;
-				type->symboltype->type = SYMBOL_BOOL;
-				type->symboltype->visited = 1;
-			}
 
-			if(tmp->symboltype->type == SYMBOL_ARRAY){
-				type->kind = arrayof_TY_K;
-				type->symboltype->type = SYMBOL_ARRAY;
-				type->symboltype->visited = 1;
-			}
+				//printf("%p\n", (void *) tmp->declarationtype->value.id);
+				//printf("%s\n", tmp->declarationtype->value.id);
+				//tmp = getSymbol(type->symboltable, tmp->declarationtype->value.id);
 
-			if(tmp->symboltype->type == SYMBOL_RECORD){
-				type->kind = recordof_TY_K;
-				type->symboltype->type = SYMBOL_RECORD;
-				type->symboltype->visited = 1;
-			}
+
+
 			break;
-		case int_TY_K:
+		case TYPE_INT:
 			break;
-		case bool_TY_K:
+		case TYPE_BOOL:
 			break;
-		case arrayof_TY_K:
+		case TYPE_ARRAY:
 			break;
-		case recordof_TY_K:
+		case TYPE_RECORD:
+			//set_var_decl_list(type->value.var_decl_list);
+			//type->value.var_decl_list = tmp->declarationtype->value.var_decl_list;
 			break;
 	}
 }

@@ -182,7 +182,7 @@ void IR_builder_function(FUNC *func) {
 	char *functionendlabel = calloc(MAXLABELSIZE ,sizeof(char));
 
 	SYMBOL *symbol = getSymbol(func->symboltable, 
-		func->functionF.head->headH.id);
+		func->head->id);
 
 	sprintf(functionlabel, "func%d", functiondId);
 	sprintf(functionendlabel,"endFunc%d", functiondId);
@@ -194,7 +194,7 @@ void IR_builder_function(FUNC *func) {
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
-	IR_builder_decl_list(func->functionF.body->decl_list);
+	IR_builder_decl_list(func->body->decl_list);
 
 	IR_INSTRUCTION *func_main = // start function label
 		make_instruction_label( functionlabel );
@@ -202,8 +202,8 @@ void IR_builder_function(FUNC *func) {
 	append_element(ir_lines, func_main);
 
 
-	IR_builder_head(func->functionF.head);
-	IR_builder_body(func->functionF.body);
+	IR_builder_head(func->head);
+	IR_builder_body(func->body);
 
 	append_element( // end of function label
 		ir_lines,
@@ -223,22 +223,22 @@ void IR_builder_function(FUNC *func) {
 void IR_builder_head (HEAD *header) {
 
 	SYMBOL *symbol;
-	SYMBOL *args = getSymbol(header->symboltable, header->headH.id);
+	SYMBOL *args = getSymbol(header->symboltable, header->id);
 	int count = 0;
 	int offset = 2; 
 
-	VAR_DECL_LIST *vars = header->headH.pdeclist->value.var_decl_list;
+	VAR_DECL_LIST *vars = header->pdlist->var_decl_list;
 	
 	while(count < args->noArguments){
 
-		if(globalTable != NULL || vars->value.var_type != NULL){
+		if(globalTable != NULL || vars->var_type != NULL){
 		
-			if (vars->kind == comma_VDL_K) {
-				symbol = getSymbol(header->headH.pdeclist->symboltable, 
-					vars->value.commaVDL.var_type->id);
+			if (vars->kind == VAR_DECL_LIST_LIST) {
+				symbol = getSymbol(header->pdlist->symboltable, 
+					vars->var_type->id);
 			} else {
-				symbol = getSymbol(header->headH.pdeclist->symboltable, 
-					vars->value.var_type->id);
+				symbol = getSymbol(header->pdlist->symboltable, 
+					vars->var_type->id);
 			}
 
 			if(symbol == NULL){
@@ -248,7 +248,7 @@ void IR_builder_head (HEAD *header) {
 
 			symbol->offset = offset;
 			offset++;
-			vars = vars->value.commaVDL.var_decl_list;
+			vars = vars->var_decl_list;
 			count++;
 		} else {
 			break;
@@ -271,12 +271,12 @@ void IR_builder_body (BODY *body) {
 
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	switch(vdecl->kind){
-		case comma_VDL_K:
-			IR_builder_var_decl_list(vdecl->value.commaVDL.var_decl_list);
-			IR_builder_var_type(vdecl->value.commaVDL.var_type);
+		case VAR_DECL_LIST_LIST:
+			IR_builder_var_decl_list(vdecl->var_decl_list);
+			IR_builder_var_type(vdecl->var_type);
 			break;
-		case var_VDL_typeK:
-			IR_builder_var_type(vdecl->value.var_type);
+		case VAR_DECL_LIST_TYPE:
+			IR_builder_var_type(vdecl->var_type);
 			break;
 	}
 	
@@ -285,19 +285,19 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
 
 	switch(vtype->type->kind){ // note: switching on type kind
-		case int_TY_K:
+		case TYPE_INT:
 			vtype->symboltable->localVars += WORDSIZE;
 			break;
  
-		case bool_TY_K:
+		case TYPE_BOOL:
 			vtype->symboltable->localVars += WORDSIZE;
 			break;
 
-		case arrayof_TY_K:
+		case TYPE_ARRAY:
 			// vtype->symboltable->localVars += WORDSIZE; 
 			// parse by reference but we have to find out if it's parameters 
 			break;
-		case recordof_TY_K:
+		case TYPE_RECORD:
 			// vtype->symboltable->localVars += WORDSIZE; // like arrays
 			break;
 		default:
@@ -308,11 +308,11 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 void IR_builder_decl_list ( DECL_LIST *dlst ) {
 
 	switch(dlst->kind){
-		case compound_DL_K:
-			IR_builder_decl_list(dlst->value.compoundDL.decl_list);
-			IR_builder_declaration(dlst->value.compoundDL.declaration);
+		case DECL_LIST_LIST:
+			IR_builder_decl_list(dlst->decl_list);
+			IR_builder_declaration(dlst->declaration);
 			break;
-		case empty_DL_K:
+		case DECL_LIST_EMPTY:
 			break;
 	}
 
@@ -320,12 +320,12 @@ void IR_builder_decl_list ( DECL_LIST *dlst ) {
 
 void IR_builder_declaration ( DECLARATION *decl ) {
 	switch(decl->kind){
-		case typeassign_D_K:
+		case DECLARATION_ID:
 			break;
-		case func_D_K:
+		case DECLARATION_FUNC:
 			IR_builder_function(decl->value.function);
 			break;
-		case var_D_K:
+		case DECLARATION_VAR:
 			IR_builder_var_decl_list(decl->value.var_decl_list);
 			break; 
 	}
@@ -334,12 +334,12 @@ void IR_builder_declaration ( DECLARATION *decl ) {
 
 void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 	switch(slst->kind) {
-		case compound_SL_K:
-			IR_builder_statement_list(slst->value.compoundSL.statement_list);
-			IR_builder_statement(slst->value.compoundSL.statement);
+		case STATEMENT_LIST_LIST:
+			IR_builder_statement_list(slst->statement_list);
+			IR_builder_statement(slst->statement);
 			break;
-		case statement_SL_K:
-			IR_builder_statement(slst->value.statement);
+		case STATEMENT_LIST_STATEMENT:
+			IR_builder_statement(slst->statement);
 			break;
 		default:
 			break;
@@ -367,13 +367,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 	switch(st->kind){
 
-		case return_S_K:	
+		case STATEMENT_RETURN:	
 			returnvalue = IR_builder_expression(st->value.exp);
 			IR_INSTRUCTION *movl = make_instruction_movl(returnvalue, eax);
 			append_element(ir_lines, movl);
 			break;
 
-		case print_S_K: 
+		case STATEMENT_WRITE: 
 			switch(st->value.exp->symboltype->type){
 
 				case SYMBOL_BOOL:
@@ -475,7 +475,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					params = make_instruction_pushl(arg1);
 					append_element(ir_lines, params);
 		
-					if (st->value.exp->value.term->kind == null_T_K){
+					if (st->value.exp->value.term->kind == TERM_NULL){
 						arg3 = make_argument_label("$formNULL");
 						IR_INSTRUCTION *pushform = 
 							make_instruction_pushl(arg3);
@@ -522,12 +522,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 			}
 			break;
 
-		case assign_S_K:  // todo with local variables
-			switch(st->value.assignS.variable->kind){
+		case STATEMENT_ASSIGN:  // todo with local variables
+			switch(st->value.statement_assign.var->kind){
 
-				case indexing_V_K:
-					arg2 = IR_builder_variable(st->value.assignS.variable);
-					arg1 = IR_builder_expression(st->value.assignS.exp);
+				case VAR_ARRAY:
+					arg2 = IR_builder_variable(st->value.statement_assign.var);
+					arg1 = IR_builder_expression(st->value.statement_assign.exp);
 					
 						append_element( 
 							ir_lines,
@@ -538,10 +538,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 						);
 					break;
 
-				case dot_V_K:
+				case VAR_RECORD:
 
-					arg1 = IR_builder_expression(st->value.assignS.exp);
-					arg2 = IR_builder_variable(st->value.assignS.variable);
+					arg1 = IR_builder_expression(st->value.statement_assign.exp);
+					arg2 = IR_builder_variable(st->value.statement_assign.var);
 
 					append_element( 
 						ir_lines,
@@ -552,11 +552,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 					);
 					break;
 
-				case id_V_K:
-					arg1 = IR_builder_expression(st->value.assignS.exp);
+				case VAR_ID:
+					arg1 = IR_builder_expression(st->value.statement_assign.exp);
 
 					SYMBOL *symbol = getSymbol(st->symboltable,st->value
-						.assignS.variable->value.id);
+						.statement_assign.var->id);
 		
 					if(symbol->tableid != st->symboltable->id){
 						append_element(ir_lines, make_instruction_pushl(ecx));
@@ -605,9 +605,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 				}
 			break;
 
-		case ifbranch_S_K:
+		case STATEMENT_IFBRANCH:
 			// generate code for boolean expression(s)
-			arg1 = IR_builder_expression(st->value.ifbranchS.exp); 
+			arg1 = IR_builder_expression(st->value.statement_ifbranch.exp); 
 
 			elselabel = calloc(MAXLABELSIZE,sizeof(char));
 			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
@@ -625,7 +625,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					) 
 				);
 
-			if(st->value.ifbranchS.opt_else->kind != empty_OE_K){
+			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 				append_element( // if not equal goto else part
 					ir_lines,
 					make_instruction_jne(elselabel) 
@@ -637,11 +637,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 				);
 			}
 
-			IR_builder_statement(st->value.ifbranchS.statement);
+			IR_builder_statement(st->value.statement_ifbranch.statement);
 				// build statements in if-case
 
 
-			if(st->value.ifbranchS.opt_else->kind != empty_OE_K){
+			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 
 				append_element( // we have to jump over 
 									//else when if-case is true
@@ -657,7 +657,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				);
 
 				IR_builder_statement( // build else statements
-					st->value.ifbranchS.opt_else->value.statement);
+					st->value.statement_ifbranch.opt_else->statement);
 			}
 
 
@@ -670,12 +670,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			break;
 
-		case allocate_S_K:
+		case STATEMENT_ALLOCATE:
 
-			switch(st->value.allocateS.variable->symboltype->type){
+			switch(st->value.statement_allocate.var->symboltype->type){
 
 				case SYMBOL_ARRAY:
-					if (st->value.allocateS.opt_length->kind == lengthof_OL_K) {
+					if (st->value.statement_allocate.opt_length->kind == OPT_LENGTH_EXPRES) {
 						
 						if(get_length(data_lines) == 0)	{ // init heap counter
 							append_element(
@@ -690,10 +690,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 						// put check out of memory here
 
 						char *address_of_id = calloc(strlen(st->value.
-						allocateS.variable->value.id) + 4, sizeof(char));
+						statement_allocate.var->id) + 4, sizeof(char));
 
 						sprintf(address_of_id, "(%s)",st->value.
-							allocateS.variable->value.id);
+							statement_allocate.var->id);
 
 						append_element(
 							ir_lines,
@@ -703,8 +703,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						arg1 = IR_builder_expression(st->value.allocateS.
-							opt_length->value.exp); // length of-result
+						arg1 = IR_builder_expression(st->value.statement_allocate.
+							opt_length->exp); // length of-result
 
 						arg2 = make_argument_tempregister(current_temporary++);
 
@@ -746,7 +746,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 								movArg,
 								make_argument_indexing(
 									make_argument_label(
-										st->value.allocateS.variable->value.id
+										st->value.statement_allocate.var->id
 										),
 									arg2
 								)
@@ -792,7 +792,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						);
 					
 						append_element(data_lines,st);
-					}else if( st->value.allocateS.opt_length->kind == empty_OL_K ) {
+					}else if( st->value.statement_allocate.opt_length->kind == OPT_LENGTH_EMPTY ) {
 							// do something else?
 					}
 					break;
@@ -810,10 +810,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 						}
 
 						char *address_of_id = calloc(strlen(st->value.
-						allocateS.variable->value.id) + 4, sizeof(char));
+						statement_allocate.var->id) + 4, sizeof(char));
 
 						sprintf(address_of_id, "(%s)",st->value.
-							allocateS.variable->value.id);
+							statement_allocate.var->id);
 
 						append_element(
 							ir_lines,
@@ -822,9 +822,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 								make_argument_label(address_of_id)
 							)
 						);
-
-						arg1 = make_argument_constant(st->value.allocateS.
-							opt_length->emptyLength); // length of-result
+						/* Something wrong here TODO */
+						arg1 = make_argument_constant(0);//st->value.statement_allocate.
+							//opt_length->emptyLength); // length of-result
 
 
 
@@ -878,7 +878,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				}
 			break;
 
-		case while_S_K:
+		case STATEMENT_WHILE:
 
 			tmp = getNextLabel();
 
@@ -895,7 +895,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			);
 
 			// evaluting expressions
-			arg1 = IR_builder_expression(st->value.whileS.exp);
+			arg1 = IR_builder_expression(st->value.statement_while.exp);
 
 			append_element( //Compare evaluted expression with true
 				ir_lines, 
@@ -913,7 +913,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			);			
 
 			// generate code for statements
-			IR_builder_statement(st->value.whileS.statement);
+			IR_builder_statement(st->value.statement_while.statement);
 			
 			append_element( // repeating statement jump
 				ir_lines, 
@@ -926,7 +926,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			);
 			break;
 
-		case statement_list_S_K:
+		case STATEMENT_LISTS:
 			IR_builder_statement_list(st->value.statement_list);
 			break;
 
@@ -936,7 +936,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 } 
 
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen ) {
-	return IR_builder_expression(oplen->value.exp);
+	return IR_builder_expression(oplen->exp);
 }
 
 ARGUMENT *IR_builder_variable (VAR *var) {
@@ -949,9 +949,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	SYMBOLTABLE *tmpTable;
 	
 	switch (var->kind){
-		case id_V_K:
+		case VAR_ID:
 
-			symbol = getSymbol(var->symboltable, var->value.id);
+			symbol = getSymbol(var->symboltable, var->id);
 
 			if(symbol->tableid != var->symboltable->id){
 				append_element(ir_lines, make_instruction_pushl(ecx));
@@ -974,8 +974,8 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				arg = make_argument_address(WORDSIZE*(symbol->offset));
 			}
 			break;
-		case indexing_V_K:
-				resultOfSubExp = IR_builder_expression(var->value.indexingV.exp);
+		case VAR_ARRAY:
+				resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
 				arg = make_argument_tempregister(current_temporary++);
 
 				append_element(ir_lines, make_instruction_movl(resultOfSubExp, arg));
@@ -985,20 +985,20 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				);
 
 				arg1 = make_argument_indexing(
-							make_argument_label(var->value.indexingV.
-								variable->value.id), 
+							make_argument_label(var->value.var_array.
+								var->id), 
 								// arrays in records problem
 							arg
 						);
 
 			return arg1;
-		case dot_V_K:
+		case VAR_RECORD:
 
-				if((symbol = getSymbol(var->symboltable, var->value.dotV.variable->value.id)) != NULL){
+				if((symbol = getSymbol(var->symboltable, var->value.var_record.var->id)) != NULL){
 					tmpTable = symbol->symboltype->child;
 				}
 
-				if((symbol = getSymbol(tmpTable, var->value.dotV.id)) != NULL){
+				if((symbol = getSymbol(tmpTable, var->value.var_record.id)) != NULL){
 					resultOfSubExp = make_argument_constant(symbol->offset);
 				}
 
@@ -1014,7 +1014,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				address_of_id = 
 						make_argument_indexing(
 							make_argument_label(
-								var->value.dotV.variable->value.id
+								var->value.var_record.var->id
 								),
 							arg
 						);
@@ -1040,31 +1040,31 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 	IR_INSTRUCTION *edxsave;
 	IR_INSTRUCTION *edxrestore;
 
-	if(exp->kind != term_E_K){
+	if(exp->kind != EXPRES_TERM){
 		argLeft = IR_builder_expression(exp->value.sides.left);
 		argRight = IR_builder_expression(exp->value.sides.right);
 	}
 
 	switch(exp->kind){
-		case term_E_K: 
+		case EXPRES_TERM: 
 			return IR_builder_term(exp->value.term);
 
-		case plus_E_K:
+		case EXPRES_PLUS:
 			instr = make_instruction_addl(argLeft, argRight);
  			append_element(ir_lines, instr);
  			return argRight;
 
-		case minus_E_K:
+		case EXPRES_MINUS:
 			instr = make_instruction_subl( argRight, argLeft);
  			append_element(ir_lines, instr);
  			return argLeft; 
 
-		case times_E_K:
+		case EXPRES_TIMES:
 			instr = make_instruction_imul(argLeft, argRight);
  			append_element(ir_lines, instr);
  			return argRight;
 
-		case divide_E_K:
+		case EXPRES_DIVIDE:
 			tmp = getNextLabel();
 
 			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
@@ -1136,12 +1136,12 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 			return argLeft;
 
-		case booleq_E_K:
-		case boolneq_E_K:
-		case boolgreater_E_K:
-		case boolless_E_K:
-		case boolleq_E_K:
-		case boolgeq_E_K:
+		case EXPRES_EQ:
+		case EXPRES_NEQ:
+		case EXPRES_GREATER:
+		case EXPRES_LESS:
+		case EXPRES_LEQ:
+		case EXPRES_GEQ:
 			result = make_argument_tempregister(current_temporary++);
 			tmp = getNextLabel();
 
@@ -1161,27 +1161,27 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			IR_INSTRUCTION *truejmp;
 
 			switch(exp->kind){
-				case booleq_E_K:
+				case EXPRES_EQ:
 					truejmp = make_instruction_je(booltruelabel);
 					break;
 
-				case boolneq_E_K:
+				case EXPRES_NEQ:
 					truejmp = make_instruction_jne(booltruelabel);
 					break;
 
-				case boolgreater_E_K:
+				case EXPRES_GREATER:
 					truejmp = make_instruction_jg(booltruelabel);
 					break;
 
-				case boolless_E_K:
+				case EXPRES_LESS:
 					truejmp = make_instruction_jl(booltruelabel);
 					break;
 
-				case boolleq_E_K:
+				case EXPRES_LEQ:
 					truejmp = make_instruction_JLE(booltruelabel);
 					break;
 
-				case boolgeq_E_K:
+				case EXPRES_GEQ:
 					truejmp = make_instruction_JGE(booltruelabel);
 					break;
 
@@ -1208,7 +1208,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, endlabel);
 			return result;
 
-		case booland_E_K: //Checked
+		case EXPRES_AND: //Checked
 			tmp = getNextLabel();
 
 			char *andFalselabel = calloc(MAXLABELSIZE,sizeof(char));
@@ -1254,7 +1254,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, andEndinstr);
 			append_element(ir_lines, make_instruction_popl(edx));
 			break;
-		case boolor_E_K:
+		case EXPRES_OR:
 			tmp = getNextLabel();
 
 			char *orOKlabel = calloc(MAXLABELSIZE,sizeof(char));
@@ -1309,32 +1309,32 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	char *falselabel;
 
 	switch(term->kind){
-		case num_T_K:
+		case TERM_NUM:
 			arg1 = make_argument_constant(term->value.intconst);
 			//arg2 = make_argument_tempregister(current_temporary++);
 			//instr = make_instruction_movl(arg1, arg2);
 			//append_element(ir_lines, instr);
 			return arg1;//arg2; //Return arg2 to keep track of temps
 
-		case boolTrue_T_K:
+		case TERM_TRUE:
 			arg1 = make_argument_constant(1);
 			//arg2 = make_argument_tempregister(current_temporary++);
 			//instr = make_instruction_movl(arg1, arg2);
 			//append_element(ir_lines, instr);
 			return arg1;//arg2; //Return arg2 to keep track of temps
 
-		case null_T_K:
-		case boolFalse_T_K:
+		case TERM_NULL:
+		case TERM_FALSE:
 			arg1 = make_argument_constant(0);
 			//arg2 = make_argument_tempregister(current_temporary++);
 			//instr = make_instruction_movl(arg1, arg2);
 			//append_element(ir_lines, instr);
 			return arg1;//arg2; //Return arg2 to keep track of temps
 
-		case expresParent_T_K: // paranteses just parses
+		case TERM_PARENTESES: // paranteses just parses
 			return IR_builder_expression(term->value.exp);
 
-		case var_T_K:
+		case TERM_VAR:
 			
 			arg1 = IR_builder_variable(term->value.var);
 			//arg2 = make_argument_tempregister(current_temporary++);
@@ -1342,12 +1342,12 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			//append_element(ir_lines, instr);
 			return arg1;//arg2; //Return arg2 to keep track of temps			
 
-		case actList_T_K:
+		case TERM_ACT_LIST:
 			addStaticLink(term->symboltable->id);
-			symbol = getSymbol(term->symboltable, term->value.actlistT.id);
+			symbol = getSymbol(term->symboltable, term->value.term_act_list.id);
 
 			// push parameters on stack recursively
-			IR_builder_act_list(term->value.actlistT.actlist);
+			IR_builder_act_list(term->value.term_act_list.actlist);
 
 			arg2 = make_argument_label(symbol->uniquename);
 			IR_INSTRUCTION *call = make_instruction_call(arg2);
@@ -1361,7 +1361,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element(ir_lines, savereturn);
 			return returnarg; // by convention eax holds return values
 
-		case termBang_T_K:
+		case TERM_NOT:
 			tmp = getNextLabel();
 			arg1 = IR_builder_term(term->value.term);
 
@@ -1421,7 +1421,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			
 			return arg1;
 
-		case expresPipes_T_K:
+		case TERM_ABS:
 			params = 0;
 			char *pipeEnd = calloc(MAXLABELSIZE,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
@@ -1442,7 +1442,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element(ir_lines, pipeLabel);
 				return arg1;
 			}else if(term->symboltype->type == SYMBOL_ARRAY){
-				char *id = term->value.exp->value.term->value.var->value.id;
+				char *id = term->value.exp->value.term->value.var->id;
 
 				ARGUMENT *firstElement = make_argument_tempregister(
 					current_temporary++);
@@ -1481,10 +1481,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 void IR_builder_act_list ( ACT_LIST *actlst) { 
 
 	switch(actlst->kind){
-		case explist_AL_K:
-			IR_builder_expression_list(actlst->value.exp_list);
+		case ACT_LIST_EXPLIST:
+			IR_builder_expression_list(actlst->exp_list);
 			break;
-		case empty_AL_K:
+		case ACT_LIST_EMPTY:
 			break;
 	}
 }
@@ -1494,19 +1494,19 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
 	switch(explst->kind){
-		case exp_EL_K:
+		case EXP_LIST_EXP:
 			append_element(
 				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->value.exp)
+					IR_builder_expression(explst->exp)
 					)
 				); 
 			break;
-		case commalist_EL_K:
+		case EXP_LIST_LIST:
 		
-			IR_builder_expression_list(explst->value.commaEL.explist);
+			IR_builder_expression_list(explst->explist);
 			append_element(
 				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->value.commaEL.exp)
+					IR_builder_expression(explst->exp)
 					)
 				);
 			break;
@@ -1819,8 +1819,8 @@ void build_data_section(){
 
 			append_element(ir_lines,
 				make_instruction_space(
-					make_argument_label(st->value.allocateS.
-						variable->value.id), 
+					make_argument_label(st->value.statement_allocate.
+						var->id), 
 					make_argument_label("4")
 					)
 				);

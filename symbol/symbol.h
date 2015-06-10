@@ -21,8 +21,8 @@ typedef struct SYMBOLTYPE {
   struct SYMBOLTYPE *return_type; // for functions
   struct SYMBOLTABLE *child;
   TYPES_SUPPORTED type;
-  struct TYPE *array;
-  struct TYPE *declaration_type;
+  struct TYPE *array; //for arrays scap?
+  struct TYPE *declaration_type; //for records scap?
   struct FUNCTION *func;
   struct VAR_DECL_LIST *parameters;
   int arguments;
@@ -33,6 +33,7 @@ typedef struct SYMBOL {
   char *name;
   int value;
   int noArguments;
+  int visited;
   SYMBOLTYPE *symboltype;
   struct SYMBOL *next;
   struct PAR_DECL_LIST *parameters;

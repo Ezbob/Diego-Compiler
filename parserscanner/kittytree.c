@@ -186,7 +186,7 @@ EXPRES *make_EXPRES_LEQ(EXPRES *left ,EXPRES *right){
 
 }
 
-EXPRES *make_EXPRESS_AND(EXPRES *left ,EXPRES *right){
+EXPRES *make_EXPRES_AND(EXPRES *left ,EXPRES *right){
 
 	EXPRES *booland = NEW(EXPRES);
 	booland->lineno = lineno;
@@ -198,7 +198,7 @@ EXPRES *make_EXPRESS_AND(EXPRES *left ,EXPRES *right){
 
 }
 
-EXPRES *make_EXPRESS_OR(EXPRES *left ,EXPRES *right){
+EXPRES *make_EXPRES_OR(EXPRES *left ,EXPRES *right){
 
 	EXPRES *boolor = NEW(EXPRES);
 	boolor->lineno = lineno;
