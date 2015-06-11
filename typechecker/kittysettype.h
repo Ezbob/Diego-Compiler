@@ -3,17 +3,17 @@
 #include "../parserscanner/kittytree.h"
 #include "kittytype.h"
 
-void begin_set( BODY *body );
-void set_function ( FUNC *function );
-void set_head ( HEAD *header );
-void set_body ( BODY *body );
-void set_type ( TYPE *type );
-void set_par_decl_list ( PAR_DECL_LIST *pdecl );
-void set_var_decl_list ( VAR_DECL_LIST *vdecl );
-void set_var_type ( VAR_TYPE *vtype );
-void set_decl_list ( DECL_LIST *dlst );
-void set_declaration ( DECLARATION *decl );
-TYPE *getRecursive( TYPE *type );
+void begin_set( BODY * );
+void set_function ( FUNC * );
+void set_head ( HEAD * );
+void set_body ( BODY * );
+void set_type ( TYPE * );
+void set_par_decl_list ( PAR_DECL_LIST * );
+void set_var_decl_list ( VAR_DECL_LIST * );
+void set_var_type ( VAR_TYPE * );
+void set_decl_list ( DECL_LIST * );
+void set_declaration ( DECLARATION * );
+TYPE *getRecursive( TYPE * );
 
 #endif
 

@@ -461,7 +461,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
-					printf("this is it\n");
 					//Push arguments for print then form for print
 					callerSave();
 					arg1 = IR_builder_expression(st->value.exp);
@@ -873,7 +872,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_WHILE:
 
 			tmp = getNextLabel();
-			printf("Hello there\n");
 
 			truewhilestring = calloc(MAXLABELSIZE,sizeof(char));
 			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));

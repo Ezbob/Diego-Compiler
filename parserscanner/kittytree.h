@@ -8,21 +8,20 @@ typedef struct EXPRES {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	SYMBOLTYPE *symboltype;
-	
 	enum {
-			EXPRES_TERM, 
-			EXPRES_PLUS, 
-			EXPRES_MINUS, 
-			EXPRES_TIMES, 
-			EXPRES_DIVIDE, 
-			EXPRES_EQ,
-			EXPRES_NEQ,
-			EXPRES_GREATER, 
-			EXPRES_LESS,
-			EXPRES_GEQ,
-			EXPRES_LEQ,
-			EXPRES_AND,
-			EXPRES_OR 
+		EXPRES_TERM, 
+		EXPRES_PLUS, 
+		EXPRES_MINUS, 
+		EXPRES_TIMES, 
+		EXPRES_DIVIDE, 
+		EXPRES_EQ,
+		EXPRES_NEQ,
+		EXPRES_GREATER, 
+		EXPRES_LESS,
+		EXPRES_GEQ,
+		EXPRES_LEQ,
+		EXPRES_AND,
+		EXPRES_OR 
 	} kind;
 	union {
 		struct { 
@@ -54,7 +53,6 @@ typedef struct TERM {
 			char *id; 
 			struct ACT_LIST *actlist; 
 		} term_act_list;
-
 		struct VAR *var;
 		struct EXPRES *exp;
 		struct TERM *term; 
@@ -214,7 +212,6 @@ typedef struct STATEMENT
 	SYMBOLTABLE *symboltable;
 	int foundReturn;
 	struct STATEMENT *next; //??
-
 	enum { 
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,

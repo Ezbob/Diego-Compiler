@@ -8,6 +8,7 @@
 #include "typechecker/kittyprinter.h"
 #include "typechecker/kittysettype.h"
 #include "symbol/symbol.h"
+#include "kittyir.h"
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
