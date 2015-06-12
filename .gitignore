@@ -1,5 +1,7 @@
 **/*.o
-**/lex.yy.*
-**/y.tab.*
 errors
 kitty
+**/lex.yy.c
+**/y.tab.*
+.idea
+CMakeLists.txt

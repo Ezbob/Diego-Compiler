@@ -143,21 +143,24 @@ void check_statement ( STATEMENT *st){
 
 	SYMBOLTYPE *rightHand;
 	SYMBOLTYPE *leftHand;
+	SYMBOLTYPE *returnType;
 
 	switch(st->kind){
 		case STATEMENT_RETURN:
 			check_expression(st->value.statement_return.exp);
 
-			// checking return expression against function header return type
-			// (set in weeder)
-			if (st->value.statement_return.exp->symboltype->type != 
-				st->value.statement_return.function->symboltype->return_type
-				->type ){
+			// Note: return type set in weeder
+			leftHand = st->value.statement_return.exp->symboltype;
+			returnType = st->value.statement_return.function->symboltype
+				->return_type;
+
+			if ( leftHand->type != returnType->type 
+				&& ((returnType->type == SYMBOL_RECORD || returnType->type == 
+					SYMBOL_ARRAY) && leftHand->type != SYMBOL_NULL) ) {
 				check_error_report(
 					"type error: Return type does not match function", 
 					st->lineno);				
 			}
-
 			break;
 
 		case STATEMENT_WRITE:
@@ -196,9 +199,6 @@ void check_statement ( STATEMENT *st){
 			check_variable(st->value.statement_assign.var);
 			check_expression(st->value.statement_assign.exp);
 
-			SYMBOL *temp_sym;
-			SYMBOLTABLE *tmpTable;
-
 			leftHand = st->value.statement_assign.var->symboltype;
 			rightHand = st->value.statement_assign.exp->symboltype;
 
@@ -221,7 +221,7 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type ||
 					leftHand->arrayDim != rightHand->arrayDim ) {
-
+					printf("not the same\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);
 				}
@@ -230,7 +230,9 @@ void check_statement ( STATEMENT *st){
 
 				leftHand = get_base_array_type(leftHand);
 
-				if ( leftHand->type != rightHand->type ){
+				if ( leftHand->type != rightHand->type && 
+					rightHand->type != SYMBOL_NULL ){
+					printf("funny stuff\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -240,8 +242,16 @@ void check_statement ( STATEMENT *st){
 				rightHand = get_base_array_type(rightHand);
 
 				if ( leftHand->type != rightHand->type ){
+					printf("HERE\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
+				}
+
+			} else if ( leftHand->type == SYMBOL_RECORD ) {
+
+				if (rightHand->type != SYMBOL_NULL ){
+					check_error_report(
+						"Invalid assignment; type mismatch", st->lineno);
 				}
 
 			} else { //Standard check
@@ -485,7 +495,6 @@ void check_expression ( EXPRES *exp){
 int check_term ( TERM *term ) {
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
-	SYMBOLTABLE *tmpTable;
 
 	int count = 0;
 

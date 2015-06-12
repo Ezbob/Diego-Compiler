@@ -44,7 +44,7 @@ void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
 	symbol->returntype = header->returntype;
 	symbol->noArguments = noArguments;
 
-	symboltype->return_type = collect_type(header->returntype, st);
+	symboltype->return_type = collect_type(header->returntype, st, NULL);
 	if ( symboltype->return_type == NULL ) {
 		fprintf(stderr,"Error: Could not collect function return type\n");
 		exit(1);
@@ -57,7 +57,9 @@ void collect_body (BODY *body, SYMBOLTABLE *st){
 	collect_statement_list(body->statement_list, st);
 }
 
-SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
+/* Note: here parentTypeName is for recursively defined types */
+SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st, 
+		char* parentTypeName ) {
 
 	type->symboltable = st;
 	SYMBOLTYPE *symboltype = NULL;
@@ -86,12 +88,27 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
 
 		case TYPE_ARRAY:
 			symboltype = make_SYMBOLTYPE(SYMBOL_ARRAY);
+			if (parentTypeName != NULL){ // if they contain recursive types
+				if (putSymbol(st, parentTypeName, 0, symboltype) == NULL){
+					fprintf(stderr, "Error at line %i:"
+						"Could not assign new type\n", type->lineno);
+					exit(1);
+				}
+			}
 			type->symboltype = symboltype;
-			symboltype->nextArrayType = collect_type(type->value.type, st);
+			symboltype->nextArrayType = collect_type(type->value.type, st, 
+				NULL);
 			return symboltype; 
 
 		case TYPE_RECORD:
 			symboltype = make_SYMBOLTYPE(SYMBOL_RECORD);
+			if (parentTypeName != NULL){ // if they contain recursive types
+				if (putSymbol(st, parentTypeName, 0, symboltype) == NULL){
+					fprintf(stderr, "Error at line %i:"
+						"Could not assign new type\n", type->lineno);
+					exit(1);
+				}
+			}
 			type->symboltype = symboltype;
 			symboltype->child = scopeSymbolTable(st, st->id);
 			symboltype->arguments =	collect_var_decl_list(
@@ -140,7 +157,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset){
 
 	vtype->symboltable = st;
 
-	SYMBOLTYPE *symboltype = collect_type(vtype->type, st);
+	SYMBOLTYPE *symboltype = collect_type(vtype->type, st, NULL);
 	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
 		if(vtype->symbol == NULL){
@@ -180,12 +197,19 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 
 	switch(decl->kind){
 		case DECLARATION_ID:
-			symboltype = collect_type(decl->value.declaration_id.type, st);
+			symboltype = collect_type(decl->value.declaration_id.type, 
+				st, decl->value.declaration_id.id);
 
-			if ( symboltype == NULL || putSymbol(st, 
-				decl->value.declaration_id.id, 0, symboltype) == NULL ) {
-				fprintf(stderr, "Error: in collecting new type assign\n");
+			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ){
+				if(putSymbol(st, decl->value.declaration_id.id,0,symboltype)
+					== NULL){
+					fprintf(stderr, "Error at line %i:"
+						"Could not assignment new type\n", decl
+					->lineno );
+					exit(1);
+				}
 			}
+
 			break;
 
 		case DECLARATION_FUNC:
