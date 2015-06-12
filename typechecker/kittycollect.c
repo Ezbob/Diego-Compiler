@@ -4,8 +4,9 @@
 #define FIRST_TABLE_ID 0
 
 /*
- * Collecting types
+ * Collecting symbols and setting symboltables in ast nodes
  */
+
 void collect(BODY *main){
 	fprintf(stderr, "Initializing Type collection\n");
 	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
@@ -26,23 +27,23 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 }
 
 void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
-
-	header->symboltable = st;
-	SYMBOLTYPE *symboltype = make_SYMBOLTYPE(SYMBOL_FUNCTION);
 	SYMBOL *symbol;
+	SYMBOLTYPE *symboltype = make_SYMBOLTYPE(SYMBOL_FUNCTION);
 	
+	header->symboltable = st;
 	header->symboltype = symboltype;
 
-	int noArguments = 0;
-	noArguments = collect_par_decl_list(header->pdlist, scope);
+	int noArguments = collect_par_decl_list(header->pdlist, scope);
+
 	header->arguments = noArguments;
 	scope->temps = noArguments;
+
+	/* symbol for the function */
 	symbol = putSymbol(st, header->id, 0, symboltype);
 	symbol->parameters = header->pdlist;
 	symbol->returntype = header->returntype;
 	symbol->noArguments = noArguments;
 
-	// return_type is now a SYMBOLTYPE struct
 	symboltype->return_type = collect_type(header->returntype, st);
 	if ( symboltype->return_type == NULL ) {
 		fprintf(stderr,"Error: Could not collect function return type\n");
@@ -81,15 +82,15 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
 			symboltype = make_SYMBOLTYPE(SYMBOL_ARRAY);
 			type->symboltype = symboltype;
 			symboltype->nextArrayType = collect_type(type->value.type, st);
-			type->symboltype->array = type->value.type;
 			return symboltype; 
 
 		case TYPE_RECORD:
 			symboltype = make_SYMBOLTYPE(SYMBOL_RECORD);
 			type->symboltype = symboltype;
-			collect_var_decl_list(type->value.var_decl_list, 
-											scopeSymbolTable(st, st->id));
-			symboltype->child = type->value.var_decl_list->symboltable;
+			symboltype->child = scopeSymbolTable(st, st->id);
+			symboltype->arguments =	
+				collect_var_decl_list(type->value.var_decl_list, 
+					symboltype->child);
 			return symboltype;
 	}
 
@@ -107,14 +108,13 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
 
 		case PAR_DECL_LIST_EMPTY:
 			return 0;
-			break;
-
 	}
 	return arguments;
 }
 
 //Collecting lists and passing on offsets to variables
 int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
+
 	vdecl->symboltable = st;
 	int no = 1;
 	switch(vdecl->kind){
@@ -127,21 +127,18 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
 			collect_var_type(vdecl->var_type, st, no);
 			break;
 	}
-
 	return no;
 }
 
 void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset){
+
 	vtype->symboltable = st;
 
-	SYMBOLTYPE *symboltype;
-
-	symboltype = collect_type(vtype->type, st);
-	
-	if(symboltype != NULL){
+	SYMBOLTYPE *symboltype = collect_type(vtype->type, st);
+	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
 		if(vtype->symbol == NULL){
-			fprintf(stderr, "%s\n", "Duplicate entry in symboltable");
+			fprintf(stderr, "Duplicate entry in symboltable\n");
 			exit(1);
 		}
 		vtype->symbol->offset = offset;
@@ -174,24 +171,15 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 
 	decl->symboltable = st;
 	SYMBOLTYPE *symboltype;
-	SYMBOL *test;
 
 	switch(decl->kind){
 		case DECLARATION_ID:
-			//symboltype = make_SYMBOLTYPE(SYMBOL_ID);
-
 			symboltype = collect_type(decl->value.declaration_id.type, st);
 
-
-			if ( symboltype == NULL && 
-				(test = putSymbol(st, decl->value.declaration_id.id, 0, 
-					symboltype)) == NULL ) {
+			if ( symboltype == NULL || putSymbol(st, 
+				decl->value.declaration_id.id, 0, symboltype) == NULL ) {
 				fprintf(stderr, "Error: in collecting new type assign\n");
 			}
-			
-			test->declarationtype = decl->value.declaration_id.type; 
-				//??? what is this test and it's declarationtype?
-
 			break;
 
 		case DECLARATION_FUNC:
@@ -314,64 +302,9 @@ void collect_expression ( EXPRES *exp, SYMBOLTABLE *st ) {
 	switch(exp->kind){
 		case EXPRES_TERM:
 			collect_term(exp->value.term, st);
-			exp->symboltype = exp->value.term->symboltype;
-			break;
-		case EXPRES_PLUS:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
 			break;
 
-		case EXPRES_MINUS:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_TIMES:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_DIVIDE:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_EQ:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_NEQ:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_GREATER:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_LESS:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_LEQ:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_GEQ:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_AND:
-			collect_expression(exp->value.sides.left, st);
-			collect_expression(exp->value.sides.right, st);
-			break;
-
-		case EXPRES_OR:
+		default:
 			collect_expression(exp->value.sides.left, st);
 			collect_expression(exp->value.sides.right, st);
 			break;
@@ -382,7 +315,6 @@ void collect_expression ( EXPRES *exp, SYMBOLTABLE *st ) {
 void collect_term ( TERM *term, SYMBOLTABLE *st ) {
 
 	term->symboltable = st;
-	SYMBOLTYPE *symboltype;
 
 	switch(term->kind){
 		case TERM_VAR:
@@ -456,11 +388,11 @@ SYMBOLTYPE *make_SYMBOLTYPE ( TYPES_SUPPORTED type ) {
 	new_type->nextArrayType = NULL;
 	new_type->return_type = NULL;
 	new_type->child = NULL;
-	new_type->array = NULL;
   	new_type->declaration_type = NULL;
   	new_type->func = NULL;
   	new_type->parameters = NULL;
   	new_type->arguments = 0;
+  	new_type->arrayDim = 0;
   	new_type->type = type;
 
 	return new_type;

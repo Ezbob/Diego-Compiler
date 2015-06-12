@@ -76,7 +76,6 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 	PutSymbol->symboltype = symbolT;
 	PutSymbol->uniquename = calloc(11,sizeof(char));
 	PutSymbol->offset = 0;
-	PutSymbol->arraySize = 0;
 	PutSymbol->tableid = t->id;
 	PutSymbol->visited = 0;
 

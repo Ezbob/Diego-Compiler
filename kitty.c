@@ -3,10 +3,9 @@
 #include "parserscanner/y.tab.h"
 #include "parserscanner/kittytree.h"
 #include "typechecker/kittyweed.h"
-#include "typechecker/kittytype.h"
+#include "typechecker/kittycollect.h"
 #include "typechecker/kittycheck.h"
 #include "typechecker/kittyprinter.h"
-#include "typechecker/kittysettype.h"
 #include "symbol/symbol.h"
 #include "kittyir.h"
 

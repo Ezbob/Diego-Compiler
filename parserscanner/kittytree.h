@@ -173,7 +173,7 @@ typedef struct DECL_LIST {
 	struct DECLARATION *declaration;
 } DECL_LIST;
 
-typedef struct DECLARATION{
+typedef struct DECLARATION {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	enum { 
@@ -192,8 +192,7 @@ typedef struct DECLARATION{
 	} value;
 } DECLARATION;
 
-typedef struct STATEMENT_LIST
-{
+typedef struct STATEMENT_LIST {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	enum { 
@@ -206,8 +205,7 @@ typedef struct STATEMENT_LIST
 
 } STATEMENT_LIST;
 
-typedef struct STATEMENT
-{
+typedef struct STATEMENT {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	int foundReturn;
@@ -252,7 +250,7 @@ typedef struct STATEMENT
 	} value;
 } STATEMENT;
 
-typedef struct OPT_LENGTH{
+typedef struct OPT_LENGTH {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 
@@ -265,8 +263,7 @@ typedef struct OPT_LENGTH{
 
 } OPT_LENGTH;
 
-typedef struct OPT_ELSE
-{
+typedef struct OPT_ELSE {
 	int lineno;
 	SYMBOLTABLE *symboltable;
 	enum { 
@@ -278,8 +275,7 @@ typedef struct OPT_ELSE
 
 } OPT_ELSE;
 
-typedef struct VAR
-{
+typedef struct VAR {
 	int lineno;
 	char *id;
 	SYMBOLTABLE *symboltable;

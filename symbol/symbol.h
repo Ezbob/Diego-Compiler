@@ -21,12 +21,12 @@ typedef struct SYMBOLTYPE {
   struct SYMBOLTYPE *return_type; // for functions
   struct SYMBOLTABLE *child;
   TYPES_SUPPORTED type;
-  struct TYPE *array; //for arrays scap?
   struct TYPE *declaration_type; //for records scap?
   struct FUNCTION *func;
   struct VAR_DECL_LIST *parameters;
-  int arguments;
-}SYMBOLTYPE;
+  int arguments; // or members
+  int arrayDim;
+} SYMBOLTYPE;
 
 
 typedef struct SYMBOL {
@@ -38,13 +38,11 @@ typedef struct SYMBOL {
   struct SYMBOL *next;
   struct PAR_DECL_LIST *parameters;
   struct FUNCTION *func;
-  struct TYPE *declarationtype;
   struct TYPE *returntype;
   struct TYPE *array;
   struct TYPE *realtype;
   char *uniquename;
   int offset;
-  int arraySize;
   int tableid;
 } SYMBOL;
 
