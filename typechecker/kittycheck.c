@@ -202,25 +202,16 @@ void check_statement ( STATEMENT *st){
 			leftHand = st->value.statement_assign.var->symboltype;
 			rightHand = st->value.statement_assign.exp->symboltype;
 
-			//Checking if assignments are OK with record types
-			if(leftHand->type == SYMBOL_RECORD) {
-
-				if((temp_sym = getSymbol(st->symboltable, st->value.
-					statement_assign.var->value.var_record.var->id)) != NULL){
-					tmpTable = temp_sym->symboltype->child;
+			if ( leftHand->type == SYMBOL_RECORD && rightHand->type ==
+				SYMBOL_RECORD ) {
+				
+				if( compare_record_members(leftHand,rightHand) != 1) {
+					check_error_report("Invalid assignment, type mismatch",
+						st->lineno);
 				}
 
-				if((temp_sym = getSymbol(tmpTable, st->value.statement_assign.
-						var->id)) != NULL){
-
-					if(temp_sym->symboltype->type != st->value.
-							statement_assign.exp->symboltype->type) {
-						check_error_report("Invalid assignment;"
-							" type mismatch", st->lineno);
-					} 
-				}
 			} else if ( leftHand->type == SYMBOL_ARRAY && rightHand->type == 
-				leftHand->type) { 
+				leftHand->type ) { 
 
 				leftHand = get_base_array_type(leftHand);
 				rightHand = get_base_array_type(rightHand);
@@ -409,7 +400,7 @@ void check_expression ( EXPRES *exp){
 		case EXPRES_MINUS:
 		case EXPRES_DIVIDE:
 		case EXPRES_TIMES:
-			if(rightHand->type != SYMBOL_INT || 
+			if(rightHand->type != SYMBOL_INT && 
 			   leftHand->type != SYMBOL_INT ) {
 				check_error_report("Expected integer expression", 
 						exp->lineno);
@@ -468,7 +459,7 @@ void check_expression ( EXPRES *exp){
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
-			if(rightHand->type != SYMBOL_INT ||
+			if(rightHand->type != SYMBOL_INT &&
 			   leftHand->type != SYMBOL_INT ) {
 				check_error_report("Expected integer expression", 
 						exp->lineno);
@@ -480,7 +471,7 @@ void check_expression ( EXPRES *exp){
 
 		case EXPRES_AND:
 		case EXPRES_OR:
-			if(rightHand->type != SYMBOL_BOOL || 
+			if(rightHand->type != SYMBOL_BOOL && 
 			   leftHand->type != SYMBOL_BOOL) { 
 				check_error_report("Expected boolean expression", 
 						exp->lineno);
@@ -491,7 +482,7 @@ void check_expression ( EXPRES *exp){
 	}
 }
 
-int check_term ( TERM *term){
+int check_term ( TERM *term ) {
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
 	SYMBOLTABLE *tmpTable;
@@ -501,16 +492,7 @@ int check_term ( TERM *term){
 	switch(term->kind){
 		case TERM_VAR:	
 			check_variable(term->value.var);
-			
-			if(term->value.var->symboltype->type == SYMBOL_RECORD) {
-				tmpTable = getSymbol(term->symboltable, term->value.var->
-					value.var_record.var->id)->symboltype->child;
-				symbol = getSymbol(tmpTable, term->value.var->
-					value.var_record.id);
-				term->symboltype = symbol->symboltype;
-			} else {
-				term->symboltype = term->value.var->symboltype;
-			}
+			term->symboltype = term->value.var->symboltype;
 			break;
 
 		case TERM_ACT_LIST:
@@ -588,8 +570,10 @@ int check_term ( TERM *term){
 
 		case TERM_ABS:
 			check_expression(term->value.exp);
-			if(term->value.exp->symboltype->type != SYMBOL_INT ){
-				check_error_report("Expected term int", term->lineno);
+			if(!(term->value.exp->symboltype->type == SYMBOL_INT ||
+				term->value.exp->symboltype->type == SYMBOL_ARRAY) ) {
+				check_error_report("Expected integer or array", 
+					term->lineno);
 			}
 			term->symboltype = term->value.exp->symboltype;
 			break;
@@ -613,7 +597,7 @@ int check_term ( TERM *term){
 	return count;
 }
 
-void check_par_decl_list ( PAR_DECL_LIST *pdecl){
+void check_par_decl_list ( PAR_DECL_LIST *pdecl ) {
 	switch(pdecl->kind){
 		case PAR_DECL_LIST_LIST:
 			check_var_decl_list(pdecl->var_decl_list);
@@ -649,7 +633,7 @@ void check_expression_list ( EXP_LIST *explst ) {
 
 /* Note: this also sets the array dim of the function parameter and the
 	return value */
-SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *type_of_array){
+SYMBOLTYPE *get_base_array_type ( SYMBOLTYPE *type_of_array ) {
 
 	SYMBOLTYPE *iterator = type_of_array;
 	int arrayDim = 1;
@@ -665,7 +649,7 @@ SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *type_of_array){
 	return iterator; // reached base type of array
 }
 
-int get_array_dim(SYMBOLTYPE *type_of_array){
+int get_array_dim ( SYMBOLTYPE *type_of_array ) {
 
 	SYMBOLTYPE *iterator = type_of_array;
 	int arrayDim = 1;
@@ -675,4 +659,47 @@ int get_array_dim(SYMBOLTYPE *type_of_array){
 		iterator = iterator->nextArrayType;
 	}
 	return arrayDim;
+}
+
+/* Basicly iterates through the members of two records and 
+ * checks if any of the pairs of members are different. 
+ * Returns 0 if the records are different, 1 if they match
+ */
+int compare_record_members(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
+
+	VAR_DECL_LIST *leftRecordMembers = leftHand->recordMembers;
+	VAR_DECL_LIST *rightRecordMembers = rightHand->recordMembers;
+	int result = 1;
+
+	if ( leftHand->arguments != rightHand->arguments ) {
+		// number of members does not match
+		result = 0;
+		return result;
+	} else if ( leftHand->arguments == 1 ) {
+		// only member in both records 
+		result = leftRecordMembers->var_type->type->symboltype->type ==
+					rightRecordMembers->var_type->type->symboltype->type;
+		return result;
+	}
+
+	while ( leftRecordMembers->var_decl_list != NULL || 
+			rightRecordMembers->var_decl_list != NULL ) {
+
+		if ( leftRecordMembers->var_type->type->symboltype->type !=
+			rightRecordMembers->var_type->type->symboltype->type ) {
+			result = 0;
+			return result;
+		}
+
+		leftRecordMembers = leftRecordMembers->var_decl_list;
+		rightRecordMembers = rightRecordMembers->var_decl_list;
+	}
+
+	if ( leftRecordMembers->var_type->type->symboltype->type !=
+		rightRecordMembers->var_type->type->symboltype->type ) {
+		result = 0;
+		return result;
+	}
+
+	return result;
 }

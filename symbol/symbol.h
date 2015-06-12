@@ -18,8 +18,9 @@ typedef enum TYPES_SUPPORTED {
 typedef struct SYMBOLTYPE {
   int visited;
   struct SYMBOLTYPE *nextArrayType; // for arrays
+  struct VAR_DECL_LIST *recordMembers; // for records
   struct SYMBOLTYPE *return_type; // for functions
-  struct SYMBOLTABLE *child; // for records?
+  struct SYMBOLTABLE *child; // for records
   TYPES_SUPPORTED type;
   struct TYPE *declaration_type; //for records scap?
   struct FUNCTION *func;

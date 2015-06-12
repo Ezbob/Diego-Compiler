@@ -94,16 +94,16 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
 			symboltype = make_SYMBOLTYPE(SYMBOL_RECORD);
 			type->symboltype = symboltype;
 			symboltype->child = scopeSymbolTable(st, st->id);
-			symboltype->arguments =	
-				collect_var_decl_list(type->value.var_decl_list, 
-					symboltype->child);
+			symboltype->arguments =	collect_var_decl_list(
+				type->value.var_decl_list, symboltype->child);
+			symboltype->recordMembers = type->value.var_decl_list;
 			return symboltype;
 	}
 
 	return symboltype; // null if a error case
 }
 
-int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
+int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st ){
 
 	pdecl->symboltable = st;
 	int arguments = 0;
@@ -119,7 +119,7 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOLTABLE *st){
 }
 
 //Collecting lists and passing on offsets to variables
-int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st){
+int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st ) {
 
 	vdecl->symboltable = st;
 	int no = 1;
@@ -392,6 +392,7 @@ SYMBOLTYPE *make_SYMBOLTYPE ( TYPES_SUPPORTED type ) {
 	new_type = NEW(SYMBOLTYPE);
 
 	new_type->nextArrayType = NULL;
+	new_type->recordMembers = NULL;
 	new_type->return_type = NULL;
 	new_type->child = NULL;
   	new_type->declaration_type = NULL;
