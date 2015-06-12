@@ -2,6 +2,16 @@
 #include "kittycollect.h"
 #include <stdio.h>
 
+#define DEBUG_TYPE(symboltype) printf("BOOL>>> %i\n",symboltype->type \
+			 == SYMBOL_BOOL); printf("INT>>> %i\n",symboltype->type \
+				== SYMBOL_INT); \
+			printf("ID>>> %i\n", symboltype->type == SYMBOL_ID); \
+			printf("ARRAY>>> %i\n", symboltype->type == SYMBOL_ARRAY); \
+			printf("RECORD>>> %i\n", symboltype->type == SYMBOL_RECORD); \
+			printf("NULL>>> %i\n", symboltype->type == SYMBOL_NULL); \
+			printf("UNKNOWN>>> %i\n", symboltype->type == SYMBOL_UNKNOWN); \
+			printf("FUNCTION>>> %i\n", symboltype->type == SYMBOL_FUNCTION);
+
 /*
 	Structs to have their symboltypes set:
 		terms,
@@ -55,7 +65,7 @@ void check_body (BODY *body) {
 	check_statement_list(body->statement_list);
 }
 
-void check_type ( TYPE *type) {
+void check_type (TYPE *type) {
 	switch(type->kind){
 		case TYPE_ID:
 			break;
@@ -72,7 +82,7 @@ void check_type ( TYPE *type) {
 	}
 }
 
-void check_var_decl_list ( VAR_DECL_LIST *vdecl) {
+void check_var_decl_list (VAR_DECL_LIST *vdecl) {
 
 	switch(vdecl->kind){
 		case VAR_DECL_LIST_LIST:
@@ -167,8 +177,8 @@ void check_statement ( STATEMENT *st){
 			
 			leftHand = st->value.statement_allocate.var->symboltype;
 
-			if ( leftHand->type != SYMBOL_RECORD || 
-				leftHand->type != SYMBOL_ARRAY ) {
+			if ( !(leftHand->type == SYMBOL_RECORD || 
+				leftHand->type == SYMBOL_ARRAY) ) {
 				check_error_report(
 					"Cannot allocate to specific variable type", 
 					st->lineno);
@@ -220,8 +230,27 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type ||
 					leftHand->arrayDim != rightHand->arrayDim ) {
-					check_error_report("Invalid assignment;"
-							" type mismatch",st->lineno);
+
+					check_error_report("Invalid assignment; type mismatch",
+						st->lineno);
+				}
+
+			} else if ( leftHand->type == SYMBOL_ARRAY ) {
+
+				leftHand = get_base_array_type(leftHand);
+
+				if ( leftHand->type != rightHand->type ){
+					check_error_report("Invalid assignment; type mismatch",
+						st->lineno);	
+				}
+				
+			} else if ( rightHand->type == SYMBOL_ARRAY ){
+
+				rightHand = get_base_array_type(rightHand);
+
+				if ( leftHand->type != rightHand->type ){
+					check_error_report("Invalid assignment; type mismatch",
+						st->lineno);	
 				}
 
 			} else { //Standard check
@@ -290,8 +319,10 @@ void check_opt_else ( OPT_ELSE *opel){
 	}
 }
 
-void check_variable ( VAR *var){
+int check_variable ( VAR *var){
 	SYMBOL *symbol;
+	SYMBOLTABLE *innerScope;
+	int depth = 1;
 
 	switch(var->kind){
 		case VAR_ID:
@@ -303,35 +334,51 @@ void check_variable ( VAR *var){
 			break;
 
 		case VAR_ARRAY:
-			check_variable(var->value.var_array.var);
+			depth += check_variable(var->value.var_array.var);
 			check_expression(var->value.var_array.exp);
 
 			//Expression must be evaluated to a integer
-			if(var->value.var_array.exp->symboltype->type != SYMBOL_INT){
+			if(var->value.var_array.exp->symboltype->type != SYMBOL_INT) {
 				check_error_report("Expression must evaluate to int", 
 					var->lineno);
 			}
 
 			//Variable must be array type
-			if(var->value.var_array.var->symboltype->type != SYMBOL_ARRAY){
+			if(var->value.var_array.var->symboltype->type != SYMBOL_ARRAY) {
 				check_error_report("Variable is not an array", var->lineno);
 			}
 
-			//var->symboltype = var->value.var_array.var->
-			//	symboltype->array->symboltype;
+			int arrayDim = get_array_dim(var->value.var_array.
+						var->symboltype);
+
+			if ( depth == arrayDim ) { // where at the basic type
+				var->symboltype = get_base_array_type(var->value.var_array.
+						var->symboltype);
+			} else {
+				var->symboltype = var->value.var_array.var->symboltype;	
+			}
 			break;
 
-		/*TODO*/
 		case VAR_RECORD:
 			check_variable(var->value.var_record.var);
-			if((symbol = getSymbol(var->symboltable, var->value.var_record
-				.id)) != NULL){
-				var->symboltype = symbol->symboltype;
-			} else{
-				check_error_report("Symbol not recognized",var->lineno);
+
+			if(var->value.var_record.var->symboltype->type == SYMBOL_RECORD) {
+				
+				innerScope = var->value.var_record.var->symboltype->child;
+
+				if((symbol = getSymbol(innerScope, var->value.var_record
+					.id)) != NULL){
+					var->symboltype = symbol->symboltype;
+				} else {
+					check_error_report("Symbol not recognized",var->lineno);
+				}	
+			} else {
+				check_error_report("Expected record",var->lineno);
 			}
 			break;
 	}
+
+	return depth;
 }
 
 
@@ -452,23 +499,18 @@ int check_term ( TERM *term){
 	int count = 0;
 
 	switch(term->kind){
-		case TERM_VAR:
-	
+		case TERM_VAR:	
 			check_variable(term->value.var);
-			if(term->value.var->kind == VAR_RECORD) {
+			
+			if(term->value.var->symboltype->type == SYMBOL_RECORD) {
 				tmpTable = getSymbol(term->symboltable, term->value.var->
 					value.var_record.var->id)->symboltype->child;
-				symbol = getSymbol(tmpTable, term->value.var->value.var_record.id);
+				symbol = getSymbol(tmpTable, term->value.var->
+					value.var_record.id);
 				term->symboltype = symbol->symboltype;
 			} else {
-				symbol = getSymbol(term->symboltable, term->value.var->id);
-				if(symbol != NULL) {
-					term->symboltype = symbol->symboltype;
-				} else {
-					term->symboltype = term->value.var->symboltype;
-				}
+				term->symboltype = term->value.var->symboltype;
 			}
-
 			break;
 
 		case TERM_ACT_LIST:
@@ -621,4 +663,16 @@ SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *type_of_array){
 	iterator->arrayDim = arrayDim;
 
 	return iterator; // reached base type of array
+}
+
+int get_array_dim(SYMBOLTYPE *type_of_array){
+
+	SYMBOLTYPE *iterator = type_of_array;
+	int arrayDim = 1;
+
+	while( iterator->nextArrayType != NULL ) {
+		arrayDim++;
+		iterator = iterator->nextArrayType;
+	}
+	return arrayDim;
 }

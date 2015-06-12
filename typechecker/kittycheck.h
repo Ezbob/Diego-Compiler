@@ -20,11 +20,12 @@ void check_statement_list ( STATEMENT_LIST *);
 void check_statement ( STATEMENT *);
 void check_opt_length ( OPT_LENGTH *);
 void check_opt_else ( OPT_ELSE *);
-void check_variable ( VAR *);
+int check_variable ( VAR *);
 
 void check_act_list ( ACT_LIST *);
 void check_expression_list ( EXP_LIST *);
 void check_var_type(VAR_TYPE *);
 SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *);
+int get_array_dim(SYMBOLTYPE *type_of_array);
 
 #endif

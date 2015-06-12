@@ -61,10 +61,16 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
 
 	type->symboltable = st;
 	SYMBOLTYPE *symboltype = NULL;
+	SYMBOL* symbol = NULL;
 
 	switch(type->kind){
 		case TYPE_ID:
-			symboltype = make_SYMBOLTYPE(SYMBOL_ID);
+			if((symbol = getSymbol(st,type->value.id)) == NULL){
+				fprintf(stderr, "Error at line %i:"
+					" Symbol not recognized\n", type->lineno );
+				exit(1);
+			}
+			symboltype = symbol->symboltype;
 			type->symboltype = symboltype;
 			return symboltype;
 
