@@ -6,6 +6,16 @@
 #include "../symbol/symbol.h"
 #include "../parserscanner/kittytree.h"
 
+#define DEBUG_TYPE(symboltype) printf("BOOL>>> %i\n",symboltype->type \
+			 == SYMBOL_BOOL); printf("INT>>> %i\n",symboltype->type \
+				== SYMBOL_INT); \
+			printf("ID>>> %i\n", symboltype->type == SYMBOL_ID); \
+			printf("ARRAY>>> %i\n", symboltype->type == SYMBOL_ARRAY); \
+			printf("RECORD>>> %i\n", symboltype->type == SYMBOL_RECORD); \
+			printf("NULL>>> %i\n", symboltype->type == SYMBOL_NULL); \
+			printf("UNKNOWN>>> %i\n", symboltype->type == SYMBOL_UNKNOWN); \
+			printf("FUNCTION>>> %i\n", symboltype->type == SYMBOL_FUNCTION);
+
 void collect(BODY *body);
 void collect_function ( FUNC *function, SYMBOLTABLE *st);
 void collect_head ( HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st);

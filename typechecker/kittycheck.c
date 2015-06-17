@@ -2,16 +2,6 @@
 #include "kittycollect.h"
 #include <stdio.h>
 
-#define DEBUG_TYPE(symboltype) printf("BOOL>>> %i\n",symboltype->type \
-			 == SYMBOL_BOOL); printf("INT>>> %i\n",symboltype->type \
-				== SYMBOL_INT); \
-			printf("ID>>> %i\n", symboltype->type == SYMBOL_ID); \
-			printf("ARRAY>>> %i\n", symboltype->type == SYMBOL_ARRAY); \
-			printf("RECORD>>> %i\n", symboltype->type == SYMBOL_RECORD); \
-			printf("NULL>>> %i\n", symboltype->type == SYMBOL_NULL); \
-			printf("UNKNOWN>>> %i\n", symboltype->type == SYMBOL_UNKNOWN); \
-			printf("FUNCTION>>> %i\n", symboltype->type == SYMBOL_FUNCTION);
-
 /*
 	Structs to have their symboltypes set:
 		terms,
@@ -221,7 +211,6 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type ||
 					leftHand->arrayDim != rightHand->arrayDim ) {
-					printf("not the same\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);
 				}
@@ -232,7 +221,6 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type && 
 					rightHand->type != SYMBOL_NULL ){
-					printf("funny stuff\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -242,7 +230,6 @@ void check_statement ( STATEMENT *st){
 				rightHand = get_base_array_type(rightHand);
 
 				if ( leftHand->type != rightHand->type ){
-					printf("HERE\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -255,7 +242,6 @@ void check_statement ( STATEMENT *st){
 				}
 
 			} else { //Standard check
-
 				if( rightHand->type != leftHand->type ) {
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);

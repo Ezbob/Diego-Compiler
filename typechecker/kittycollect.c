@@ -195,12 +195,16 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 	decl->symboltable = st;
 	SYMBOLTYPE *symboltype;
 
+
 	switch(decl->kind){
 		case DECLARATION_ID:
+
 			symboltype = collect_type(decl->value.declaration_id.type, 
 				st, decl->value.declaration_id.id);
 
-			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ){
+			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
+				getSymbol(st, decl->value.declaration_id.id)->symboltype->type
+				!= symboltype->type){
 				if(putSymbol(st, decl->value.declaration_id.id,0,symboltype)
 					== NULL){
 					fprintf(stderr, "Error at line %i:"
