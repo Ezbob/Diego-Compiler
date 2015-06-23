@@ -3,11 +3,15 @@
 extern int unknownTypesCount;
 
 void begin_multi_collect ( BODY * main ) {
+
 	if ( unknownTypesCount > 0 ) {
-		fprintf(stderr, "Initializing second type collection phase\n");
-		multi_collect_body(main);
+		fprintf(stderr, "Initializing multiple type collection phases\n");
+	
+		for ( int i = 0; i < MAXIMUM_PASSES; i++ ) {
+			multi_collect_body(main);
+		}
+		fprintf(stderr, "%i passes completed\n", MAXIMUM_PASSES);
 	}
-	printf("unknown: %i\n", unknownTypesCount);
 }
 
 void multi_collect_body ( BODY *body ) {
@@ -35,6 +39,7 @@ void multi_collect_type ( TYPE *type ) {
 			if ( type->symboltype->type == SYMBOL_UNKNOWN 
 				&& (symbol = getSymbol(type->symboltable,type->value.id)) 
 				!= NULL && symbol->symboltype->type != SYMBOL_UNKNOWN ) {
+				unknownTypesCount--;
 				type->symboltype = symbol->symboltype;
 			}
 			break;
@@ -110,10 +115,10 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 
 			if( (symbol = getSymbol(declaration->symboltable,
 				declaration->value.declaration_id.id)) != NULL
-				&& symbol->symboltype->type == SYMBOL_UNKNOWN ) {
-				if(symboltype->type != SYMBOL_UNKNOWN) {
-					unknownTypesCount--;
-				}
+				&& symbol->symboltype->type == SYMBOL_UNKNOWN
+				&& symboltype->type != SYMBOL_UNKNOWN) {
+
+				unknownTypesCount--;
 				symbol->symboltype = symboltype;
 			}
 			break;

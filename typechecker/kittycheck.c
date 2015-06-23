@@ -2,24 +2,6 @@
 #include "kittycollect.h"
 #include <stdio.h>
 
-/*
-	Structs to have their symboltypes set:
-		terms,
-		expressions, 
-		functions, (done in ktype)
-		head, (done in ktype)
-		type, (done in ktype)
-		var
-	These structs are part of the function subtree:
-		terms via expressions
-		expressions via statements, terms, expression_lists, variable, 
-			opt_length
-		functions via decl_lists 
-		head via functions
-		type via var_type, declaration, head
-		var via statements, term
-*/
-
 static int parameterCounter = 0;
 
 void check_error_report(const char* errorMsg, int lineno) {
@@ -613,7 +595,9 @@ void check_act_list ( ACT_LIST *actlst ) {
 	parameterCounter = 0; // reset parameter since there could be 
 	switch(actlst->kind){
 		case ACT_LIST_EXPLIST:
+			parameterCounter++;
 			check_expression_list(actlst->exp_list);
+			printf("..%i..\n", parameterCounter);
 			break;
 		case ACT_LIST_EMPTY:
 			break;

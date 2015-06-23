@@ -163,9 +163,9 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 
 	SYMBOLTYPE *symboltype = collect_type(vtype->type, st, NULL);
 
-	//if ( symboltype->type == SYMBOL_UNKNOWN ) {
-	//	unknownTypesCount++;
-	//}
+	if ( symboltype->type == SYMBOL_UNKNOWN ) {
+		unknownTypesCount++;
+	}
 
 	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);

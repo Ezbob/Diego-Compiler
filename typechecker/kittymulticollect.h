@@ -1,5 +1,6 @@
 #ifndef __KITTY_MULTI_COLLECT_H
 #define __KITTY_MULTI_COLLECT_H
+#define MAXIMUM_PASSES 5
 
 #include "../symbol/symbol.h"
 #include "../parserscanner/kittytree.h"
