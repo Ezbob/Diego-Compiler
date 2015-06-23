@@ -25,7 +25,7 @@ void check_opt_else ( OPT_ELSE *);
 int check_variable ( VAR *);
 
 int check_act_list ( ACT_LIST *);
-void check_expression_list ( EXP_LIST *);
+int check_expression_list ( EXP_LIST *);
 void check_var_type (VAR_TYPE *);
 SYMBOLTYPE *get_base_array_type (SYMBOLTYPE *);
 int get_array_dim (SYMBOLTYPE *);

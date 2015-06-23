@@ -2,7 +2,7 @@
 #include "kittycollect.h"
 #include <stdio.h>
 
-static int parameterCounter = 0;
+//static int parameterCounter = 0;
 
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
@@ -562,12 +562,11 @@ void check_par_decl_list ( PAR_DECL_LIST *pdecl ) {
 }
 
 int check_act_list ( ACT_LIST *actlst ) {
-	parameterCounter = 0; 
+	int parameterCounter = 0; 
 
 	switch(actlst->kind){
 		case ACT_LIST_EXPLIST:
-			parameterCounter++;
-			check_expression_list(actlst->exp_list);
+			parameterCounter = check_expression_list(actlst->exp_list);
 			break;
 		case ACT_LIST_EMPTY:
 			break;
@@ -576,17 +575,18 @@ int check_act_list ( ACT_LIST *actlst ) {
 	return parameterCounter;
 }
 
-void check_expression_list ( EXP_LIST *explst ) {
+int check_expression_list ( EXP_LIST *explst ) {
+	int parameterCounter = 1;
 	switch(explst->kind){
 		case EXP_LIST_EXP:
 			check_expression(explst->exp);
 			break;
 		case EXP_LIST_LIST:
-			parameterCounter++;
-			check_expression_list(explst->explist);
+			parameterCounter += check_expression_list(explst->explist);
 			check_expression(explst->exp);
 			break;
 	}
+	return parameterCounter;
 }
 
 /* Note: this also sets the array dim of the function parameter and the

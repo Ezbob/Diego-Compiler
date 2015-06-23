@@ -5,12 +5,13 @@ extern int unknownTypesCount;
 void begin_multi_collect ( BODY * main ) {
 
 	if ( unknownTypesCount > 0 ) {
-		fprintf(stderr, "Initializing multiple type collection phases\n");
+		fprintf(stderr, "Initializing multiple type collection passes phase\n");
 	
 		for ( int i = 0; i < MAXIMUM_PASSES; i++ ) {
 			multi_collect_body(main);
 		}
-		fprintf(stderr, "%i passes completed\n", MAXIMUM_PASSES);
+
+		fprintf(stderr, "%i passes completed\n", MAXIMUM_PASSES + 1);
 	}
 }
 
