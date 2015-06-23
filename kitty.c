@@ -4,6 +4,7 @@
 #include "parserscanner/kittytree.h"
 #include "typechecker/kittyweed.h"
 #include "typechecker/kittycollect.h"
+#include "typechecker/kittymulticollect.h"
 #include "typechecker/kittycheck.h"
 #include "typechecker/kittyprinter.h"
 #include "symbol/symbol.h"
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
 			collect(_main_);
+			begin_multi_collect(_main_);
 			begin_check(_main_);
 			if( argc > 1 && ( strcmp(argv[1],"--print") 
 				|| strcmp(argv[1],"-p") ) ) {

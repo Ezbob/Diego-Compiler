@@ -196,6 +196,7 @@ void check_statement ( STATEMENT *st){
 				SYMBOL_RECORD ) {
 				
 				if( compare_record_as_sets(leftHand,rightHand) != 1 ) {
+					printf("hello1\n");
 					check_error_report("Invalid assignment, type mismatch",
 						st->lineno);
 				}
@@ -211,6 +212,7 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type ||
 					leftHand->arrayDim != rightHand->arrayDim ) {
+					printf("hello2\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);
 				}
@@ -221,6 +223,7 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type && 
 					rightHand->type != SYMBOL_NULL ){
+					printf("hello3\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -230,6 +233,7 @@ void check_statement ( STATEMENT *st){
 				rightHand = get_base_array_type(rightHand);
 
 				if ( leftHand->type != rightHand->type ){
+					printf("hello4\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -237,12 +241,15 @@ void check_statement ( STATEMENT *st){
 			} else if ( leftHand->type == SYMBOL_RECORD ) {
 
 				if (rightHand->type != SYMBOL_NULL ){
+					printf("hello5\n");
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);
 				}
 
 			} else { //Standard check
 				if( rightHand->type != leftHand->type ) {
+					
+					printf("hello6\n");
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);
 				} 

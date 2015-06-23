@@ -1,14 +1,17 @@
 #include "kittycollect.h"
 #include "../parserscanner/kittytree.h"
+#include "../dlinkedlist.h"
 #include <stdio.h>
 #define FIRST_TABLE_ID 0
+
+int unknownTypesCount = 0; // this is for multiple passes
 
 /*
  * Collecting symbols and setting symboltables in ast nodes
  */
 
 void collect(BODY *main){
-	fprintf(stderr, "Initializing Type collection\n");
+	fprintf(stderr, "Initializing type collection phase\n");
 	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
 }
 
@@ -67,14 +70,15 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 
 	switch(type->kind){
 		case TYPE_ID:
-			if((symbol = getSymbol(st,type->value.id)) == NULL) {
-				fprintf(stderr, "Error at line %i:"
-					" Symbol not recognized\n", type->lineno );
-				exit(1);
+			if((symbol = getSymbol(st,type->value.id)) != NULL && 
+				symbol->symboltype != SYMBOL_UNKNOWN ) {
+				symboltype = symbol->symboltype;
+				type->symboltype = symboltype;
+				return symboltype;
 			}
-			symboltype = symbol->symboltype;
-			type->symboltype = symboltype;
-			return symboltype;
+			unknownTypesCount++;
+			type->symboltype = make_SYMBOLTYPE(SYMBOL_UNKNOWN);
+			return type->symboltype; // set to unknown if we can't find it
 
 		case TYPE_INT:
 			symboltype = make_SYMBOLTYPE(SYMBOL_INT);
@@ -158,6 +162,11 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 	vtype->symboltable = st;
 
 	SYMBOLTYPE *symboltype = collect_type(vtype->type, st, NULL);
+
+	if ( symboltype == SYMBOL_UNKNOWN ) {
+		unknownTypesCount++;
+	}
+
 	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
 		if(vtype->symbol == NULL){
@@ -201,18 +210,22 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 
 			symboltype = collect_type(decl->value.declaration_id.type, 
 				st, decl->value.declaration_id.id);
-			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
-				getSymbol(st, decl->value.declaration_id.id)->symboltype->type
-				!= symboltype->type){
-				if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
-					== NULL){
-					fprintf(stderr, "Error at line %i:"
-						"Could not assignment new type\n", decl
-					->lineno );
-					exit(1);
-				}
+
+			if(symboltype->type == SYMBOL_UNKNOWN){
+				unknownTypesCount++;
 			}
 
+			//if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
+			//	getSymbol(st, decl->value.declaration_id.id)->symboltype->type
+			//		!= symboltype->type) {
+			if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
+				== NULL){
+				fprintf(stderr, "Error at line %i:"
+					"Could not assignment new type\n", decl
+				->lineno );
+				exit(1);
+			}
+			//}
 			break;
 
 		case DECLARATION_FUNC:
