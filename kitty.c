@@ -23,10 +23,8 @@
 #endif
 
 int lineno = 1;
-int DEBUG = 0;
 struct BODY *_main_;
 struct SYMBOLTABLE *globalTable;
-struct linked_list *ir_codes;
 
 int main(int argc, char *argv[]) {
 
@@ -35,11 +33,9 @@ int main(int argc, char *argv[]) {
 		case PARSE_ERROR:
 			fprintf(stderr, "Error: Parse error detected\n");
 			return COMPILATION_FAILURE;
-			break;
 		case PARSE_OUT_OF_MEM:
 			fprintf(stderr, "Error: Parse out of memory\n");
 			return COMPILATION_FAILURE;
-			break;
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
 			collect(_main_);
@@ -48,13 +44,12 @@ int main(int argc, char *argv[]) {
 				|| strcmp(argv[1],"-p") ) ) {
 				printer_body(_main_);
 			} else {
-				ir_codes = IR_build(_main_);	
+				IR_build(_main_);	
 			}
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");
 			return COMPILATION_FAILURE;
-			break;
 	}
 
 	return COMPILATION_SUCCESS;

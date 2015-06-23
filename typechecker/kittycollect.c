@@ -12,7 +12,7 @@ void collect(BODY *main){
 	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
 }
 
-void collect_function ( FUNC *function, SYMBOLTABLE *st) {
+void collect_function ( FUNC *function, SYMBOLTABLE *st ) {
 
 	/*Variables only lives in function, so new scope*/
 	SYMBOLTABLE *scope = scopeSymbolTable(st, st->id);
@@ -26,26 +26,26 @@ void collect_function ( FUNC *function, SYMBOLTABLE *st) {
 	function->symboltype = function->head->symboltype;
 }
 
-void collect_head (HEAD *header, SYMBOLTABLE *scope, SYMBOLTABLE *st){
+void collect_head (HEAD *header, SYMBOLTABLE *inner, SYMBOLTABLE *outer) {
 	SYMBOL *symbol;
-	SYMBOLTYPE *symboltype = make_SYMBOLTYPE(SYMBOL_FUNCTION);
 	
-	header->symboltable = st;
-	header->symboltype = symboltype;
+	header->symboltable = outer;
+	header->symboltype = make_SYMBOLTYPE(SYMBOL_FUNCTION);
 
-	int noArguments = collect_par_decl_list(header->pdlist, scope);
+	int noArguments = collect_par_decl_list(header->pdlist, inner);
 
 	header->arguments = noArguments;
-	scope->temps = noArguments;
+	inner->temps = noArguments;
 
 	/* symbol for the function */
-	symbol = putSymbol(st, header->id, 0, symboltype);
+	symbol = putSymbol(outer, header->id, 0, header->symboltype);
 	symbol->parameters = header->pdlist;
 	symbol->returntype = header->returntype;
 	symbol->noArguments = noArguments;
 
-	symboltype->return_type = collect_type(header->returntype, st, NULL);
-	if ( symboltype->return_type == NULL ) {
+	header->symboltype->return_type = 
+			collect_type(header->returntype, outer, NULL);
+	if ( header->symboltype->return_type == NULL ) {
 		fprintf(stderr,"Error: Could not collect function return type\n");
 		exit(1);
 	}
@@ -67,7 +67,7 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 
 	switch(type->kind){
 		case TYPE_ID:
-			if((symbol = getSymbol(st,type->value.id)) == NULL){
+			if((symbol = getSymbol(st,type->value.id)) == NULL) {
 				fprintf(stderr, "Error at line %i:"
 					" Symbol not recognized\n", type->lineno );
 				exit(1);
@@ -153,7 +153,7 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOLTABLE *st ) {
 	return no;
 }
 
-void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset){
+void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 
 	vtype->symboltable = st;
 
@@ -174,7 +174,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset){
 	st->temps++;
 }
 
-void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ){
+void collect_decl_list ( DECL_LIST *dlst, SYMBOLTABLE *st ) {
 
 	dlst->symboltable = st;
 
@@ -201,11 +201,10 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 
 			symboltype = collect_type(decl->value.declaration_id.type, 
 				st, decl->value.declaration_id.id);
-
 			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
 				getSymbol(st, decl->value.declaration_id.id)->symboltype->type
 				!= symboltype->type){
-				if(putSymbol(st, decl->value.declaration_id.id,0,symboltype)
+				if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
 					== NULL){
 					fprintf(stderr, "Error at line %i:"
 						"Could not assignment new type\n", decl

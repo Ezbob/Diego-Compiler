@@ -195,7 +195,7 @@ void check_statement ( STATEMENT *st){
 			if ( leftHand->type == SYMBOL_RECORD && rightHand->type ==
 				SYMBOL_RECORD ) {
 				
-				if( compare_record_members(leftHand,rightHand) != 1) {
+				if( compare_record_as_sets(leftHand,rightHand) != 1 ) {
 					check_error_report("Invalid assignment, type mismatch",
 						st->lineno);
 				}
@@ -656,11 +656,12 @@ int get_array_dim ( SYMBOLTYPE *type_of_array ) {
 	return arrayDim;
 }
 
-/* Basicly iterates through the members of two records and 
- * checks if any of the pairs of members are different. 
+/* Counts the type of the members of both records, and checks whether these
+ * are the same. This makes the order of the members unimportant thus records
+ * are treated as sets.
  * Returns 0 if the records are different, 1 if they match
  */
-int compare_record_members(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
+int compare_record_as_sets(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
 
 	VAR_DECL_LIST *leftRecordMembers = leftHand->recordMembers;
 	VAR_DECL_LIST *rightRecordMembers = rightHand->recordMembers;
@@ -677,23 +678,102 @@ int compare_record_members(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
 		return result;
 	}
 
-	while ( leftRecordMembers->var_decl_list != NULL || 
-			rightRecordMembers->var_decl_list != NULL ) {
+	// idear: counting up the diffrent types
+	int typeCount[2][NUMBER_OF_TYPES_SUPPORTED];
+	SYMBOLTYPE *currentSymbolType;
 
-		if ( leftRecordMembers->var_type->type->symboltype->type !=
-			rightRecordMembers->var_type->type->symboltype->type ) {
-			result = 0;
-			return result;
+	// init the count matrix/table
+	for(int i = 0; i < NUMBER_OF_TYPES_SUPPORTED; i++){
+		typeCount[0][i] = 0;
+		typeCount[1][i] = 0;
+	}
+
+	// counting both sides for var_decl_list
+	while ( leftRecordMembers->kind == VAR_DECL_LIST_LIST ) {
+		for ( int i = 0; i < 2; i++ ) {
+			if ( i == 0 ) {
+				currentSymbolType = leftRecordMembers->
+						var_type->type->symboltype;
+			} else {
+				currentSymbolType = rightRecordMembers->
+						var_type->type->symboltype;
+			}
+			switch ( currentSymbolType->type ) {
+				case SYMBOL_FUNCTION:
+					typeCount[i][0]++;
+					break; 
+				case SYMBOL_INT:
+					typeCount[i][1]++;
+					break; 
+				case SYMBOL_BOOL:
+					typeCount[i][2]++;
+					break; 
+				case SYMBOL_ID:
+					typeCount[i][3]++;
+					break;
+				case SYMBOL_RECORD:
+					typeCount[i][4]++;
+					break; 
+				case SYMBOL_ARRAY:
+					typeCount[i][5]++;
+					break; 
+				case SYMBOL_NULL:
+					typeCount[i][6]++;
+					break;
+				case SYMBOL_UNKNOWN:
+					typeCount[i][7]++;
+					break;
+			}
 		}
 
 		leftRecordMembers = leftRecordMembers->var_decl_list;
 		rightRecordMembers = rightRecordMembers->var_decl_list;
 	}
 
-	if ( leftRecordMembers->var_type->type->symboltype->type !=
-		rightRecordMembers->var_type->type->symboltype->type ) {
-		result = 0;
-		return result;
+	// we have to count one last time because var_type is the last element in
+	// the list
+	for ( int i = 0; i < 2; i++ ) {
+		if ( i == 0 ) {
+			currentSymbolType = leftRecordMembers->
+					var_type->type->symboltype;
+		} else {
+			currentSymbolType = rightRecordMembers->
+					var_type->type->symboltype;
+		}
+		switch ( currentSymbolType->type ) {
+			case SYMBOL_FUNCTION:
+				typeCount[i][0]++;
+				break; 
+    		case SYMBOL_INT:
+    			typeCount[i][1]++;
+    			break; 
+    		case SYMBOL_BOOL:
+    			typeCount[i][2]++;
+    			break; 
+    		case SYMBOL_ID:
+    			typeCount[i][3]++;
+    			break;
+    		case SYMBOL_RECORD:
+    			typeCount[i][4]++;
+    			break; 
+    		case SYMBOL_ARRAY:
+    			typeCount[i][5]++;
+    			break; 
+    		case SYMBOL_NULL:
+    			typeCount[i][6]++;
+    			break;
+    		case SYMBOL_UNKNOWN:
+    			typeCount[i][7]++;
+    			break;
+		}
+	}
+
+	for ( int i = 0; i < NUMBER_OF_TYPES_SUPPORTED; i++ ) {
+		if ( typeCount[0][i] != typeCount[1][i] ) {
+			// basicly the count of type i does not match
+			result = 0;
+			return result;
+		}
 	}
 
 	return result;
