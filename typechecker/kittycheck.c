@@ -248,7 +248,7 @@ void check_statement ( STATEMENT *st){
 
 			} else { //Standard check
 				if( rightHand->type != leftHand->type ) {
-					
+
 					printf("hello6\n");
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);

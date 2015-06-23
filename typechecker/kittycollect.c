@@ -71,7 +71,7 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 	switch(type->kind){
 		case TYPE_ID:
 			if((symbol = getSymbol(st,type->value.id)) != NULL && 
-				symbol->symboltype != SYMBOL_UNKNOWN ) {
+				symbol->symboltype->type != SYMBOL_UNKNOWN ) {
 				symboltype = symbol->symboltype;
 				type->symboltype = symboltype;
 				return symboltype;
@@ -163,9 +163,9 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 
 	SYMBOLTYPE *symboltype = collect_type(vtype->type, st, NULL);
 
-	if ( symboltype == SYMBOL_UNKNOWN ) {
-		unknownTypesCount++;
-	}
+	//if ( symboltype->type == SYMBOL_UNKNOWN ) {
+	//	unknownTypesCount++;
+	//}
 
 	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
@@ -215,17 +215,17 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 				unknownTypesCount++;
 			}
 
-			//if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
-			//	getSymbol(st, decl->value.declaration_id.id)->symboltype->type
-			//		!= symboltype->type) {
-			if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
-				== NULL){
-				fprintf(stderr, "Error at line %i:"
-					"Could not assignment new type\n", decl
-				->lineno );
-				exit(1);
+			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
+				getSymbol(st, decl->value.declaration_id.id)->symboltype->type
+					!= symboltype->type) {
+				if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
+					== NULL){
+					fprintf(stderr, "Error at line %i:"
+						"Could not assignment new type\n", decl
+					->lineno );
+					exit(1);
+				}
 			}
-			//}
 			break;
 
 		case DECLARATION_FUNC:
