@@ -8,7 +8,7 @@
 void begin_check(BODY *main);
 
 void check_expression ( EXPRES *);
-int check_term ( TERM *);
+void check_term ( TERM *);
 
 void check_function(FUNC *);
 void check_head (HEAD *);
@@ -24,11 +24,12 @@ void check_opt_length ( OPT_LENGTH *);
 void check_opt_else ( OPT_ELSE *);
 int check_variable ( VAR *);
 
-void check_act_list ( ACT_LIST *);
+int check_act_list ( ACT_LIST *);
 void check_expression_list ( EXP_LIST *);
-void check_var_type(VAR_TYPE *);
-SYMBOLTYPE *get_base_array_type(SYMBOLTYPE *);
-int get_array_dim(SYMBOLTYPE *);
-int compare_record_as_sets(SYMBOLTYPE *, SYMBOLTYPE *);
+void check_var_type (VAR_TYPE *);
+SYMBOLTYPE *get_base_array_type (SYMBOLTYPE *);
+int get_array_dim (SYMBOLTYPE *);
+int compare_record_as_sets (SYMBOLTYPE *, SYMBOLTYPE *);
+void function_parameter_compaire (EXP_LIST *,VAR_DECL_LIST *);
 
 #endif

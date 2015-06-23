@@ -4,7 +4,8 @@
 #include <stdio.h>
 #define FIRST_TABLE_ID 0
 
-int unknownTypesCount = 0; // this is for multiple passes
+int unknownTypesCount = 0; // decides whether more passes should be used.
+						// more passes are used when unknownTypesCount > 0
 
 /*
  * Collecting symbols and setting symboltables in ast nodes

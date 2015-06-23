@@ -178,7 +178,6 @@ void check_statement ( STATEMENT *st){
 				SYMBOL_RECORD ) {
 				
 				if( compare_record_as_sets(leftHand,rightHand) != 1 ) {
-					printf("hello1\n");
 					check_error_report("Invalid assignment, type mismatch",
 						st->lineno);
 				}
@@ -194,7 +193,6 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type ||
 					leftHand->arrayDim != rightHand->arrayDim ) {
-					printf("hello2\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);
 				}
@@ -205,7 +203,6 @@ void check_statement ( STATEMENT *st){
 
 				if ( leftHand->type != rightHand->type && 
 					rightHand->type != SYMBOL_NULL ){
-					printf("hello3\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -215,7 +212,6 @@ void check_statement ( STATEMENT *st){
 				rightHand = get_base_array_type(rightHand);
 
 				if ( leftHand->type != rightHand->type ){
-					printf("hello4\n");
 					check_error_report("Invalid assignment; type mismatch",
 						st->lineno);	
 				}
@@ -223,15 +219,12 @@ void check_statement ( STATEMENT *st){
 			} else if ( leftHand->type == SYMBOL_RECORD ) {
 
 				if (rightHand->type != SYMBOL_NULL ){
-					printf("hello5\n");
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);
 				}
 
 			} else { //Standard check
 				if( rightHand->type != leftHand->type ) {
-
-					printf("hello6\n");
 					check_error_report(
 						"Invalid assignment; type mismatch", st->lineno);
 				} 
@@ -276,7 +269,7 @@ void check_opt_length ( OPT_LENGTH *oplen){
 			check_expression(oplen->exp);
 			if(oplen->exp->symboltype->type != SYMBOL_INT){
 				check_error_report("Expected length to evaluate to a"
-					"integer value", oplen->lineno);
+					" integer value", oplen->lineno);
 			}
 			break;
 		case OPT_LENGTH_EMPTY:
@@ -467,11 +460,11 @@ void check_expression ( EXPRES *exp){
 	}
 }
 
-int check_term ( TERM *term ) {
+void check_term ( TERM *term ) {
 	SYMBOLTYPE *symbolT;
 	SYMBOL *symbol;
-
-	int count = 0;
+	int actualParameterCount;
+	int numberOfParametersNeeded;
 
 	switch(term->kind){
 		case TERM_VAR:	
@@ -481,20 +474,29 @@ int check_term ( TERM *term ) {
 
 		case TERM_ACT_LIST:
 			
-			check_act_list(term->value.term_act_list.actlist);
-			symbol = getSymbol(term->symboltable, term->value.term_act_list.id);
+			actualParameterCount = check_act_list(term->value.
+							term_act_list.actlist);
+			symbol = getSymbol(term->symboltable, 
+						term->value.term_act_list.id);
+
 			if(symbol == NULL || symbol->symboltype->type 
 					!= SYMBOL_FUNCTION ){
 				check_error_report(
 					"Function not defined or not a function", term->lineno);
 			}
 
-			if((term->value.term_act_list.actlist->kind == ACT_LIST_EMPTY && 
-			   symbol->parameters->kind != PAR_DECL_LIST_EMPTY) ||
-				(term->value.term_act_list.actlist->kind != ACT_LIST_EMPTY && 
-			   symbol->parameters->kind == PAR_DECL_LIST_EMPTY)) {
+			numberOfParametersNeeded = symbol->noArguments;
 
-				check_error_report("Wrong no. of parameters", term->lineno);
+			if (actualParameterCount < numberOfParametersNeeded ) {
+				check_error_report("Too few arguments for function", 
+					term->lineno);
+			} else if(actualParameterCount > numberOfParametersNeeded ) {
+				check_error_report("Too many arguments for function", 
+					term->lineno);
+			} else if (actualParameterCount > 0 && 
+					numberOfParametersNeeded == 0) {
+				check_error_report("Function does not take any arguments", 
+					term->lineno);
 			}
 
 			EXP_LIST *callParameters = term->value.term_act_list.actlist->
@@ -502,38 +504,7 @@ int check_term ( TERM *term ) {
 			VAR_DECL_LIST *functionParameters = symbol->parameters->
 				var_decl_list;
 
-			while( callParameters != NULL && functionParameters 
-								!= NULL && count < symbol->noArguments){
-				
-				if(callParameters->kind == EXP_LIST_LIST &&
-				   functionParameters->kind == VAR_DECL_LIST_LIST){
-
-					if(callParameters->exp->symboltype->type !=
-					   functionParameters->var_type->symbol
-					   			->symboltype->type){
-						check_error_report("Wrong parameter type", 
-							term->lineno);
-					}
-
-				} else if(callParameters->kind == EXP_LIST_EXP &&
-					      functionParameters->kind == VAR_DECL_LIST_TYPE){
-					
-					if(callParameters->exp->symboltype->type !=
-					   functionParameters->var_type->symbol
-					   			->symboltype->type)
-						check_error_report("Wrong parameter type", 
-							term->lineno);
-				} 
-				callParameters = callParameters->explist;
-				functionParameters = 
-					functionParameters->var_decl_list;
-				
-				count++;
-			}
-
-			if( count != symbol->noArguments ){
-				check_error_report("Wrong no. of parameters", term->lineno);
-			}
+			function_parameter_compaire(callParameters,functionParameters);
 
 			symbolT = symbol->symboltype->return_type;
 			term->symboltype = symbolT;
@@ -578,7 +549,6 @@ int check_term ( TERM *term ) {
 		default:
 			break;
 	}
-	return count;
 }
 
 void check_par_decl_list ( PAR_DECL_LIST *pdecl ) {
@@ -591,17 +561,19 @@ void check_par_decl_list ( PAR_DECL_LIST *pdecl ) {
 	}
 }
 
-void check_act_list ( ACT_LIST *actlst ) {
-	parameterCounter = 0; // reset parameter since there could be 
+int check_act_list ( ACT_LIST *actlst ) {
+	parameterCounter = 0; 
+
 	switch(actlst->kind){
 		case ACT_LIST_EXPLIST:
 			parameterCounter++;
 			check_expression_list(actlst->exp_list);
-			printf("..%i..\n", parameterCounter);
 			break;
 		case ACT_LIST_EMPTY:
 			break;
 	}
+
+	return parameterCounter;
 }
 
 void check_expression_list ( EXP_LIST *explst ) {
@@ -768,4 +740,34 @@ int compare_record_as_sets(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
 	}
 
 	return result;
+}
+
+void function_parameter_compaire ( EXP_LIST *callParameters,
+	VAR_DECL_LIST *functionParameters ) {
+
+	while ( callParameters != NULL && functionParameters != NULL) {
+		
+		if( callParameters->kind == EXP_LIST_LIST &&
+		   functionParameters->kind == VAR_DECL_LIST_LIST) {
+
+			if( callParameters->exp->symboltype->type !=
+			   functionParameters->var_type->symbol
+			   			->symboltype->type ) {
+				check_error_report("Wrong parameter type", 
+					callParameters->lineno);
+			}
+
+		} else if( callParameters->kind == EXP_LIST_EXP &&
+			      functionParameters->kind == VAR_DECL_LIST_TYPE ) {
+			
+			if( callParameters->exp->symboltype->type !=
+			   functionParameters->var_type->symbol
+			   			->symboltype->type){
+				check_error_report("Wrong parameter type", 
+					callParameters->lineno);
+			}
+		} 
+		callParameters = callParameters->explist;
+		functionParameters = functionParameters->var_decl_list;
+	}
 }
