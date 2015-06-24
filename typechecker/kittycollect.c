@@ -77,7 +77,6 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 				type->symboltype = symboltype;
 				return symboltype;
 			}
-			unknownTypesCount++;
 			type->symboltype = make_SYMBOLTYPE(SYMBOL_UNKNOWN);
 			return type->symboltype; // set to unknown if we can't find it
 
@@ -170,6 +169,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 
 	if (symboltype != NULL) {
 		vtype->symbol = putSymbol(st, vtype->id, 0, symboltype);
+
 		if(vtype->symbol == NULL){
 			fprintf(stderr, "Duplicate entry in symboltable\n");
 			exit(1);
@@ -219,6 +219,7 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 			if ( getSymbol(st, decl->value.declaration_id.id) == NULL ||
 				getSymbol(st, decl->value.declaration_id.id)->symboltype->type
 					!= symboltype->type) {
+
 				if( putSymbol(st, decl->value.declaration_id.id,0,symboltype )
 					== NULL){
 					fprintf(stderr, "Error at line %i:"

@@ -40,7 +40,6 @@ void multi_collect_type ( TYPE *type ) {
 			if ( type->symboltype->type == SYMBOL_UNKNOWN 
 				&& (symbol = getSymbol(type->symboltable,type->value.id)) 
 				!= NULL && symbol->symboltype->type != SYMBOL_UNKNOWN ) {
-				unknownTypesCount--;
 				type->symboltype = symbol->symboltype;
 			}
 			break;
@@ -87,7 +86,6 @@ void multi_collect_var_type ( VAR_TYPE *var_type ) {
 	if ( ( symbol = getSymbol(var_type->symboltable, var_type->id) )
 		!= NULL && symbol->symboltype->type == SYMBOL_UNKNOWN 
 		&& symboltype->type != SYMBOL_UNKNOWN ) {
-	
 		symbol->symboltype = symboltype;
 		unknownTypesCount--;
 	}
@@ -118,7 +116,6 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 				declaration->value.declaration_id.id)) != NULL
 				&& symbol->symboltype->type == SYMBOL_UNKNOWN
 				&& symboltype->type != SYMBOL_UNKNOWN) {
-
 				unknownTypesCount--;
 				symbol->symboltype = symboltype;
 			}
@@ -131,3 +128,5 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 			break;
 	}
 }
+
+
