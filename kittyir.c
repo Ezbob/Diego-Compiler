@@ -519,8 +519,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.statement_assign.var->kind){
 
 				case VAR_ARRAY:
-					arg2 = IR_builder_variable(st->value.statement_assign.var);
-					arg1 = IR_builder_expression(st->value.statement_assign.exp);
+					arg2 = IR_builder_variable(st->value.
+						statement_assign.var);
+					arg1 = IR_builder_expression(st->value.
+						statement_assign.exp);
 					
 						append_element( 
 							ir_lines,
@@ -533,8 +535,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case VAR_RECORD:
 
-					arg1 = IR_builder_expression(st->value.statement_assign.exp);
-					arg2 = IR_builder_variable(st->value.statement_assign.var);
+					arg1 = IR_builder_expression(st->value.
+						statement_assign.exp);
+					arg2 = IR_builder_variable(st->value.
+						statement_assign.var);
 
 					append_element( 
 						ir_lines,
@@ -546,14 +550,23 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case VAR_ID:
-					arg1 = IR_builder_expression(st->value.statement_assign.exp);
+					arg1 = IR_builder_expression(st->value.
+						statement_assign.exp);
 
 					SYMBOL *symbol = getSymbol(st->symboltable,st->value
 						.statement_assign.var->id);
 		
 					if(symbol->tableid != st->symboltable->id){
-						append_element(ir_lines, make_instruction_pushl(ecx));
-						append_element(ir_lines, make_instruction_movl(make_argument_constant(symbol->tableid), ecx));
+						append_element(
+							ir_lines, 
+							make_instruction_pushl(ecx)
+							);
+						append_element(ir_lines, 
+							make_instruction_movl(
+								make_argument_constant(symbol->tableid)
+								, ecx
+								)
+							);
 
 						append_element(ir_lines, 
 							make_instruction_movl(
@@ -565,9 +578,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 						);
 
 
-						append_element(ir_lines, make_instruction_popl(ecx));
+						append_element(ir_lines, 
+							make_instruction_popl(ecx)
+							);
 
-						arg2 = make_argument_static(WORDSIZE*(symbol->offset));
+						arg2 = make_argument_static(
+							WORDSIZE*(symbol->offset)
+							);
 
 						append_element( 
 							ir_lines,
@@ -666,7 +683,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.statement_allocate.var->symboltype->type){
 
 				case SYMBOL_ARRAY:
-					if (st->value.statement_allocate.opt_length->kind == OPT_LENGTH_EXPRES) {
+					if (st->value.statement_allocate.
+						opt_length->kind == OPT_LENGTH_EXPRES) {
 						
 						if(get_length(data_lines) == 0)	{ // init heap counter
 							append_element(
@@ -694,10 +712,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						arg1 = IR_builder_expression(st->value.statement_allocate.
-							opt_length->exp); // length of-result
+						arg1 = IR_builder_expression(st->value.
+							statement_allocate.opt_length->exp); 
+								// length of-result
 
-						arg2 = make_argument_tempregister(current_temporary++);
+						arg2 = make_argument_tempregister(
+							current_temporary++);
 
 						append_element(
 							ir_lines,
@@ -706,7 +726,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						ARGUMENT *movArg = make_argument_tempregister(current_temporary++);
+						ARGUMENT *movArg = make_argument_tempregister(
+							current_temporary++);
 
 						append_element(
 							ir_lines,
@@ -751,7 +772,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+						// type check maybe? 
+						// but symboltype of variabe is SYMBOL_ARRAY 
 						append_element(
 							ir_lines,
 							make_instruction_imul(
@@ -783,7 +805,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 						);
 					
 						append_element(data_lines,st);
-					}else if( st->value.statement_allocate.opt_length->kind == OPT_LENGTH_EMPTY ) {
+					}else if( st->value.statement_allocate.
+						opt_length->kind == OPT_LENGTH_EMPTY ) {
 							// do something else?
 					}
 					break;
@@ -814,12 +837,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 						/* Something wrong here TODO */
-						arg1 = make_argument_constant(0);//st->value.statement_allocate.
+						arg1 = make_argument_constant(0);
+							//st->value.statement_allocate.
 							//opt_length->emptyLength); // length of-result
 
-
-
-						arg2 = make_argument_tempregister(current_temporary++);
+						arg2 = make_argument_tempregister(
+							current_temporary++);
 
 						append_element(
 							ir_lines,
@@ -837,7 +860,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						// type check maybe? but symboltype of variabe is SYMBOL_RECORD
+						// type check maybe? but symboltype 
+						// of variabe is SYMBOL_RECORD
 						append_element(
 							ir_lines,
 							make_instruction_imul(
@@ -946,7 +970,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			if(symbol->tableid != var->symboltable->id){
 				append_element(ir_lines, make_instruction_pushl(ecx));
-				append_element(ir_lines, make_instruction_movl(make_argument_constant(symbol->tableid), ecx));
+				append_element(ir_lines, 
+					make_instruction_movl(
+						make_argument_constant(symbol->tableid), ecx));
 
 				append_element(ir_lines, 
 					make_instruction_movl(
@@ -966,10 +992,12 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			}
 			break;
 		case VAR_ARRAY:
-				resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
+				resultOfSubExp = IR_builder_expression(
+					var->value.var_array.exp);
 				arg = make_argument_tempregister(current_temporary++);
 
-				append_element(ir_lines, make_instruction_movl(resultOfSubExp, arg));
+				append_element(ir_lines,
+					make_instruction_movl(resultOfSubExp, arg));
 
 				append_element(ir_lines,
 					make_instruction_incl(arg)
@@ -985,11 +1013,13 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			return arg1;
 		case VAR_RECORD:
 
-				if((symbol = getSymbol(var->symboltable, var->value.var_record.var->id)) != NULL){
+				if((symbol = getSymbol(var->symboltable,
+					var->value.var_record.var->id)) != NULL){
 					tmpTable = symbol->symboltype->child;
 				}
 
-				if((symbol = getSymbol(tmpTable, var->value.var_record.id)) != NULL){
+				if((symbol = getSymbol(tmpTable, 
+					var->value.var_record.id)) != NULL){
 					resultOfSubExp = make_argument_constant(symbol->offset);
 				}
 
@@ -1271,14 +1301,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, cmpor2);
 			append_element(ir_lines, jmpOK);
 
-			IR_INSTRUCTION *orfalsesave = make_instruction_movl(make_argument_constant(0), result);
+			IR_INSTRUCTION *orfalsesave = make_instruction_movl(
+				make_argument_constant(0), result);
 			append_element(ir_lines, orfalsesave);
 
 			IR_INSTRUCTION *jmpend = make_instruction_jmp(orEndlabel);
 			append_element(ir_lines, jmpend);
 			append_element(ir_lines, oroklabel);
 
-			IR_INSTRUCTION *ortruesave = make_instruction_movl(make_argument_constant(1), result);
+			IR_INSTRUCTION *ortruesave = make_instruction_movl(
+				make_argument_constant(1), result);
 			append_element(ir_lines, ortruesave);
 
 			append_element(ir_lines, orendlabel);
@@ -1335,7 +1367,8 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case TERM_ACT_LIST:
 			addStaticLink(term->symboltable->id);
-			symbol = getSymbol(term->symboltable, term->value.term_act_list.id);
+			symbol = getSymbol(term->symboltable, 
+				term->value.term_act_list.id);
 
 			// push parameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
@@ -1347,8 +1380,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			moveStackpointer(symbol->noArguments);
 
 			//Handle return value as it can sit in eax
-			ARGUMENT *returnarg = make_argument_tempregister(current_temporary++);
-			IR_INSTRUCTION *savereturn = make_instruction_movl(eax, returnarg);
+			ARGUMENT *returnarg = make_argument_tempregister(
+				current_temporary++);
+			IR_INSTRUCTION *savereturn = make_instruction_movl(
+				eax, returnarg);
 			append_element(ir_lines, savereturn);
 			return returnarg; // by convention eax holds return values
 
@@ -1843,8 +1878,10 @@ void repairMem(linked_list *ir_lines){
 					//remove line from code
 
 					append_element(temp, make_instruction_pushl(edi));
-					append_element(temp, make_instruction_movl(instr1->arg1,edi));
-					append_element(temp, make_instruction_movl(edi,instr1->arg2));
+					append_element(temp, 
+						make_instruction_movl(instr1->arg1,edi));
+					append_element(temp, 
+						make_instruction_movl(edi,instr1->arg2));
 					append_element(temp, make_instruction_popl(edi));
 
 					temp->previous->next = temp->next;
@@ -1869,8 +1906,10 @@ void repairMem(linked_list *ir_lines){
 					//remove line from code
 
 					append_element(temp, make_instruction_pushl(edi));
-					append_element(temp, make_instruction_movl(instr1->arg2, edi));
-					append_element(temp, make_instruction_cmp(instr1->arg1, edi));
+					append_element(temp, 
+						make_instruction_movl(instr1->arg2, edi));
+					append_element(temp, 
+						make_instruction_cmp(instr1->arg1, edi));
 					append_element(temp, make_instruction_popl(edi));
 
 					temp->previous->next = temp->next;
@@ -1890,9 +1929,12 @@ void repairMem(linked_list *ir_lines){
 				case staticlink_arg:
 					//remove line from code
 					append_element(temp, make_instruction_pushl(edi));
-					append_element(temp, make_instruction_movl(instr1->arg2, edi));
-					append_element(temp, make_instruction_addl(instr1->arg1, edi));
-					append_element(temp, make_instruction_movl(edi, instr1->arg2));
+					append_element(temp, 
+						make_instruction_movl(instr1->arg2, edi));
+					append_element(temp, 
+						make_instruction_addl(instr1->arg1, edi));
+					append_element(temp, 
+						make_instruction_movl(edi, instr1->arg2));
 					append_element(temp, make_instruction_popl(edi));
 
 					temp->previous->next = temp->next;
@@ -1912,9 +1954,12 @@ void repairMem(linked_list *ir_lines){
 				case staticlink_arg:
 					//remove line from code
 					append_element(temp, make_instruction_pushl(edi));
-					append_element(temp, make_instruction_movl(instr1->arg2, edi));
-					append_element(temp, make_instruction_imul(instr1->arg1, edi));
-					append_element(temp, make_instruction_movl(edi, instr1->arg2));
+					append_element(temp, 
+						make_instruction_movl(instr1->arg2, edi));
+					append_element(temp, 
+						make_instruction_imul(instr1->arg1, edi));
+					append_element(temp, 
+						make_instruction_movl(edi, instr1->arg2));
 					append_element(temp, make_instruction_popl(edi));
 
 					temp->previous->next = temp->next;
