@@ -36,7 +36,7 @@ IR_INSTRUCTION *make_instruction_intcode(char *c) {
 	IR_INSTRUCTION *new_instruction;
 	new_instruction = (IR_INSTRUCTION *) malloc(sizeof(IR_INSTRUCTION));
 	new_instruction->id = 0;
-	new_instruction->op_code = intcode;
+	new_instruction->op_code = intCode;
 	new_instruction->label = calloc(strlen(c)+1,sizeof(char));
 	new_instruction->label = c;
 	return new_instruction;
@@ -306,12 +306,11 @@ ARGUMENT *make_argument_constant(int i) {
 	return new_argument;
 }
 
-ARGUMENT *make_argument_tempregister(int i){
+ARGUMENT *make_argument_temp_register(int i){
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
-	new_argument->kind = tempreg_arg;
-	new_argument->type = TEMP;
-	new_argument->tempid = i;
+	new_argument->kind = tempReg_arg;
+	new_argument->temp_id = i;
 	return new_argument;
 }
 
@@ -327,7 +326,7 @@ ARGUMENT *make_argument_indexing(ARGUMENT *displ, ARGUMENT *index){
 ARGUMENT *make_argument_static(int i){
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
-	new_argument->kind = staticlink_arg;
+	new_argument->kind = staticLink_arg;
 	new_argument->intConst = i;
 	return new_argument;
 }

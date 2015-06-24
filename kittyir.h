@@ -1,47 +1,44 @@
 #ifndef KITTY_EMITTER_H
 #define KITTY_EMITTER_H 
 #include "dlinkedlist.h"
-#include "dlinkedstack.h"
 #include "parserscanner/kittytree.h"
 
-#define MAXLABELSIZE 20
-#define INSTRUCTIONNUM 0
-#define WORDSIZE 4
-
-typedef enum ARGUMENTTYPE {
-	REGISTER, TEMP, VIRTUAL, SPILLED, STATICLINK, INT
-} ARGUMENTTYPE;
+#define MAX_LABEL_SIZE 20
+#define WORD_SIZE 4
 
 typedef enum REGISTERS {
 	r_eax, r_ebx, r_ecx, r_edx, r_ebp, r_esp, r_esi, r_edi 
 } REGISTERS;
 
+typedef enum OP_CODES {
+	directive, label, movl, call, pushl, popl, addl,
+	subl, ret, xor, divl, imul, cmp, jne, jmp, je,
+	JGE, JLE, jl, jg, notl, negl, intCode, space, leal,
+	incl, decl
+} OP_CODES;
+
+typedef enum ARGUMENT_KIND {
+	address_arg, register_arg, label_arg,
+	constant_arg, tempReg_arg, indexing_arg, staticLink_arg
+} ARGUMENT_KIND;
+
 typedef struct IR_INSTRUCTION {
 	int id;
 	char *label;
-	enum { directive, label, movl, call, pushl, popl, addl, 
-		subl, ret, xor, divl, imul, cmp, jne, jmp, je,
-		JGE, JLE, jl, jg, notl, negl, intcode, space, long_op, leal,
-		incl, decl } op_code; 
-							// add more instructions later on
+	OP_CODES op_code;
 	struct ARGUMENT *arg1;
 	struct ARGUMENT *arg2;
-
 } IR_INSTRUCTION;
 
 typedef struct ARGUMENT {
-	int tempid;
-	ARGUMENTTYPE type;
-	enum { address_arg, register_arg, label_arg, 
-		constant_arg, tempreg_arg, indexing_arg, staticlink_arg } kind;
+	int temp_id;
+	ARGUMENT_KIND kind;
 	char *label;
 	int intConst;
 	REGISTERS reg;
 	struct ARGUMENT *displace;
 	struct ARGUMENT *index;
 	char *charConst;
-	void *address;
-	int divflag;
 } ARGUMENT;
 
 typedef struct SECTION {
@@ -82,12 +79,12 @@ void calleeEnd();
 int getNextLabel();
 IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *);
 int getNextFunction();
-void moveStackpointer(int i);
+void addToStackPointer(int i);
 void IR_print_arguments(ARGUMENT *arg);
 void IR_printer(linked_list *ir_lines);
 ARGUMENT *get_register(int n);
 void basic_assign(linked_list *ir_lines);
-void assign_instructionnumber(linked_list *ir_lines);
+void assign_instruction_number(linked_list *ir_lines);
 void repairMem(linked_list *ir_code);
 void build_data_section();
 
@@ -95,8 +92,5 @@ ARGUMENT *IR_builder_variable ( VAR *var);
 ARGUMENT *IR_builder_expression ( EXPRES *exp);
 ARGUMENT *IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen);
-
-ARGUMENT *address_resolver(VAR *, int);
-
 
 #endif

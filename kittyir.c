@@ -3,23 +3,18 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
-#include "kittyemit.h"
 
 static int current_temporary = 1;
 static int current_label = 0;
 static int function_label = 0;
-static int instructionnumber = 0;
+static int instruction_number = 0;
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
 
-extern SYMBOLTABLE *globalTable;
-
-struct SYMBOLTABLE *currentTable;
-
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
-void initRegisters(){
+void initRegisters() {
 	eax = make_argument_register(r_eax, "eax");
 	ebx = make_argument_register(r_ebx, "ebx");
 	ecx = make_argument_register(r_ecx, "ecx");
@@ -30,17 +25,17 @@ void initRegisters(){
 	esp = make_argument_register(r_esp, "esp");
 }
 
-int getNextLabel(){
+int getNextLabel() {
 	return current_label++;
 }
 
-int getNextFunction(){
+int getNextFunction() {
 	return function_label++;
 }
 
-void initStaticLink(){
+void initStaticLink() {
 
-	if(get_length(data_lines) == 0)	{ // init heap counter
+	if (get_length(data_lines) == 0) { // init heap counter
 		
 		append_element(
 			ir_lines,
@@ -51,7 +46,7 @@ void initStaticLink(){
 		);
 
 		ARGUMENT *arg1 = make_argument_constant(function_label);
-		ARGUMENT *arg2 = make_argument_tempregister(current_temporary++);
+		ARGUMENT *arg2 = make_argument_temp_register(current_temporary++);
 
 		append_element(
 			ir_lines,
@@ -65,7 +60,7 @@ void initStaticLink(){
 		append_element(
 			ir_lines,
 			make_instruction_imul(
-				make_argument_constant(WORDSIZE),
+				make_argument_constant(WORD_SIZE),
 				arg2
 			)
 		);
@@ -80,7 +75,7 @@ void initStaticLink(){
 	}
 }
 
-void addStaticLink(int id){
+void addStaticLink( int id ) {
 
 	ARGUMENT *place = make_argument_constant(id);
 
@@ -103,24 +98,17 @@ linked_list *IR_build( BODY *program ) {
 	data_lines = initialize_list();
 	initRegisters();
 
-	SYMBOLTABLE *symboltable = program->symboltable;
-
-	int offsetcount = -1;
+	int offsetCount = -1;
 
 	SYMBOL *symbol;
 
-	for(int i = 0; i < HASH_SIZE; i++){
-		symbol = symboltable->table[i];
+	for ( int i = 0; i < HASH_SIZE; i++ ) {
+		symbol = program->symboltable->table[i];
 
-		if(symbol != NULL && symbol->symboltype->type != SYMBOL_FUNCTION){
-			symbol->offset = offsetcount--;
+		if ( symbol != NULL && symbol->symboltype->type != SYMBOL_FUNCTION ) {
+			symbol->offset = offsetCount--;
 		}
 	}
-
-	char *mainLabel = calloc(MAXLABELSIZE,sizeof(char));
-	sprintf(mainLabel, "%s", "main");
-
-	globalTable = symboltable;
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -131,15 +119,12 @@ linked_list *IR_build( BODY *program ) {
 	append_element(ir_lines, make_instruction_directive(".globl main"));
 
 	// make "main:" label line
-
-	IR_INSTRUCTION *globl_main = make_instruction_label(mainLabel);
-	append_element(ir_lines, globl_main);
+	append_element(ir_lines, make_instruction_label("main"));
 
 	calleeStart();
 	calleeSave();
 
 	localVariableAllocation(program->symboltable);
-
 
 	callerSave();
 	initStaticLink();
@@ -158,7 +143,7 @@ linked_list *IR_build( BODY *program ) {
 	build_data_section();
 
 	linked_list *save = ir_lines;
-	assign_instructionnumber(ir_lines);
+	assign_instruction_number(ir_lines);
 	basic_assign(ir_lines);
 	ir_lines = save;
 
@@ -171,37 +156,34 @@ linked_list *IR_build( BODY *program ) {
 
 void IR_builder_function(FUNC *func) {
 
-	int functiondId = getNextFunction();
-	char *functionlabel = calloc(MAXLABELSIZE ,sizeof(char));
-	char *functionendlabel = calloc(MAXLABELSIZE ,sizeof(char));
+	int functionId = getNextFunction();
+	char *functionStartLabel = calloc(MAX_LABEL_SIZE ,sizeof(char));
+	char *functionEndLabel = calloc(MAX_LABEL_SIZE ,sizeof(char));
 
 	SYMBOL *symbol = getSymbol(func->symboltable, 
 		func->head->id);
 
-	sprintf(functionlabel, "func%d", functiondId);
-	sprintf(functionendlabel,"endFunc%d", functiondId);
+	sprintf(functionStartLabel, "func%d", functionId);
+	sprintf(functionEndLabel,"endFunc%d", functionId);
 
-	strcpy(symbol->uniquename, functionlabel);
+	strcpy(symbol->uniquename, functionStartLabel);
 
-	sprintf(functionlabel, "%s", functionlabel);
+	sprintf(functionStartLabel, "%s", functionStartLabel);
 	
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
 	IR_builder_decl_list(func->body->decl_list);
 
-	IR_INSTRUCTION *func_main = // start function label
-		make_instruction_label( functionlabel );
-
-	append_element(ir_lines, func_main);
-
+	// start function label
+	append_element(ir_lines, make_instruction_label(functionStartLabel));
 
 	IR_builder_head(func->head);
 	IR_builder_body(func->body);
 
 	append_element( // end of function label
 		ir_lines,
-		make_instruction_label( functionendlabel )
+		make_instruction_label(functionEndLabel)
 		);
 
 
@@ -223,19 +205,13 @@ void IR_builder_head (HEAD *header) {
 
 	VAR_DECL_LIST *vars = header->pdlist->var_decl_list;
 	
-	while(count < args->noArguments){
+	while ( count < args->noArguments ) {
 
-		if(globalTable != NULL || vars->var_type != NULL){
-		
-			if (vars->kind == VAR_DECL_LIST_LIST) {
-				symbol = getSymbol(header->pdlist->symboltable, 
-					vars->var_type->id);
-			} else {
-				symbol = getSymbol(header->pdlist->symboltable, 
-					vars->var_type->id);
-			}
+		if ( vars->var_type != NULL ) {
 
-			if(symbol == NULL){
+			symbol = getSymbol(header->pdlist->symboltable,
+				vars->var_type->id);
+			if ( symbol == NULL ) {
 				fprintf(stderr, "%s\n", "Variable not found in symboltable");
 				exit(1);
 			}
@@ -251,8 +227,6 @@ void IR_builder_head (HEAD *header) {
 }
 
 void IR_builder_body (BODY *body) {
-	SYMBOLTABLE *temptable = currentTable;
-	currentTable = body->symboltable;
  	calleeStart(); // shift in stackframe
  	addStaticLink(body->symboltable->id);
 	calleeSave();
@@ -260,7 +234,6 @@ void IR_builder_body (BODY *body) {
 	callerSave();
 
 	IR_builder_statement_list(body->statement_list);
-	currentTable = temptable;
 }
 
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
@@ -280,19 +253,19 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 
 	switch(vtype->type->kind){ // note: switching on type kind
 		case TYPE_INT:
-			vtype->symboltable->localVars += WORDSIZE;
+			vtype->symboltable->localVars += WORD_SIZE;
 			break;
  
 		case TYPE_BOOL:
-			vtype->symboltable->localVars += WORDSIZE;
+			vtype->symboltable->localVars += WORD_SIZE;
 			break;
 
 		case TYPE_ARRAY:
-			// vtype->symboltable->localVars += WORDSIZE; 
+			// vtype->symboltable->localVars += WORD_SIZE;
 			// parse by reference but we have to find out if it's parameters 
 			break;
 		case TYPE_RECORD:
-			// vtype->symboltable->localVars += WORDSIZE; // like arrays
+			// vtype->symboltable->localVars += WORD_SIZE; // like arrays
 			break;
 		default:
 			break;
@@ -323,7 +296,6 @@ void IR_builder_declaration ( DECLARATION *decl ) {
 			IR_builder_var_decl_list(decl->value.var_decl_list);
 			break; 
 	}
-
 }
 
 void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
@@ -342,16 +314,17 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 
 
 void IR_builder_statement ( STATEMENT *st ) {
-	int tmp = 0; 
+	int tempLabelCounter = 0;
 
-	char *truewhilestring;
-	char *endlabelstring;
-	char *elselabel;
-	char *printlabel;
-	char *falselabel;
-	char *truelabel;
+	char *trueWhileString;
+	char *endLabelString;
+	char *elseLabel;
+	char *printLabel;
+	char *falseLabel;
+	char *trueLabel;
+	char *address_of_id;
 
-	ARGUMENT *returnvalue;
+	ARGUMENT *returnValue;
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
 	ARGUMENT *arg3;
@@ -362,9 +335,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 	switch(st->kind){
 
 		case STATEMENT_RETURN:	
-			returnvalue = IR_builder_expression(st->value.exp);
-			IR_INSTRUCTION *movl = make_instruction_movl(returnvalue, eax);
-			append_element(ir_lines, movl);
+			returnValue = IR_builder_expression(st->value.exp);
+			append_element(ir_lines, make_instruction_movl(returnValue, eax));
 			break;
 
 		case STATEMENT_WRITE: 
@@ -375,15 +347,15 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// generating argument for boolean expression
 					arg1 = IR_builder_expression(st->value.exp);
 
-					tmp = getNextLabel();
+					tempLabelCounter = getNextLabel();
 
-					falselabel = calloc(MAXLABELSIZE,sizeof(char));
-					truelabel = calloc(MAXLABELSIZE,sizeof(char));
-					printlabel = calloc(MAXLABELSIZE, sizeof(char));
+					falseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+					trueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+					printLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
 
-					sprintf(falselabel,"bfalse%d", tmp );
-					sprintf(truelabel, "btrue%d",tmp);
-					sprintf(printlabel,"printbool%d",tmp);
+					sprintf(falseLabel,"bfalse%d", tempLabelCounter);
+					sprintf(trueLabel, "btrue%d", tempLabelCounter);
+					sprintf(printLabel,"printbool%d", tempLabelCounter);
 
 					append_element( // compaire boolean value to true
 						ir_lines,
@@ -396,11 +368,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element( // true has to be printed?
 						ir_lines,
 						make_instruction_jne(
-								falselabel
+								falseLabel
 							)
 						);
-
-					//callerSave();
 
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
@@ -419,17 +389,15 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element( // jmp to printf call 
 						ir_lines,
 						make_instruction_jmp(
-								printlabel
+								printLabel
 							)
 						);
 
 					append_element( // false label section
 						ir_lines,
-						make_instruction_label(falselabel)
+						make_instruction_label(falseLabel)
 						);
 
-					//callerSave();
-					
 					append_element(ir_lines, // making a push to the stack
 											// with result of expression
 						make_instruction_pushl(arg1)
@@ -444,7 +412,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					append_element( // printing section
 						ir_lines,
-						make_instruction_label(printlabel)
+						make_instruction_label(printLabel)
 						);
 
 					append_element( // call to print
@@ -454,7 +422,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-					moveStackpointer(2); // clean up
+					addToStackPointer(2); // clean up
 					callerRestore();
 
 					break;
@@ -484,7 +452,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					call = make_instruction_call(arg2);
 					append_element(ir_lines, call);
 
-					moveStackpointer(2);
+					addToStackPointer(2);
 					callerRestore();
 
 					break;
@@ -500,14 +468,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 
-					arg3 = make_argument_label("$formNUM");
-					IR_INSTRUCTION *pushform = make_instruction_pushl(arg3);
-					append_element(ir_lines, pushform);
-					arg2 = make_argument_label("printf");
-					call = make_instruction_call(arg2);
-					append_element(ir_lines, call);
+					append_element(ir_lines, make_instruction_pushl(
+							make_argument_label("$formNUM")));
 
-					moveStackpointer(2);
+					append_element(ir_lines, make_instruction_call(
+							make_argument_label("printf")));
+
+					addToStackPointer(2);
 					callerRestore();
 					break;
 				default:
@@ -516,101 +483,106 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_ASSIGN:  // todo with local variables
-			switch(st->value.statement_assign.var->kind){
+			switch(st->value.statement_assign.var->kind) {
 
 				case VAR_ARRAY:
 					arg2 = IR_builder_variable(st->value.
-						statement_assign.var);
+							statement_assign.var);
 					arg1 = IR_builder_expression(st->value.
-						statement_assign.exp);
-					
-						append_element( 
+							statement_assign.exp);
+
+					append_element(
 							ir_lines,
 							make_instruction_movl(
-								arg1,
-								arg2
+									arg1,
+									arg2
 							)
-						);
+					);
 					break;
 
 				case VAR_RECORD:
 
 					arg1 = IR_builder_expression(st->value.
-						statement_assign.exp);
+							statement_assign.exp);
 					arg2 = IR_builder_variable(st->value.
-						statement_assign.var);
+							statement_assign.var);
 
-					append_element( 
-						ir_lines,
-						make_instruction_movl(
-							arg1,
-							arg2
-						)
+					append_element(
+							ir_lines,
+							make_instruction_movl(
+									arg1,
+									arg2
+							)
 					);
 					break;
 
 				case VAR_ID:
 					arg1 = IR_builder_expression(st->value.
-						statement_assign.exp);
+							statement_assign.exp);
 
-					SYMBOL *symbol = getSymbol(st->symboltable,st->value
-						.statement_assign.var->id);
-		
-					if(symbol->tableid != st->symboltable->id){
+					SYMBOL *symbol = getSymbol(st->symboltable, st->value
+							.statement_assign.var->id);
+
+					if ( symbol != NULL ) {
+
+						if (symbol->tableid != st->symboltable->id) {
+
 						append_element(
-							ir_lines, 
-							make_instruction_pushl(ecx)
-							);
-						append_element(ir_lines, 
-							make_instruction_movl(
-								make_argument_constant(symbol->tableid)
-								, ecx
-								)
-							);
+								ir_lines,
+								make_instruction_pushl(ecx)
+								);
 
-						append_element(ir_lines, 
-							make_instruction_movl(
-								make_argument_indexing(
-									make_argument_label(
-										"staticLinks"),ecx
-								), ebx
-							)
+						append_element(ir_lines,
+									   make_instruction_movl(
+											   make_argument_constant(
+													   symbol->tableid
+											   ), ecx)
+								);
+
+						append_element(ir_lines,
+									   make_instruction_movl(
+											   make_argument_indexing(
+													   make_argument_label(
+															   "staticLinks"),
+													   ecx
+											   ), ebx
+									   )
 						);
 
 
-						append_element(ir_lines, 
-							make_instruction_popl(ecx)
-							);
+						append_element(ir_lines,
+									   make_instruction_popl(ecx)
+						);
 
 						arg2 = make_argument_static(
-							WORDSIZE*(symbol->offset)
-							);
+								WORD_SIZE * (symbol->offset)
+						);
 
-						append_element( 
-							ir_lines,
-							make_instruction_movl(
-								arg1,
-								arg2
-							)
-						);
-					} else if( symbol->offset == 0 && 
-						st->symboltable->localVars >= WORDSIZE 
-						&& symbol != NULL ) { 
-						// assigning offsets in stack
-					
-						symbol->offset = -1 * (st->symboltable->localVars / 
-																	WORDSIZE);
-						st->symboltable->localVars -= WORDSIZE;
-					}
-					append_element( // actual assignment
-						ir_lines,
-						make_instruction_movl (
-							arg1, 
-							make_argument_address ( 
-								(symbol->offset * WORDSIZE)
+						append_element(
+								ir_lines,
+								make_instruction_movl(
+										arg1,
+										arg2
 								)
-							)
 						);
+						} else if (symbol->offset == 0 &&
+							   st->symboltable->localVars >= WORD_SIZE) {
+						// assigning offsets in stack
+
+							symbol->offset = -1 * (st->symboltable->
+									localVars / WORD_SIZE);
+							st->symboltable->localVars -= WORD_SIZE;
+						}
+						append_element( // actual assignment
+								ir_lines,
+								make_instruction_movl(
+										arg1,
+										make_argument_address(
+												(symbol->offset * WORD_SIZE)
+										)
+								)
+						);
+					}
 					break;
 				}
 			break;
@@ -619,13 +591,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// generate code for boolean expression(s)
 			arg1 = IR_builder_expression(st->value.statement_ifbranch.exp); 
 
-			elselabel = calloc(MAXLABELSIZE,sizeof(char));
-			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
+			elseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			endLabelString = calloc(MAX_LABEL_SIZE,sizeof(char));
 
 			int labelno = getNextLabel();
 
-			sprintf(elselabel, "else%d", labelno);
-			sprintf(endlabelstring, "endIf%d", labelno);
+			sprintf(elseLabel, "else%d", labelno);
+			sprintf(endLabelString, "endIf%d", labelno);
 
 			append_element( //Comparison with "true" boolean value
 				ir_lines, 
@@ -638,12 +610,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 				append_element( // if not equal goto else part
 					ir_lines,
-					make_instruction_jne(elselabel) 
+					make_instruction_jne(elseLabel)
 				);
 			} else {
 				append_element( // if not equal goto end-of-if
 					ir_lines,
-					make_instruction_jne(endlabelstring) 
+					make_instruction_jne(endLabelString)
 				);
 			}
 
@@ -657,13 +629,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 									//else when if-case is true
 					ir_lines, 
 					make_instruction_jmp(
-						endlabelstring
+							endLabelString
 						)
 					);
 
 				append_element( // make else-label
 					ir_lines, 
-					make_instruction_label(elselabel)
+					make_instruction_label(elseLabel)
 				);
 
 				IR_builder_statement( // build else statements
@@ -671,7 +643,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			}
 
 
-			IR_INSTRUCTION *test = make_instruction_label(endlabelstring);			
+			IR_INSTRUCTION *test = make_instruction_label(endLabelString);
 			append_element( // end-of-if label
 				ir_lines, 
 				test
@@ -683,132 +655,126 @@ void IR_builder_statement ( STATEMENT *st ) {
 			switch(st->value.statement_allocate.var->symboltype->type){
 
 				case SYMBOL_ARRAY:
-					if (st->value.statement_allocate.
-						opt_length->kind == OPT_LENGTH_EXPRES) {
-						
-						if(get_length(data_lines) == 0)	{ // init heap counter
-							append_element(
-								ir_lines, 
-								make_instruction_movl(
-									make_argument_label("$heap"),
-									make_argument_label("(heapNext)")		
-									)
-							);
-						}
+					// assume that the checker has checked if "length of" is
+					// present
 
-						// put check out of memory here
-
-						char *address_of_id = calloc(strlen(st->value.
-						statement_allocate.var->id) + 4, sizeof(char));
-
-						sprintf(address_of_id, "(%s)",st->value.
-							statement_allocate.var->id);
-
+					if (get_length(data_lines) == 0) {
+						// init heap counter
 						append_element(
 							ir_lines,
 							make_instruction_movl(
-								make_argument_label("$heapNext"),
-								make_argument_label(address_of_id)
-							)
-						);
-
-						arg1 = IR_builder_expression(st->value.
-							statement_allocate.opt_length->exp); 
-								// length of-result
-
-						arg2 = make_argument_tempregister(
-							current_temporary++);
-
-						append_element(
-							ir_lines,
-							make_instruction_pushl(
-								arg2
-							)
-						);
-
-						ARGUMENT *movArg = make_argument_tempregister(
-							current_temporary++);
-
-						append_element(
-							ir_lines,
-							make_instruction_pushl(
-								movArg
-							)
-						);
-
-						append_element( // xored to get zero
-							ir_lines,
-							make_instruction_xor(
-								arg2,
-								arg2
-							)
-						);
-
-						append_element(
-							ir_lines,
-							make_instruction_movl(
-								arg1,
-								movArg
-							)
-						);
-
-						append_element(
-							ir_lines,
-							make_instruction_movl(
-								movArg,
-								make_argument_indexing(
-									make_argument_label(
-										st->value.statement_allocate.var->id
-										),
-									arg2
-								)
-							)
-						);
-
-						append_element( // first element is the length so incl
-							ir_lines,
-							make_instruction_incl(
-								movArg
-							)
-						);
-
-						// type check maybe? 
-						// but symboltype of variabe is SYMBOL_ARRAY 
-						append_element(
-							ir_lines,
-							make_instruction_imul(
-								make_argument_constant(WORDSIZE),
-								movArg
-							)
-						);
-
-						append_element(
-							ir_lines, // add to the next pointer
-							make_instruction_addl(
-								movArg, 
+								make_argument_label("$heap"),
 								make_argument_label("(heapNext)")
-							)
+								)
 						);
+					}
 
-						append_element(
-							ir_lines,
-							make_instruction_popl(
+					// put check out of memory here
+
+					address_of_id = calloc(strlen(st->value.
+					statement_allocate.var->id) + 4, sizeof(char));
+
+					sprintf(address_of_id, "(%s)",st->value.
+						statement_allocate.var->id);
+
+					append_element( // allocate space to array
+						ir_lines,
+						make_instruction_movl(
+							make_argument_label("$heapNext"),
+							make_argument_label(address_of_id)
+						)
+					);
+
+					arg2 = make_argument_temp_register( // grab a new reg
+							current_temporary++);
+
+					append_element( // store the value of the new reg
+						ir_lines,
+						make_instruction_pushl(
+							arg2
+						)
+					);
+
+					ARGUMENT *movArg = make_argument_temp_register(
+							current_temporary++);
+
+					append_element(
+						ir_lines,
+						make_instruction_pushl(
+							movArg
+						)
+					);
+
+					append_element( // xored to get zero
+						ir_lines,
+						make_instruction_xor(
+							arg2,
+							arg2
+						)
+					);
+
+					append_element(
+						ir_lines,
+						make_instruction_movl(
+								IR_builder_expression(st->value.
+										statement_allocate.opt_length->exp),
 								movArg
-							)
-						);
+						)
+					);
 
-						append_element(
-							ir_lines,
-							make_instruction_popl(
+					append_element(
+						ir_lines,
+						make_instruction_movl(
+							movArg,
+							make_argument_indexing(
+								make_argument_label(
+									st->value.statement_allocate.var->id
+									),
 								arg2
 							)
-						);
-					
-						append_element(data_lines,st);
-					}else if( st->value.statement_allocate.
-						opt_length->kind == OPT_LENGTH_EMPTY ) {
-							// do something else?
-					}
+						)
+					);
+
+					// use the first element to store the length of the array
+					append_element(
+						ir_lines,
+						make_instruction_incl(
+							movArg
+						)
+					);
+
+					append_element(
+						ir_lines,
+						make_instruction_imul(
+							make_argument_constant(WORD_SIZE),
+							movArg
+						)
+					);
+
+					append_element(
+						ir_lines, // add to the next pointer
+						make_instruction_addl(
+							movArg,
+							make_argument_label("(heapNext)")
+						)
+					);
+
+					append_element(
+						ir_lines,
+						make_instruction_popl(
+							movArg
+						)
+					);
+
+					append_element(
+						ir_lines,
+						make_instruction_popl(
+							arg2
+						)
+					);
+
+					append_element(data_lines,st);
+
 					break;
 
 				case SYMBOL_RECORD:
@@ -823,7 +789,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 							);
 						}
 
-						char *address_of_id = calloc(strlen(st->value.
+						address_of_id = calloc(strlen(st->value.
 						statement_allocate.var->id) + 4, sizeof(char));
 
 						sprintf(address_of_id, "(%s)",st->value.
@@ -838,11 +804,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 						);
 						/* Something wrong here TODO */
 						arg1 = make_argument_constant(0);
-							//st->value.statement_allocate.
-							//opt_length->emptyLength); // length of-result
 
-						arg2 = make_argument_tempregister(
-							current_temporary++);
+						arg2 = make_argument_temp_register(
+								current_temporary++);
 
 						append_element(
 							ir_lines,
@@ -865,7 +829,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						append_element(
 							ir_lines,
 							make_instruction_imul(
-								make_argument_constant(WORDSIZE),
+								make_argument_constant(WORD_SIZE),
 								ebx
 							)
 						);
@@ -887,32 +851,31 @@ void IR_builder_statement ( STATEMENT *st ) {
 				
 						append_element(data_lines,st);
 					break;
-
-					default:
-						break;
+				default:
+					break;
 				}
 			break;
 
 		case STATEMENT_WHILE:
 
-			tmp = getNextLabel();
+			tempLabelCounter = getNextLabel();
 
-			truewhilestring = calloc(MAXLABELSIZE,sizeof(char));
-			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
+			trueWhileString = calloc(MAX_LABEL_SIZE,sizeof(char));
+			endLabelString = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(truewhilestring, "whileStart%d", current_label);
-			sprintf(endlabelstring, "whileEnd%d", current_label);
+			sprintf(trueWhileString, "whileStart%d", current_label);
+			sprintf(endLabelString, "whileEnd%d", current_label);
 
 		
 			append_element( // while-start label insert 
 				ir_lines, 
-				make_instruction_label(truewhilestring)
+				make_instruction_label(trueWhileString)
 			);
 
-			// evaluting expressions
+			// evaluating expressions
 			arg1 = IR_builder_expression(st->value.statement_while.exp);
 
-			append_element( //Compare evaluted expression with true
+			append_element( //Compare evaluated expression with true
 				ir_lines, 
 				make_instruction_cmp(
 					make_argument_constant(1),
@@ -923,7 +886,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( // jump to end if while condition is false 
 				ir_lines, 
 				make_instruction_jne(
-					endlabelstring
+						endLabelString
 				)
 			);			
 
@@ -932,12 +895,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 			
 			append_element( // repeating statement jump
 				ir_lines, 
-				make_instruction_jmp(truewhilestring)
+				make_instruction_jmp(trueWhileString)
 			);
 			
 			append_element( // insertion of while-end
 				ir_lines, 
-				make_instruction_label(endlabelstring)
+				make_instruction_label(endLabelString)
 			);
 			break;
 
@@ -965,7 +928,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	
 	switch (var->kind){
 		case VAR_ID:
-
 			symbol = getSymbol(var->symboltable, var->id);
 
 			if(symbol->tableid != var->symboltable->id){
@@ -978,7 +940,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					make_instruction_movl(
 						make_argument_indexing(
 							make_argument_label(
-								"staticLinks"),ecx
+								"staticLinks"), ecx
 						), ebx
 					)
 				);
@@ -986,15 +948,15 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 				append_element(ir_lines, make_instruction_popl(ecx));
 
-				arg = make_argument_static(WORDSIZE*(symbol->offset));
+				arg = make_argument_static(WORD_SIZE*(symbol->offset));
 			} else{
-				arg = make_argument_address(WORDSIZE*(symbol->offset));
+				arg = make_argument_address(WORD_SIZE*(symbol->offset));
 			}
 			break;
 		case VAR_ARRAY:
 				resultOfSubExp = IR_builder_expression(
 					var->value.var_array.exp);
-				arg = make_argument_tempregister(current_temporary++);
+				arg = make_argument_temp_register(current_temporary++);
 
 				append_element(ir_lines,
 					make_instruction_movl(resultOfSubExp, arg));
@@ -1005,10 +967,10 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 				arg1 = make_argument_indexing(
 							make_argument_label(var->value.var_array.
-								var->id), 
-								// arrays in records problem
+								var->id),
 							arg
 						);
+						// arrays in records problem
 
 			return arg1;
 		case VAR_RECORD:
@@ -1023,7 +985,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					resultOfSubExp = make_argument_constant(symbol->offset);
 				}
 
-				arg = make_argument_tempregister(current_temporary++);
+				arg = make_argument_temp_register(current_temporary++);
 
 				append_element(ir_lines,
 						make_instruction_movl(
@@ -1052,16 +1014,12 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 }
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
-	int tmp = 0;
-
+	int tempLabelCounter = 0;
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *result;
-	IR_INSTRUCTION *instr;
-	IR_INSTRUCTION *edxsave;
-	IR_INSTRUCTION *edxrestore;
 
-	if(exp->kind != EXPRES_TERM){
+	if ( exp->kind != EXPRES_TERM ) {
 		argLeft = IR_builder_expression(exp->value.sides.left);
 		argRight = IR_builder_expression(exp->value.sides.right);
 	}
@@ -1071,89 +1029,70 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case EXPRES_PLUS:
-			instr = make_instruction_addl(argLeft, argRight);
- 			append_element(ir_lines, instr);
+ 			append_element(ir_lines,
+						   make_instruction_addl(argLeft, argRight));
  			return argRight;
 
 		case EXPRES_MINUS:
-			instr = make_instruction_subl( argRight, argLeft);
- 			append_element(ir_lines, instr);
- 			return argLeft; 
+ 			append_element(ir_lines,
+						   make_instruction_subl( argRight, argLeft));
+ 			return argRight;
 
 		case EXPRES_TIMES:
-			instr = make_instruction_imul(argLeft, argRight);
- 			append_element(ir_lines, instr);
+ 			append_element(ir_lines,
+						   make_instruction_imul(argLeft, argRight));
  			return argRight;
 
 		case EXPRES_DIVIDE:
-			tmp = getNextLabel();
+			tempLabelCounter = getNextLabel();
 
-			char *zeroden = calloc(MAXLABELSIZE,sizeof(char));
-			sprintf(zeroden, "zeroDen%d", tmp);
-			IR_INSTRUCTION *zerodenlabel = 
-				make_instruction_label(zeroden);
+			char *zeroDenominator = calloc(MAX_LABEL_SIZE,sizeof(char));
+			sprintf(zeroDenominator, "zeroDen%d", tempLabelCounter);
 
 			ARGUMENT *zeroArg = make_argument_constant(0);
 
-			append_element(
-				ir_lines,
-				make_instruction_movl(
-					argRight,
-					eax
-				)
-			);
+			append_element(ir_lines, make_instruction_movl(argRight, eax));
+				// denominator has to be check if zero
 
-			IR_INSTRUCTION *cmpvszero = 
-				make_instruction_cmp(zeroArg, eax);
-			append_element(ir_lines, cmpvszero);
+			append_element(ir_lines, make_instruction_cmp(zeroArg, eax));
 
-			IR_INSTRUCTION *notzero = make_instruction_jne(zeroden);
-			append_element(ir_lines, notzero);
+			append_element(ir_lines, make_instruction_jne(zeroDenominator));
 
-			ARGUMENT *exitARG1 = make_argument_constant(3);
-			IR_INSTRUCTION *moveExitArg1 = 
-				make_instruction_movl(exitARG1, ebx);
-			append_element(ir_lines, moveExitArg1);
+			append_element(ir_lines,make_instruction_movl(
+								   make_argument_constant(3), ebx));
 
-			ARGUMENT *exitARG2 = make_argument_constant(1);
-			IR_INSTRUCTION *moveExitArg2 = 
-				make_instruction_movl(exitARG2, eax);
-			append_element(ir_lines, moveExitArg2);
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(1), eax));
 
-			IR_INSTRUCTION *sysexit = make_instruction_intcode("0x80");
-			append_element(ir_lines, sysexit);
+			append_element(ir_lines, make_instruction_intcode("0x80"));
+				// code for throwing a divide by zero exception
 
-			append_element(ir_lines, zerodenlabel);
+			append_element(ir_lines, make_instruction_label(zeroDenominator));
 
-			//HACK -------------------------
+			append_element(ir_lines, make_instruction_pushl(ebx));
 
-			IR_INSTRUCTION *hack1 = make_instruction_pushl(ebx);
-			append_element(ir_lines, hack1);
+			append_element(ir_lines, make_instruction_movl(argRight, ebx));
 
-			IR_INSTRUCTION *hack2 = make_instruction_movl(argRight, ebx);
-			append_element(ir_lines, hack2);
+			append_element(ir_lines, make_instruction_pushl(edx));
+				// Saving edx register; contains modulo after division
 
-			//------------------------------
-			edxsave = make_instruction_pushl(edx); //Saving edx register
-			append_element(ir_lines, edxsave);
+			append_element(ir_lines, make_instruction_xor(edx, edx));
+				// Clear edx for modulo
 
-			instr = make_instruction_xor(edx, edx); //Clear edx for DIV
-			append_element(ir_lines, instr);
+			append_element(ir_lines, make_instruction_movl(argLeft, eax));
+				// move nominator to eax
 
-			IR_INSTRUCTION *instr1 = make_instruction_movl(argLeft, eax);
-			append_element(ir_lines, instr1);
+			append_element(ir_lines, make_instruction_div(ebx));
+				// divide eax with eax to get result in eax
 
-			IR_INSTRUCTION *instr2 = make_instruction_div(ebx);
-			append_element(ir_lines, instr2);
+			append_element(ir_lines, make_instruction_movl(eax, argLeft));
+				// move the result to argLeft that gets returned
 
-			IR_INSTRUCTION *instr3 = make_instruction_movl(eax, argLeft);
-			append_element(ir_lines, instr3);
+			append_element(ir_lines, make_instruction_popl(edx));
+				// restore the edx register
 
-			IR_INSTRUCTION *hack3 = make_instruction_popl(ebx);
-			append_element(ir_lines, hack3);
-
-			edxrestore = make_instruction_popl(edx);
-			append_element(ir_lines, edxrestore); //Restoring edx register
+			append_element(ir_lines, make_instruction_popl(ebx));
+				// restore the ebx register
 
 			return argLeft;
 
@@ -1163,21 +1102,20 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
-			result = make_argument_tempregister(current_temporary++);
-			tmp = getNextLabel();
+			result = make_argument_temp_register(current_temporary++);
+			tempLabelCounter = getNextLabel();
 
-			char *booltruelabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *boolendlabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *booltruelabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *boolendlabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(booltruelabel, "booOPtrue%d", tmp);
+			sprintf(booltruelabel, "booOPtrue%d", tempLabelCounter);
 			IR_INSTRUCTION *truelabel = make_instruction_label(booltruelabel);
 
-			sprintf(boolendlabel, "boolOPend%d", tmp);
+			sprintf(boolendlabel, "boolOPend%d", tempLabelCounter);
 			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
 
-
-			instr = make_instruction_cmp( argRight, argLeft);
-			append_element(ir_lines, instr);
+			append_element(ir_lines,
+						   make_instruction_cmp( argRight, argLeft));
 	
 			IR_INSTRUCTION *truejmp;
 
@@ -1230,19 +1168,19 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return result;
 
 		case EXPRES_AND: //Checked
-			tmp = getNextLabel();
+			tempLabelCounter = getNextLabel();
 
-			char *andFalselabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *andEndlabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *andFalselabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *andEndlabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(andFalselabel, "ANDfalse%d", tmp);
+			sprintf(andFalselabel, "ANDfalse%d", tempLabelCounter);
 			IR_INSTRUCTION *andFalseinstr = make_instruction_label(
 					andFalselabel);
 
-			sprintf(andEndlabel, "ANDend%d", tmp);
+			sprintf(andEndlabel, "ANDend%d", tempLabelCounter);
 			IR_INSTRUCTION *andEndinstr = make_instruction_label(andEndlabel);
 
-			result = make_argument_tempregister(current_temporary++);
+			result = make_argument_temp_register(current_temporary++);
 
 			ARGUMENT *cmpARG = make_argument_constant(1);
 
@@ -1276,44 +1214,38 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_popl(edx));
 			break;
 		case EXPRES_OR:
-			tmp = getNextLabel();
+			tempLabelCounter = getNextLabel();
 
-			char *orOKlabel = calloc(MAXLABELSIZE,sizeof(char));
-			char *orEndlabel = calloc(MAXLABELSIZE,sizeof(char));
+			char *orOKLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *orEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(orOKlabel, "ORtrue%d", tmp);
-			IR_INSTRUCTION *oroklabel = make_instruction_label(orOKlabel);
+			sprintf(orOKLabel, "ORtrue%d", tempLabelCounter);
 
-			sprintf(orEndlabel, "ORend%d", tmp);
-			IR_INSTRUCTION *orendlabel = make_instruction_label(orEndlabel);
+			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
-			result = make_argument_tempregister(current_temporary++);
+			result = make_argument_temp_register(current_temporary++);
 
-			ARGUMENT *cmporARG = make_argument_constant(1);
+			ARGUMENT *cmpOrArg = make_argument_constant(1);
 
-			IR_INSTRUCTION *cmpor1 = make_instruction_cmp(cmporARG, argLeft);
-			append_element(ir_lines, cmpor1);
+			append_element(ir_lines, make_instruction_cmp(cmpOrArg, argLeft));
 
-			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKlabel);
+			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKLabel);
 			append_element(ir_lines, jmpOK);
 
-			IR_INSTRUCTION *cmpor2 = make_instruction_cmp(cmporARG, argRight);
-			append_element(ir_lines, cmpor2);
+			append_element(ir_lines,
+						   make_instruction_cmp(cmpOrArg, argRight));
 			append_element(ir_lines, jmpOK);
 
-			IR_INSTRUCTION *orfalsesave = make_instruction_movl(
-				make_argument_constant(0), result);
-			append_element(ir_lines, orfalsesave);
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(0), result));
 
-			IR_INSTRUCTION *jmpend = make_instruction_jmp(orEndlabel);
-			append_element(ir_lines, jmpend);
-			append_element(ir_lines, oroklabel);
+			append_element(ir_lines, make_instruction_jmp(orEndLabel));
+			append_element(ir_lines, make_instruction_label(orOKLabel));
 
-			IR_INSTRUCTION *ortruesave = make_instruction_movl(
-				make_argument_constant(1), result);
-			append_element(ir_lines, ortruesave);
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(1), result));
 
-			append_element(ir_lines, orendlabel);
+			append_element(ir_lines, make_instruction_label(orEndLabel));
 			break;
 	}
 
@@ -1324,80 +1256,63 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *arg1;
-	ARGUMENT *arg2;
 	SYMBOL *symbol;
-	int tmp;
+	int tempLabelCounter;
 	int params;
-	char *endlabelstring;
-	char *falselabel;
+	char *endLabel;
+	char *falseLabel;
 
 	switch(term->kind){
 		case TERM_NUM:
-			arg1 = make_argument_constant(term->value.intconst);
-			//arg2 = make_argument_tempregister(current_temporary++);
-			//instr = make_instruction_movl(arg1, arg2);
-			//append_element(ir_lines, instr);
-			return arg1;//arg2; //Return arg2 to keep track of temps
+			return make_argument_constant(term->value.intconst);
 
 		case TERM_TRUE:
-			arg1 = make_argument_constant(1);
-			//arg2 = make_argument_tempregister(current_temporary++);
-			//instr = make_instruction_movl(arg1, arg2);
-			//append_element(ir_lines, instr);
-			return arg1;//arg2; //Return arg2 to keep track of temps
+			return make_argument_constant(1);
 
 		case TERM_NULL:
 		case TERM_FALSE:
-			arg1 = make_argument_constant(0);
-			//arg2 = make_argument_tempregister(current_temporary++);
-			//instr = make_instruction_movl(arg1, arg2);
-			//append_element(ir_lines, instr);
-			return arg1;//arg2; //Return arg2 to keep track of temps
+			return make_argument_constant(0);
 
-		case TERM_PARENTESES: // paranteses just parses
+		case TERM_PARENTESES: // parentheses just parses
 			return IR_builder_expression(term->value.exp);
 
 		case TERM_VAR:
-			
-			arg1 = IR_builder_variable(term->value.var);
-			//arg2 = make_argument_tempregister(current_temporary++);
-			//instr = make_instruction_movl(arg1, arg2);
-			//append_element(ir_lines, instr);
-			return arg1;//arg2; //Return arg2 to keep track of temps			
+			return IR_builder_variable(term->value.var);
 
 		case TERM_ACT_LIST:
 			addStaticLink(term->symboltable->id);
-			symbol = getSymbol(term->symboltable, 
-				term->value.term_act_list.id);
+
+			symbol = getSymbol(term->symboltable, term->value.
+					term_act_list.id);
 
 			// push parameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			arg2 = make_argument_label(symbol->uniquename);
-			IR_INSTRUCTION *call = make_instruction_call(arg2);
-			append_element(ir_lines, call);
-			//function paramerters are useless after function call
-			moveStackpointer(symbol->noArguments);
+			append_element(ir_lines, make_instruction_call(
+					make_argument_label(symbol->uniquename)));
+
+			// stack clean up for function parameters
+			addToStackPointer(symbol->noArguments);
 
 			//Handle return value as it can sit in eax
-			ARGUMENT *returnarg = make_argument_tempregister(
-				current_temporary++);
-			IR_INSTRUCTION *savereturn = make_instruction_movl(
-				eax, returnarg);
-			append_element(ir_lines, savereturn);
-			return returnarg; // by convention eax holds return values
+			ARGUMENT *returnArg = make_argument_temp_register(
+					current_temporary++);
+
+			append_element(ir_lines, make_instruction_movl(eax, returnArg));
+
+			return returnArg; // by convention eax holds return values
 
 		case TERM_NOT:
-			tmp = getNextLabel();
+			tempLabelCounter = getNextLabel();
 			arg1 = IR_builder_term(term->value.term);
 
-			falselabel = calloc(MAXLABELSIZE,sizeof(char));
-			endlabelstring = calloc(MAXLABELSIZE,sizeof(char));
+			falseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			endLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(falselabel,"negf%d",tmp);
-			sprintf(endlabelstring, "nege%d",tmp);
+			sprintf(falseLabel,"negf%d", tempLabelCounter);
+			sprintf(endLabel, "nege%d", tempLabelCounter);
 
-			append_element( // compaire with zero(false)
+			append_element( // compare with zero(false)
 				ir_lines,
 				make_instruction_cmp( 
 					make_argument_constant(0),
@@ -1408,7 +1323,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element( // goto false label if it's not zero
 				ir_lines,
 				make_instruction_jne(
-					falselabel
+						falseLabel
 					)
 				);
 
@@ -1423,13 +1338,13 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			append_element( // get to the end of the negate statement
 				ir_lines,
 				make_instruction_jmp(
-					endlabelstring
+						endLabel
 					)
 				);
 
 			append_element( // here goes the false label
 				ir_lines,
-				make_instruction_label(falselabel)
+				make_instruction_label(falseLabel)
 				);
 
 			append_element( // since it's one make it zero
@@ -1442,14 +1357,14 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			append_element( // this is end (label) !
 				ir_lines,
-				make_instruction_label(endlabelstring)
+				make_instruction_label(endLabel)
 				);
 			
 			return arg1;
 
 		case TERM_ABS:
 			params = 0;
-			char *pipeEnd = calloc(MAXLABELSIZE,sizeof(char));
+			char *pipeEnd = calloc(MAX_LABEL_SIZE,sizeof(char));
 			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
 			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeEnd);
 
@@ -1470,11 +1385,11 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			}else if(term->symboltype->type == SYMBOL_ARRAY){
 				char *id = term->value.exp->value.term->value.var->id;
 
-				ARGUMENT *firstElement = make_argument_tempregister(
-					current_temporary++);
+				ARGUMENT *firstElement = make_argument_temp_register(
+						current_temporary++);
 
-				ARGUMENT *zeroElement = make_argument_tempregister(
-					current_temporary++);
+				ARGUMENT *zeroElement = make_argument_temp_register(
+						current_temporary++);
 
 				append_element( // xored to get zero
 					ir_lines,
@@ -1492,7 +1407,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 								// label to pointer to heap
 							zeroElement // index
 						),
-						firstElement // result
+						firstElement
 					)
 				);
 				return firstElement;
@@ -1611,9 +1526,9 @@ void calleeRestore(){
 
 }
 
-void moveStackpointer(int i){
+void addToStackPointer(int i){
 
-	ARGUMENT *arg = make_argument_constant(i * WORDSIZE);
+	ARGUMENT *arg = make_argument_constant(i * WORD_SIZE);
 	IR_INSTRUCTION *instr = make_instruction_addl(arg, esp);
 	append_element(ir_lines, instr); 
 
@@ -1634,18 +1549,18 @@ void basic_assign(linked_list *ir_lines){
 
 		instr1 = (IR_INSTRUCTION *) temp->data;
 
-		if(instr1->arg1 != NULL && instr1->arg1->kind == tempreg_arg){
+		if(instr1->arg1 != NULL && instr1->arg1->kind == tempReg_arg){
 			reg = get_register(count);
 			save = temp;
-			int cmp1 = instr1->arg1->tempid;
+			int cmp1 = instr1->arg1->temp_id;
 
 			while(temp != ir_lines){
 
 				instr2 = (IR_INSTRUCTION *) temp->data;
 
-				if(instr2->arg1 != NULL && instr2->arg1->kind == 
-						tempreg_arg){
-					if(instr2->arg1->tempid == cmp1){
+				if(instr2->arg1 != NULL && instr2->arg1->kind ==
+										   tempReg_arg){
+					if(instr2->arg1->temp_id == cmp1){
 
 						instr2->arg1 = reg;
 					}
@@ -1653,15 +1568,15 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg1 != NULL && instr2->arg1->kind == 
 						indexing_arg){
-					if(instr2->arg1->index->tempid == cmp1){
+					if(instr2->arg1->index->temp_id == cmp1){
 
 						instr2->arg1->index = reg;
 					}
 				}
 
-				if(instr2->arg2 != NULL && instr2->arg2->kind == 
-						tempreg_arg){
-					if(instr2->arg2->tempid == cmp1){
+				if(instr2->arg2 != NULL && instr2->arg2->kind ==
+										   tempReg_arg){
+					if(instr2->arg2->temp_id == cmp1){
 
 						instr2->arg2 = reg;
 					}
@@ -1670,7 +1585,7 @@ void basic_assign(linked_list *ir_lines){
                 //Arrays
                 if(instr2->arg2 != NULL && instr2->arg2->kind == 
                 		indexing_arg){
-                        if(instr2->arg2->index->tempid == cmp1){
+                        if(instr2->arg2->index->temp_id == cmp1){
 
                                 instr2->arg2->index = reg;
                         }
@@ -1685,17 +1600,17 @@ void basic_assign(linked_list *ir_lines){
 			temp = save;
 		}
 
-		if(instr1->arg2 != NULL && instr1->arg2->kind == tempreg_arg){
+		if(instr1->arg2 != NULL && instr1->arg2->kind == tempReg_arg){
 			reg = get_register(count);
 			save = temp;
-			int cmp2 = instr1->arg2->tempid;
+			int cmp2 = instr1->arg2->temp_id;
 
 			while(temp != ir_lines){
 				instr2 = (IR_INSTRUCTION *) temp->data;
 
-				if(instr2->arg1 != NULL && instr2->arg1->kind == tempreg_arg){
+				if(instr2->arg1 != NULL && instr2->arg1->kind == tempReg_arg){
 
-					if(instr2->arg1->tempid == cmp2){
+					if(instr2->arg1->temp_id == cmp2){
 
 						instr2->arg1 = reg;
 					}
@@ -1704,16 +1619,16 @@ void basic_assign(linked_list *ir_lines){
                 //Arrays
                 if(instr2->arg1 != NULL && instr2->arg1->kind == 
                 		indexing_arg){
-                        if(instr2->arg1->index->tempid == cmp2){
+                        if(instr2->arg1->index->temp_id == cmp2){
 
                                 instr2->arg1->index = reg;
                         }
                 }
 
 
-				if(instr2->arg2 != NULL && instr2->arg2->kind == tempreg_arg){
+				if(instr2->arg2 != NULL && instr2->arg2->kind == tempReg_arg){
 
-					if(instr2->arg2->tempid == cmp2){
+					if(instr2->arg2->temp_id == cmp2){
 
 						instr2->arg2 = reg;
 					}
@@ -1722,7 +1637,7 @@ void basic_assign(linked_list *ir_lines){
                 //Arrays
                 if(instr2->arg2 != NULL && instr2->arg2->kind == 
                 		indexing_arg){
-                        if(instr2->arg2->index->tempid == cmp2){
+                        if(instr2->arg2->index->temp_id == cmp2){
 
                                 instr2->arg2->index = reg;
                         }
@@ -1748,22 +1663,16 @@ ARGUMENT *get_register(int n){
 	switch(n){
 		case 0:
 			return eax;
-		break;
 		case 1:
 			return ebx;
-		break;
 		case 2:
 			return ecx;
-		break;
 		case 3:
 			return edx;
-		break;
 		case 4:
 			return esi;
-		break;
 		case 5:
 			return edi;
-		break;
 		default:
 			if(n < 0 || n > 5){
 				return NULL;
@@ -1773,7 +1682,7 @@ ARGUMENT *get_register(int n){
 	return NULL;
 }
 
-void assign_instructionnumber(linked_list *ir_lines){
+void assign_instruction_number(linked_list *ir_lines){
 
 	linked_list *temp;
 	temp = ir_lines->next;
@@ -1781,14 +1690,14 @@ void assign_instructionnumber(linked_list *ir_lines){
 
 	while(temp != ir_lines){
 		instr = (IR_INSTRUCTION *) temp->data;
-		instr->id = instructionnumber++;
+		instr->id = instruction_number++;
 		temp = temp->next;
 	}
 }
 
 // builds the data section at the end of the file
 // cannot build in top because data_lines is not filled
-void build_data_section(){
+void build_data_section() {
 
 	append_element(ir_lines, make_instruction_directive(".data"));
 	append_element(ir_lines, 
@@ -1833,7 +1742,7 @@ void build_data_section(){
 		);	
 	
 	
-	if(get_length(data_lines) > 0){
+	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap
 
 		linked_list *temp;
@@ -1874,7 +1783,7 @@ void repairMem(linked_list *ir_lines){
 				case address_arg:
 				case constant_arg:
 				case indexing_arg:
-				case staticlink_arg:
+				case staticLink_arg:
 					//remove line from code
 
 					append_element(temp, make_instruction_pushl(edi));
@@ -1887,13 +1796,10 @@ void repairMem(linked_list *ir_lines){
 					temp->previous->next = temp->next;
 					temp->next->previous = temp->previous;
 
-
 				default:
 					break;
 
 			}
-
-
 		}
 
 		if(instr1->op_code == cmp){
@@ -1902,7 +1808,7 @@ void repairMem(linked_list *ir_lines){
 				case address_arg:
 				case constant_arg:
 				case indexing_arg:
-				case staticlink_arg:
+				case staticLink_arg:
 					//remove line from code
 
 					append_element(temp, make_instruction_pushl(edi));
@@ -1926,7 +1832,7 @@ void repairMem(linked_list *ir_lines){
 				case address_arg:
 				case constant_arg:
 				case indexing_arg:
-				case staticlink_arg:
+				case staticLink_arg:
 					//remove line from code
 					append_element(temp, make_instruction_pushl(edi));
 					append_element(temp, 
@@ -1951,7 +1857,7 @@ void repairMem(linked_list *ir_lines){
 				case address_arg:
 				case constant_arg:
 				case indexing_arg:
-				case staticlink_arg:
+				case staticLink_arg:
 					//remove line from code
 					append_element(temp, make_instruction_pushl(edi));
 					append_element(temp, 

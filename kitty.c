@@ -7,7 +7,6 @@
 #include "typechecker/kittymulticollect.h"
 #include "typechecker/kittycheck.h"
 #include "typechecker/kittyprinter.h"
-#include "symbol/symbol.h"
 #include "kittyir.h"
 
 #ifndef SUCCESS_AND_FAILURE
@@ -25,9 +24,8 @@
 
 int lineno = 1;
 struct BODY *_main_;
-struct SYMBOLTABLE *globalTable;
 
-int main(int argc, char *argv[]) {
+int main ( int argc, char *argv[] ) {
 
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){

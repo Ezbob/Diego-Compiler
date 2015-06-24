@@ -151,7 +151,7 @@ void IR_printer(linked_list *ir_lines){
 				printf("\n");
 				break;
 
-			case intcode:
+			case intCode:
 				printf("\t%s", "INT ");
 				printf("$%s", instr_to_print->label);
 				printf("\n");
@@ -202,9 +202,9 @@ void IR_print_arguments(ARGUMENT *arg){
 			printf("%s", arg->charConst);
 			break;
 
-		case tempreg_arg:
+		case tempReg_arg:
 			printf("%%");
-			printf("%s%i", "temp", arg->tempid);
+			printf("%s%i", "temp", arg->temp_id);
 			break;
 
 		case label_arg:
@@ -222,7 +222,7 @@ void IR_print_arguments(ARGUMENT *arg){
 			printf(",4)");
 			break;
 			
-		case staticlink_arg:
+		case staticLink_arg:
 			printf("%d(%%ebx)", arg->intConst);
 			break;
 		default:

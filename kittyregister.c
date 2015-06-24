@@ -34,7 +34,8 @@ void liveness_analysis(){
 		IR_INSTRUCTION *nextinstr;
 		IR_INSTRUCTION *next = mainSection->first;
 		symboltable = mainSection->symboltable;
-		while(temp != code && (nextinstr = (IR_INSTRUCTION *) temp->data) != next){
+		while(temp != code && (nextinstr = (IR_INSTRUCTION *)
+				temp->data) != next){
 			temp = temp->next;
 		}
 
@@ -42,7 +43,8 @@ void liveness_analysis(){
 		LIVENESS *liveNext = root;
 		root->prev = NULL;
 
-		while(temp != code && (nextinstr = (IR_INSTRUCTION *) temp->data) != mainSection->last){
+		while(temp != code && (nextinstr = (IR_INSTRUCTION *) temp->data)
+							  != mainSection->last){
 			analyseUseDef(liveNext, next);
 
 			temp = temp->next;
@@ -80,51 +82,51 @@ void analyseUseDef(LIVENESS *line, IR_INSTRUCTION *instr){
 		switch(instr->op_code){
 			case subl:
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->use, instr->arg2->tempid);
+					setbit(line->use, instr->arg2->temp_id);
 				}
 				if(ifTempAdd(instr->arg1)){
-					setbit(line->use, instr->arg1->tempid);
+					setbit(line->use, instr->arg1->temp_id);
 				}
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->def, instr->arg2->tempid);
+					setbit(line->def, instr->arg2->temp_id);
 				}
 			break;
 			case divl:
 				if(ifTempAdd(instr->arg1)){
-					setbit(line->use, instr->arg1->tempid);
+					setbit(line->use, instr->arg1->temp_id);
 				}
 			break;
 			case cmp:
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->use, instr->arg2->tempid);
+					setbit(line->use, instr->arg2->temp_id);
 				}
 				if(ifTempAdd(instr->arg1)){
-					setbit(line->use, instr->arg1->tempid);
+					setbit(line->use, instr->arg1->temp_id);
 				}
 			break;
 			case imul:
 			case addl:
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->use, instr->arg2->tempid);
+					setbit(line->use, instr->arg2->temp_id);
 				}
 				if(ifTempAdd(instr->arg1)){
-					setbit(line->use, instr->arg1->tempid);
+					setbit(line->use, instr->arg1->temp_id);
 				}
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->def, instr->arg2->tempid);
+					setbit(line->def, instr->arg2->temp_id);
 				}
 			break;
 			default:
 				if(instr->op_code == movl){
 					if(ifTempAdd(instr->arg2)){
-						setbit(line->use, instr->arg2->tempid);
+						setbit(line->use, instr->arg2->temp_id);
 					}
 				}
 				if(ifTempAdd(instr->arg1)){
-					setbit(line->use, instr->arg1->tempid );
+					setbit(line->use, instr->arg1->temp_id);
 				}
 				if(ifTempAdd(instr->arg2)){
-					setbit(line->def, instr->arg2->tempid);
+					setbit(line->def, instr->arg2->temp_id);
 				}
 			break;
 		}
@@ -135,7 +137,7 @@ int ifTempAdd(ARGUMENT *arg){
 	if(arg == NULL)
 		return 0;
 
-	if(arg->kind == tempreg_arg){
+	if(arg->kind == tempReg_arg){
 		return 1;
 	}
 
