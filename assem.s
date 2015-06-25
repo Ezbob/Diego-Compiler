@@ -43,7 +43,7 @@ boolOPend1:
 ORtrue2:
 	movl $1, %edx
 ORend2:
-	cmp $1, %ebx
+	cmp $1, %edx
 	jne else3
 	movl $1, %eax
 	jmp endIf3
@@ -55,12 +55,15 @@ else3:
 	movl %edi, staticLinks(,%ebx,4)
 	popl %edi
 	popl %ebx
-	pushl $0
+	movl 8(%ebp), %esi
+	subl $1, %esi
+	pushl %esi
 	call func0
 	addl $4, %esp
-	movl %eax, %esi
-	imul 8(%ebp), %esi
-	movl %esi, %eax
+	movl %eax, %ebx
+	movl %ebx, %ecx
+	imul 8(%ebp), %ecx
+	movl %ecx, %eax
 endIf3:
 endFunc0:
 	popl %edi
@@ -80,11 +83,10 @@ main:
 	pushl %edi
 	pushl %ecx
 	pushl %edx
-	movl $heap, (heapNext)
 	movl $heapNext, (staticLinks)
-	movl $1, %ebx
-	imul $4, %ebx
-	addl %ebx, (heapNext)
+	movl $1, %edx
+	imul $4, %edx
+	addl %edx, (heapNext)
 	pushl %ecx
 	pushl %edx
 	pushl %ebx
@@ -97,8 +99,8 @@ main:
 	pushl $5
 	call func0
 	addl $4, %esp
-	movl %eax, %ecx
-	pushl %ecx
+	movl %eax, %esi
+	pushl %esi
 	pushl $formNUM
 	call printf
 	addl $8, %esp
@@ -111,6 +113,7 @@ main:
 	popl %ecx
 	movl %ebp, %esp
 	popl %ebp
+	movl $0, %eax
 	ret
 .data
 formNUM: 

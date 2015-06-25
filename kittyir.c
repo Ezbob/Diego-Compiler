@@ -1016,8 +1016,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 		case EXPRES_MINUS:
 			result = make_argument_temp_register(current_temporary++);
-			append_element(ir_lines,make_instruction_movl(argRight,result));
-			append_element(ir_lines, make_instruction_subl(argLeft, result));
+			append_element(ir_lines,make_instruction_movl(argLeft,result));
+			append_element(ir_lines, make_instruction_subl(argRight, result));
  			return result;
 
 		case EXPRES_TIMES:
@@ -1176,6 +1176,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 				// in case one of the arguments are false
 
 			append_element(ir_lines, make_instruction_label(andEndLabel));
+
+			return result;
 			break;
 		case EXPRES_OR:
 			tempLabelCounter = getNextLabel();
@@ -1208,6 +1210,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 				// true case
 
 			append_element(ir_lines, make_instruction_label(orEndLabel));
+
+			return result;
 			break;
 	}
 
