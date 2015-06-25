@@ -925,94 +925,92 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	ARGUMENT *address_of_id;
 	SYMBOLTABLE *tmpTable;
 	
-	switch (var->kind){
+	switch ( var->kind ) {
 		case VAR_ID:
 			symbol = getSymbol(var->symboltable, var->id);
+			arg = NULL;
 
-			if(symbol->tableid != var->symboltable->id){
-				append_element(ir_lines, make_instruction_pushl(ecx));
-				append_element(ir_lines, 
-					make_instruction_movl(
-						make_argument_constant(symbol->tableid), ecx));
+			if( symbol != NULL ){
 
-				append_element(ir_lines, 
-					make_instruction_movl(
-						make_argument_indexing(
-							make_argument_label(
-								"staticLinks"), ecx
-						), ebx
-					)
-				);
+				if ( symbol->symboltype->type == SYMBOL_ARRAY ||
+						symbol->symboltype->type == SYMBOL_RECORD ) {
 
+					// They're on the heap so we just use labels
+					arg = make_argument_label(var->id);
 
-				append_element(ir_lines, make_instruction_popl(ecx));
+				} else if (symbol->tableid != var->symboltable->id) {
+					// basically, if variable is not in current,
+					// use static link
 
-				arg = make_argument_static(WORD_SIZE*(symbol->offset));
-			} else{
-				arg = make_argument_address(WORD_SIZE*(symbol->offset));
+					append_element(ir_lines, make_instruction_pushl(ecx));
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_constant(symbol->tableid), ecx));
+
+					append_element(ir_lines,
+								   make_instruction_movl(
+										   make_argument_indexing(
+												   make_argument_label(
+														   "staticLinks"),
+												   ecx ), ebx ));
+
+					append_element(ir_lines, make_instruction_popl(ecx));
+
+					arg = make_argument_static( WORD_SIZE *
+														(symbol->offset) );
+				} else {
+					arg = make_argument_address( WORD_SIZE *
+														 (symbol->offset) );
+				}
 			}
-			break;
+			return arg;
 		case VAR_ARRAY:
-				resultOfSubExp = IR_builder_expression(
-					var->value.var_array.exp);
-				arg = make_argument_temp_register(current_temporary++);
+			resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
 
-				append_element(ir_lines,
-					make_instruction_movl(resultOfSubExp, arg));
+			arg = make_argument_temp_register(current_temporary++);
 
-				append_element(ir_lines,
-					make_instruction_incl(arg)
-				);
+			append_element(ir_lines,
+				make_instruction_movl(resultOfSubExp, arg));
 
-				arg1 = make_argument_indexing(
-							make_argument_label(var->value.var_array.
-								var->id),
-							arg
-						);
-						// arrays in records problem
+			append_element(ir_lines,
+				make_instruction_incl(arg));
+				// increment since we use the first element as the size
+
+			arg1 = make_argument_indexing(
+						make_argument_label(
+								var->value.var_array.var->id), arg );
+					// return the indexing into the array
 
 			return arg1;
 		case VAR_RECORD:
 
-				if((symbol = getSymbol(var->symboltable,
-					var->value.var_record.var->id)) != NULL){
-					tmpTable = symbol->symboltype->child;
-				}
+			if((symbol = getSymbol(var->symboltable,
+				var->value.var_record.var->id)) != NULL){
+				tmpTable = symbol->symboltype->child;
+				// get the inner scope of the record
+			}
 
-				if((symbol = getSymbol(tmpTable, 
-					var->value.var_record.id)) != NULL){
-					resultOfSubExp = make_argument_constant(symbol->offset);
-				}
+			if((symbol = getSymbol(tmpTable,
+				var->value.var_record.id)) != NULL){
+				arg1 = make_argument_constant(symbol->offset);
+				// member index in the record as argument
+			}
 
-				arg = make_argument_temp_register(current_temporary++);
+			arg = make_argument_temp_register(current_temporary++);
 
-				append_element(ir_lines,
-						make_instruction_movl(
-							resultOfSubExp,
-							arg
-						)
-				);
+			append_element(ir_lines, make_instruction_movl(arg1, arg));
 
-				address_of_id = 
-						make_argument_indexing(
-							make_argument_label(
-								var->value.var_record.var->id
-								),
-							arg
-						);
+			address_of_id = make_argument_indexing(
+					make_argument_label(var->value.var_record.var->id), arg);
+				// get the index of the member
+
 			return address_of_id;
-		default:
-			fprintf(stderr, "Error: variable kind not supported\n" );
-			arg = NULL; // this will probably
-				// generate a seg fault in upper levels
-			break;
 	}
-	
-	return arg;
 
+	return NULL;
 }
 
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
+
 	int tempLabelCounter = 0;
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
@@ -1211,7 +1209,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, jumpToTrue);
 			append_element(ir_lines,make_instruction_cmp(truth, argRight));
 			append_element(ir_lines, jumpToTrue);
-				// like in and we compare both arguments but jumps to true
+				// like in "and" we compare both arguments but jumps to true
 				// case instead of false case
 
 			append_element(ir_lines, make_instruction_movl(
@@ -1234,9 +1232,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 ARGUMENT *IR_builder_term ( TERM *term) {
 
-	ARGUMENT *arg1;
+	ARGUMENT *subArg;
 	SYMBOL *symbol;
-	int params;
 
 	switch(term->kind){
 		case TERM_NUM:
@@ -1280,62 +1277,42 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 		case TERM_NOT:
 
-			arg1 = IR_builder_term(term->value.term);
+			subArg = IR_builder_term(term->value.term);
 
 			append_element(ir_lines,make_instruction_xor(
-					make_argument_constant(1),arg1));
-			// xor the term expression with true (1) to get the negated
+					make_argument_constant(1), subArg));
+			// xor the term expression with true (1) to get the negated value
 
-			return arg1;
+			return subArg;
 
 		case TERM_ABS:
-			params = 0;
-			char *pipeEnd = calloc(MAX_LABEL_SIZE,sizeof(char));
-			sprintf(pipeEnd, "pipeEnd%d", getNextLabel());
-			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeEnd);
+			subArg = IR_builder_expression(term->value.exp);
 
-			arg1 = IR_builder_expression(term->value.exp);
 			if ( term->symboltype->type == SYMBOL_INT ) {
-				//2 cases, positive numbers and negative numbers
-				ARGUMENT *pipeCMPArg = make_argument_constant(0);
 
-				IR_INSTRUCTION *pipeCMP = make_instruction_cmp(pipeCMPArg, 
-					arg1);
-				append_element(ir_lines, pipeCMP);
-				IR_INSTRUCTION *pipeEndJmp = make_instruction_JGE(pipeEnd);
-				append_element(ir_lines, pipeEndJmp);
-				IR_INSTRUCTION *negl = make_instruction_negl(arg1);
-				append_element(ir_lines, negl);
-				append_element(ir_lines, pipeLabel);
-				return arg1;
-			}else if ( term->symboltype->type == SYMBOL_ARRAY ) {
-				char *id = term->value.exp->value.term->value.var->id;
+				append_element(ir_lines,  make_instruction_negl(subArg));
+				// neg instruction negates the argument as
+				// two's complement
+
+				return subArg;
+
+			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 
 				ARGUMENT *firstElement = make_argument_temp_register(
 						current_temporary++);
 
-				ARGUMENT *zeroElement = make_argument_temp_register(
+				ARGUMENT *zeroIndex = make_argument_temp_register(
 						current_temporary++);
+				append_element( ir_lines,
+								make_instruction_xor(
+										zeroIndex, zeroIndex));
+					// makes a register
 
-				append_element( // xored to get zero
-					ir_lines,
-					make_instruction_xor(
-						zeroElement,
-						zeroElement
-					)
-				);
+				append_element( ir_lines, make_instruction_movl(
+						make_argument_indexing(subArg, zeroIndex),
+						firstElement ) );
 
-				append_element( // move from first place in array to reg
-					ir_lines,
-					make_instruction_movl(
-						make_argument_indexing(
-							make_argument_label(id), 
-								// label to pointer to heap
-							zeroElement // index
-						),
-						firstElement
-					)
-				);
+				// move from first place in array to reg
 				return firstElement;
 			}
 		default:
