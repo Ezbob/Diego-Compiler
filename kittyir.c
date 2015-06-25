@@ -48,13 +48,7 @@ void initStaticLink() {
 		ARGUMENT *arg1 = make_argument_constant(function_label);
 		ARGUMENT *arg2 = make_argument_temp_register(current_temporary++);
 
-		append_element(
-			ir_lines,
-			make_instruction_movl(
-				arg1,
-				arg2
-			)
-		);
+		append_element(ir_lines, make_instruction_movl(arg1, arg2));
 
 		// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
 		append_element(
@@ -527,32 +521,20 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 						if (symbol->tableid != st->symboltable->id) {
 
-						append_element(
-								ir_lines,
-								make_instruction_pushl(ecx)
-								);
+						append_element(ir_lines, make_instruction_pushl(ecx));
 
-						append_element(ir_lines,
-									   make_instruction_movl(
+						append_element(ir_lines, make_instruction_movl(
 											   make_argument_constant(
-													   symbol->tableid
-											   ), ecx)
-								);
+													   symbol->tableid),
+											   ecx));
 
-						append_element(ir_lines,
-									   make_instruction_movl(
+						append_element(ir_lines, make_instruction_movl(
 											   make_argument_indexing(
 													   make_argument_label(
 															   "staticLinks"),
-													   ecx
-											   ), ebx
-									   )
-						);
+													   ecx), ebx));
 
-
-						append_element(ir_lines,
-									   make_instruction_popl(ecx)
-						);
+						append_element(ir_lines, make_instruction_popl(ecx));
 
 						arg2 = make_argument_static(
 								WORD_SIZE * (symbol->offset)
@@ -814,7 +796,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-
 						append_element(
 							ir_lines,
 							make_instruction_movl(
@@ -1027,19 +1008,23 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case EXPRES_PLUS:
- 			append_element(ir_lines,
-						   make_instruction_addl(argLeft, argRight));
- 			return argRight;
+			result = make_argument_temp_register(current_temporary++);
+			append_element(ir_lines,make_instruction_movl(argRight,result));
+				// right hand side must be a register
+ 			append_element(ir_lines, make_instruction_addl(argLeft, result));
+ 			return result;
 
 		case EXPRES_MINUS:
- 			append_element(ir_lines,
-						   make_instruction_subl(argLeft, argRight));
- 			return argRight;
+			result = make_argument_temp_register(current_temporary++);
+			append_element(ir_lines,make_instruction_movl(argRight,result));
+			append_element(ir_lines, make_instruction_subl(argLeft, result));
+ 			return result;
 
 		case EXPRES_TIMES:
- 			append_element(ir_lines,
-						   make_instruction_imul(argLeft, argRight));
- 			return argRight;
+			result = make_argument_temp_register(current_temporary++);
+			append_element(ir_lines,make_instruction_movl(argRight,result));
+ 			append_element(ir_lines, make_instruction_imul(argLeft, result));
+ 			return result;
 
 		case EXPRES_DIVIDE:
 			tempLabelCounter = getNextLabel();
@@ -1233,7 +1218,11 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *subArg;
+	ARGUMENT *firstElement;
+	ARGUMENT *zeroIndex;
+	ARGUMENT *result;
 	SYMBOL *symbol;
+	char *positiveNumberLabel;
 
 	switch(term->kind){
 		case TERM_NUM:
@@ -1279,40 +1268,58 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			subArg = IR_builder_term(term->value.term);
 
+			result = make_argument_temp_register(current_temporary++);
+			append_element(ir_lines,make_instruction_movl(subArg,result));
+				// we need a new register to work on
+
 			append_element(ir_lines,make_instruction_xor(
-					make_argument_constant(1), subArg));
+					make_argument_constant(1), result));
 			// xor the term expression with true (1) to get the negated value
 
-			return subArg;
+			return result;
 
 		case TERM_ABS:
 			subArg = IR_builder_expression(term->value.exp);
 
 			if ( term->symboltype->type == SYMBOL_INT ) {
 
-				append_element(ir_lines,  make_instruction_negl(subArg));
-				// neg instruction negates the argument as
-				// two's complement
+				positiveNumberLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+				sprintf(positiveNumberLabel, "posNum%i", getNextLabel());
 
-				return subArg;
+				result = make_argument_temp_register(current_temporary++);
+				append_element(ir_lines,make_instruction_movl(subArg,result));
+
+				append_element(ir_lines,make_instruction_cmp(
+						make_argument_constant(0),result));
+				append_element(ir_lines,make_instruction_JGE(
+						positiveNumberLabel));
+				// jump to end if number is positive
+
+				append_element(ir_lines,
+							   make_instruction_negl(result));
+				// false negates the argument as two's complement
+
+				append_element(ir_lines,
+							   make_instruction_label(positiveNumberLabel));
+				return result;
 
 			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 
-				ARGUMENT *firstElement = make_argument_temp_register(
+				firstElement = make_argument_temp_register(
 						current_temporary++);
 
-				ARGUMENT *zeroIndex = make_argument_temp_register(
+				zeroIndex = make_argument_temp_register(
 						current_temporary++);
-				append_element( ir_lines,
-								make_instruction_xor(
-										zeroIndex, zeroIndex));
-					// makes a register
+
+				append_element( ir_lines, make_instruction_xor(zeroIndex,
+															   zeroIndex));
 
 				append_element( ir_lines, make_instruction_movl(
 						make_argument_indexing(subArg, zeroIndex),
-						firstElement ) );
+						firstElement));
+					// gets the first element of the array where the size is
+					// stored
 
-				// move from first place in array to reg
 				return firstElement;
 			}
 		default:
@@ -1322,11 +1329,11 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 	return NULL;
 }
 
-void IR_builder_act_list ( ACT_LIST *actlst) { 
+void IR_builder_act_list ( ACT_LIST *actList ) {
 
-	switch(actlst->kind){
+	switch(actList->kind){
 		case ACT_LIST_EXPLIST:
-			IR_builder_expression_list(actlst->exp_list);
+			IR_builder_expression_list( actList->exp_list );
 			break;
 		case ACT_LIST_EMPTY:
 			break;
@@ -1336,24 +1343,18 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 /* Since expression_list is used only by act list we can push function
  * parameters from here
  */
-void IR_builder_expression_list ( EXP_LIST *explst) {
+void IR_builder_expression_list ( EXP_LIST *expList ) {
 
-	switch(explst->kind){
+	switch(expList->kind){
 		case EXP_LIST_EXP:
-			append_element(
-				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->exp)
-					)
-				); 
+			append_element( ir_lines, make_instruction_pushl(
+					IR_builder_expression(expList->exp)));
 			break;
 		case EXP_LIST_LIST:
 		
-			IR_builder_expression_list(explst->explist);
-			append_element(
-				ir_lines, make_instruction_pushl(
-					IR_builder_expression(explst->exp)
-					)
-				);
+			IR_builder_expression_list(expList->explist);
+			append_element( ir_lines, make_instruction_pushl(
+					IR_builder_expression(expList->exp)));
 			break;
 	}
 }

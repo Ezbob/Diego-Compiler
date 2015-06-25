@@ -36,7 +36,6 @@ ARGUMENT *make_argument_address(int i);
 ARGUMENT *make_argument_register(REGISTERS reg, char *name);
 ARGUMENT *make_argument_label(char *);
 ARGUMENT *make_argument_constant(int i);
-ARGUMENT *make_argument_temp(int i);
 ARGUMENT *make_argument_temp_register(int i);
 ARGUMENT *make_argument_indexing(ARGUMENT *, ARGUMENT *);
 ARGUMENT *make_argument_static(int i);
