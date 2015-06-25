@@ -673,9 +673,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					address_of_id = calloc(strlen(st->value.
 					statement_allocate.var->id) + 4, sizeof(char));
-
 					sprintf(address_of_id, "(%s)",st->value.
 						statement_allocate.var->id);
+						// address of array
 
 					append_element( // allocate space to array
 						ir_lines,
@@ -695,17 +695,17 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 
-					ARGUMENT *movArg = make_argument_temp_register(
-							current_temporary++);
+					ARGUMENT *arraySize = make_argument_temp_register(
+							current_temporary++); // grab a new reg
 
-					append_element(
-						ir_lines,
-						make_instruction_pushl(
-							movArg
-						)
+					append_element( // save the reg value
+							ir_lines,
+							make_instruction_pushl(
+								arraySize
+							)
 					);
 
-					append_element( // xored to get zero
+					append_element( // xored to get zero, aka the first index
 						ir_lines,
 						make_instruction_xor(
 							arg2,
@@ -713,19 +713,19 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 
-					append_element(
+					append_element( // get the array size in terms of elements
 						ir_lines,
 						make_instruction_movl(
-								IR_builder_expression(st->value.
-										statement_allocate.opt_length->exp),
-								movArg
+								IR_builder_opt_length(st->value.
+										statement_allocate.opt_length),
+								arraySize
 						)
 					);
 
-					append_element(
+					append_element( // move the array size to the first index
 						ir_lines,
 						make_instruction_movl(
-							movArg,
+								arraySize,
 							make_argument_indexing(
 								make_argument_label(
 									st->value.statement_allocate.var->id
@@ -735,26 +735,26 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 
-					// use the first element to store the length of the array
+
 					append_element(
 						ir_lines,
 						make_instruction_incl(
-							movArg
+								arraySize
 						)
 					);
 
-					append_element(
+					append_element( // getting array size in bytes
 						ir_lines,
 						make_instruction_imul(
 							make_argument_constant(WORD_SIZE),
-							movArg
+							arraySize
 						)
 					);
 
-					append_element(
-						ir_lines, // add to the next pointer
+					append_element( // update the heap free pointer
+						ir_lines,
 						make_instruction_addl(
-							movArg,
+								arraySize,
 							make_argument_label("(heapNext)")
 						)
 					);
@@ -762,19 +762,18 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(
 						ir_lines,
 						make_instruction_popl(
-							movArg
+								arraySize
 						)
 					);
-
 					append_element(
 						ir_lines,
 						make_instruction_popl(
 							arg2
 						)
 					);
+					// restore the used regs
 
-					append_element(data_lines,st);
-
+					append_element(data_lines, st);
 					break;
 
 				case SYMBOL_RECORD:
@@ -913,8 +912,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 	}
 } 
 
-ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *oplen ) {
-	return IR_builder_expression(oplen->exp);
+ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
+	return IR_builder_expression(opt_length->exp);
 }
 
 ARGUMENT *IR_builder_variable (VAR *var) {
@@ -1018,6 +1017,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *result;
+	ARGUMENT *truth;
 
 	if ( exp->kind != EXPRES_TERM ) {
 		argLeft = IR_builder_expression(exp->value.sides.left);
@@ -1035,7 +1035,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 		case EXPRES_MINUS:
  			append_element(ir_lines,
-						   make_instruction_subl( argRight, argLeft));
+						   make_instruction_subl(argLeft, argRight));
  			return argRight;
 
 		case EXPRES_TIMES:
@@ -1046,17 +1046,18 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_DIVIDE:
 			tempLabelCounter = getNextLabel();
 
-			char *zeroDenominator = calloc(MAX_LABEL_SIZE,sizeof(char));
-			sprintf(zeroDenominator, "zeroDen%d", tempLabelCounter);
+			char *notZeroDenominator = calloc(MAX_LABEL_SIZE,sizeof(char));
+			sprintf(notZeroDenominator, "NotZeroDen%d", tempLabelCounter);
 
-			ARGUMENT *zeroArg = make_argument_constant(0);
+			append_element(ir_lines, make_instruction_pushl(ebx));
+			append_element(ir_lines, make_instruction_movl(argRight, ebx));
+				// save ebx and use it to hold the right hand
 
-			append_element(ir_lines, make_instruction_movl(argRight, eax));
+			append_element(ir_lines, make_instruction_cmp(
+					make_argument_constant(0), ebx));
+			append_element(ir_lines, make_instruction_jne(
+					notZeroDenominator));
 				// denominator has to be check if zero
-
-			append_element(ir_lines, make_instruction_cmp(zeroArg, eax));
-
-			append_element(ir_lines, make_instruction_jne(zeroDenominator));
 
 			append_element(ir_lines,make_instruction_movl(
 								   make_argument_constant(3), ebx));
@@ -1067,11 +1068,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_intcode("0x80"));
 				// code for throwing a divide by zero exception
 
-			append_element(ir_lines, make_instruction_label(zeroDenominator));
-
-			append_element(ir_lines, make_instruction_pushl(ebx));
-
-			append_element(ir_lines, make_instruction_movl(argRight, ebx));
+			append_element(ir_lines, make_instruction_label(
+					notZeroDenominator));
 
 			append_element(ir_lines, make_instruction_pushl(edx));
 				// Saving edx register; contains modulo after division
@@ -1079,6 +1077,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_xor(edx, edx));
 				// Clear edx for modulo
 
+			append_element(ir_lines, make_instruction_pushl(eax));
 			append_element(ir_lines, make_instruction_movl(argLeft, eax));
 				// move nominator to eax
 
@@ -1088,11 +1087,10 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_movl(eax, argLeft));
 				// move the result to argLeft that gets returned
 
+			append_element(ir_lines, make_instruction_popl(eax));
 			append_element(ir_lines, make_instruction_popl(edx));
-				// restore the edx register
-
 			append_element(ir_lines, make_instruction_popl(ebx));
-				// restore the ebx register
+				// restore the saved registers
 
 			return argLeft;
 
@@ -1105,145 +1103,126 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			result = make_argument_temp_register(current_temporary++);
 			tempLabelCounter = getNextLabel();
 
-			char *booltruelabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			char *boolendlabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *boolTrueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *boolEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 
-			sprintf(booltruelabel, "booOPtrue%d", tempLabelCounter);
-			IR_INSTRUCTION *truelabel = make_instruction_label(booltruelabel);
+			sprintf(boolTrueLabel, "booOPtrue%d", tempLabelCounter);
+			IR_INSTRUCTION *trueLabel = make_instruction_label(boolTrueLabel);
 
-			sprintf(boolendlabel, "boolOPend%d", tempLabelCounter);
-			IR_INSTRUCTION *endlabel = make_instruction_label(boolendlabel);
+			sprintf(boolEndLabel, "boolOPend%d", tempLabelCounter);
+			IR_INSTRUCTION *endLabel = make_instruction_label(boolEndLabel);
 
 			append_element(ir_lines,
 						   make_instruction_cmp( argRight, argLeft));
+				// compare both sides
 	
-			IR_INSTRUCTION *truejmp;
+			IR_INSTRUCTION *trueJump;
 
 			switch(exp->kind){
 				case EXPRES_EQ:
-					truejmp = make_instruction_je(booltruelabel);
+					trueJump = make_instruction_je(boolTrueLabel);
 					break;
 
 				case EXPRES_NEQ:
-					truejmp = make_instruction_jne(booltruelabel);
+					trueJump = make_instruction_jne(boolTrueLabel);
 					break;
 
 				case EXPRES_GREATER:
-					truejmp = make_instruction_jg(booltruelabel);
+					trueJump = make_instruction_jg(boolTrueLabel);
 					break;
 
 				case EXPRES_LESS:
-					truejmp = make_instruction_jl(booltruelabel);
+					trueJump = make_instruction_jl(boolTrueLabel);
 					break;
 
 				case EXPRES_LEQ:
-					truejmp = make_instruction_JLE(booltruelabel);
+					trueJump = make_instruction_JLE(boolTrueLabel);
 					break;
 
 				case EXPRES_GEQ:
-					truejmp = make_instruction_JGE(booltruelabel);
+					trueJump = make_instruction_JGE(boolTrueLabel);
 					break;
 
 				default:
 					return argRight;
 			}
 
-			append_element(ir_lines, truejmp); //false
-			IR_INSTRUCTION *falsesave = make_instruction_movl(
-			make_argument_constant(0), result);
-			append_element(ir_lines, falsesave);
+			append_element(ir_lines, trueJump);
+				// the jump to true instruction
 
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(0), result));
+			append_element(ir_lines, make_instruction_jmp(boolEndLabel));
+				// the false case
 
-			IR_INSTRUCTION *endjmp = make_instruction_jmp(boolendlabel);
-			append_element(ir_lines, endjmp);
+			append_element(ir_lines, trueLabel);
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(1), result));
+				// the true case
 
-			//true
-			append_element(ir_lines, truelabel);
-
-			IR_INSTRUCTION *truesave = make_instruction_movl(
-				make_argument_constant(1), result);
-			append_element(ir_lines, truesave);
-
-			append_element(ir_lines, endlabel);
+			append_element(ir_lines, endLabel);
 			return result;
 
-		case EXPRES_AND: //Checked
+		case EXPRES_AND:
 			tempLabelCounter = getNextLabel();
 
-			char *andFalselabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			char *andEndlabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-
-			sprintf(andFalselabel, "ANDfalse%d", tempLabelCounter);
-			IR_INSTRUCTION *andFalseinstr = make_instruction_label(
-					andFalselabel);
-
-			sprintf(andEndlabel, "ANDend%d", tempLabelCounter);
-			IR_INSTRUCTION *andEndinstr = make_instruction_label(andEndlabel);
+			char *andFalseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *andEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
+			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
 			result = make_argument_temp_register(current_temporary++);
 
-			ARGUMENT *cmpARG = make_argument_constant(1);
+			truth = make_argument_constant(1);
+			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
 
+			append_element(ir_lines, make_instruction_cmp(truth, argLeft));
+			append_element(ir_lines, jumpToFalse);
+			append_element(ir_lines, make_instruction_cmp(truth, argRight));
+			append_element(ir_lines, jumpToFalse);
+				// check if both arguments evaluates to true
 
-			IR_INSTRUCTION *cmp1 = make_instruction_cmp(cmpARG, argLeft);
-			append_element(ir_lines, cmp1);
-			
+			append_element(ir_lines,make_instruction_movl(
+					truth, result));
+			append_element(ir_lines, make_instruction_jmp(andEndLabel));
+				// in case both arguments are true
 
-			IR_INSTRUCTION *jmpfalse = make_instruction_jne(andFalselabel);
-			append_element(ir_lines, jmpfalse);
+			append_element(ir_lines, make_instruction_label(andFalseLabel));
+			append_element(ir_lines, make_instruction_movl(
+					make_argument_constant(0), result));
+				// in case one of the arguments are false
 
-			IR_INSTRUCTION *cmp2 = make_instruction_cmp(cmpARG, argRight);
-			append_element(ir_lines, cmp2);
-	
-
-			append_element(ir_lines, jmpfalse);
-
-			IR_INSTRUCTION *trueand = 
-			make_instruction_movl(make_argument_constant(1), result);
-			append_element(ir_lines, trueand);
-
-			IR_INSTRUCTION *andjmpend = make_instruction_jmp(andEndlabel);
-			append_element(ir_lines, andjmpend);
-
-			append_element(ir_lines, andFalseinstr);
-			IR_INSTRUCTION *falseand = 
-				make_instruction_movl(make_argument_constant(0), result);
-			append_element(ir_lines, falseand);
-
-			append_element(ir_lines, andEndinstr);
-			append_element(ir_lines, make_instruction_popl(edx));
+			append_element(ir_lines, make_instruction_label(andEndLabel));
 			break;
 		case EXPRES_OR:
 			tempLabelCounter = getNextLabel();
 
-			char *orOKLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *orTrueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
 			char *orEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-
-			sprintf(orOKLabel, "ORtrue%d", tempLabelCounter);
-
+			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
 			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
 			result = make_argument_temp_register(current_temporary++);
+			truth = make_argument_constant(1);
 
-			ARGUMENT *cmpOrArg = make_argument_constant(1);
+			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
 
-			append_element(ir_lines, make_instruction_cmp(cmpOrArg, argLeft));
-
-			IR_INSTRUCTION *jmpOK = make_instruction_je(orOKLabel);
-			append_element(ir_lines, jmpOK);
-
-			append_element(ir_lines,
-						   make_instruction_cmp(cmpOrArg, argRight));
-			append_element(ir_lines, jmpOK);
+			append_element(ir_lines, make_instruction_cmp(truth, argLeft));
+			append_element(ir_lines, jumpToTrue);
+			append_element(ir_lines,make_instruction_cmp(truth, argRight));
+			append_element(ir_lines, jumpToTrue);
+				// like in and we compare both arguments but jumps to true
+				// case instead of false case
 
 			append_element(ir_lines, make_instruction_movl(
 					make_argument_constant(0), result));
-
 			append_element(ir_lines, make_instruction_jmp(orEndLabel));
-			append_element(ir_lines, make_instruction_label(orOKLabel));
+				// false case
 
+			append_element(ir_lines, make_instruction_label(orTrueLabel));
 			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(1), result));
+					truth, result));
+				// true case
 
 			append_element(ir_lines, make_instruction_label(orEndLabel));
 			break;
@@ -1257,10 +1236,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 	ARGUMENT *arg1;
 	SYMBOL *symbol;
-	int tempLabelCounter;
 	int params;
-	char *endLabel;
-	char *falseLabel;
 
 	switch(term->kind){
 		case TERM_NUM:
@@ -1303,63 +1279,13 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return returnArg; // by convention eax holds return values
 
 		case TERM_NOT:
-			tempLabelCounter = getNextLabel();
+
 			arg1 = IR_builder_term(term->value.term);
 
-			falseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			endLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			append_element(ir_lines,make_instruction_xor(
+					make_argument_constant(1),arg1));
+			// xor the term expression with true (1) to get the negated
 
-			sprintf(falseLabel,"negf%d", tempLabelCounter);
-			sprintf(endLabel, "nege%d", tempLabelCounter);
-
-			append_element( // compare with zero(false)
-				ir_lines,
-				make_instruction_cmp( 
-					make_argument_constant(0),
-					arg1
-					)
-				);
-
-			append_element( // goto false label if it's not zero
-				ir_lines,
-				make_instruction_jne(
-						falseLabel
-					)
-				);
-
-			append_element( // since it's zero add 1 to negate
-				ir_lines,
-				make_instruction_addl(
-					make_argument_constant(1),
-					arg1
-					)
-				);
-
-			append_element( // get to the end of the negate statement
-				ir_lines,
-				make_instruction_jmp(
-						endLabel
-					)
-				);
-
-			append_element( // here goes the false label
-				ir_lines,
-				make_instruction_label(falseLabel)
-				);
-
-			append_element( // since it's one make it zero
-				ir_lines,
-				make_instruction_xor(
-					arg1,
-					arg1
-					)
-				);
-
-			append_element( // this is end (label) !
-				ir_lines,
-				make_instruction_label(endLabel)
-				);
-			
 			return arg1;
 
 		case TERM_ABS:
@@ -1369,7 +1295,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			IR_INSTRUCTION *pipeLabel = make_instruction_label(pipeEnd);
 
 			arg1 = IR_builder_expression(term->value.exp);
-			if(term->symboltype->type == SYMBOL_INT){
+			if ( term->symboltype->type == SYMBOL_INT ) {
 				//2 cases, positive numbers and negative numbers
 				ARGUMENT *pipeCMPArg = make_argument_constant(0);
 
@@ -1382,7 +1308,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 				append_element(ir_lines, negl);
 				append_element(ir_lines, pipeLabel);
 				return arg1;
-			}else if(term->symboltype->type == SYMBOL_ARRAY){
+			}else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 				char *id = term->value.exp->value.term->value.var->id;
 
 				ARGUMENT *firstElement = make_argument_temp_register(
@@ -1430,8 +1356,9 @@ void IR_builder_act_list ( ACT_LIST *actlst) {
 	}
 }
 
-// Since expression_list is used only by act list we can push function
-// parameters from here
+/* Since expression_list is used only by act list we can push function
+ * parameters from here
+ */
 void IR_builder_expression_list ( EXP_LIST *explst) {
 
 	switch(explst->kind){
@@ -1455,7 +1382,7 @@ void IR_builder_expression_list ( EXP_LIST *explst) {
 }
 
 /* Adding allocation of local variables, this is by convention 
- *	a subtration of the stack pointer 
+ *	a subtraction of the stack pointer
  */
 IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *currentScope) {
 	if (currentScope->localVars > 0){

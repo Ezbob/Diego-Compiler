@@ -1,0 +1,7 @@
+var a : bool, b : bool;
+
+a = true;
+b = false;
+
+write a == b;
+write !(a == b);
