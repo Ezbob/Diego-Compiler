@@ -2,11 +2,12 @@
 #include <string.h>
 #include "parserscanner/y.tab.h"
 #include "parserscanner/kittytree.h"
+#include "parserscanner/kittyprinter.h"
 #include "typechecker/kittyweed.h"
 #include "typechecker/kittycollect.h"
 #include "typechecker/kittymulticollect.h"
 #include "typechecker/kittycheck.h"
-#include "typechecker/kittyprinter.h"
+
 #include "kittyir.h"
 
 #ifndef SUCCESS_AND_FAILURE

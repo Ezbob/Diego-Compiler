@@ -2,12 +2,11 @@
 #include <stdarg.h> 
 #include "kittyprinter.h"
  
-static int indentation = 0;
+static int indentation = -1;
 static int tabSize = 4;
 
 #define NEXT_INDENT_LEVEL (tab_indentation++)
 #define PREV_INDENT_LEVEL (tab_indentation--)
-
 
 
 /*Line shift with the current indentations level */
@@ -23,26 +22,32 @@ void lineShift(){
 }
 
 void printer_function(FUNC *func) {
-	printf("%s\n", "Func ");
+	printf("%s", "Func ");
 	printer_head(func->head);
-
+	indentation++;
+	printer_body(func->body);
+	indentation--;
+	printer_tail(func->tail);
 }
 
 void printer_head (HEAD *header){
-	printf("%s ( ", header->id);
+	printf("%s( ", header->id);
 	printer_par_decl_list(header->pdlist);
 	printf(") :");
 	printer_type(header->returntype);
 }
 
 void printer_body (BODY *body){
-	indentation++;
-	lineShift();
 	printer_decl_list(body->decl_list);
 	printer_statement_list(body->statement_list);
-	indentation--;
+	
 }
 
+void printer_tail (TAIL *tail){
+
+	printf("End %s", tail->id);
+	lineShift();
+}
 
 
 void printer_type ( TYPE *type){
@@ -62,8 +67,13 @@ void printer_type ( TYPE *type){
 			break;
 		case TYPE_RECORD:
 			printf(" record of {");
+			indentation += 2;
+			lineShift();
 			printer_var_decl_list(type->value.var_decl_list);
+			indentation -= 2;
+			lineShift();
 			printf("};");
+			lineShift();
 			break;
 	}
 }
@@ -82,8 +92,10 @@ void printer_par_decl_list ( PAR_DECL_LIST *pdecl){
 void printer_var_decl_list ( VAR_DECL_LIST *vdecl){
 	switch(vdecl->kind){
 		case VAR_DECL_LIST_LIST:
+			//lineShift();
 			printer_var_decl_list(vdecl->var_decl_list);
-			printf(" , ");
+			printf(", ");
+			lineShift();
 			printer_var_type(vdecl->var_type);
 			break;
 		case VAR_DECL_LIST_TYPE:
@@ -93,6 +105,7 @@ void printer_var_decl_list ( VAR_DECL_LIST *vdecl){
 }
 
 void printer_var_type ( VAR_TYPE *vtype){
+
 	printf("%s :", vtype->id);
 	printer_type(vtype->type);
 }
@@ -113,16 +126,17 @@ void printer_declaration ( DECLARATION *decl){
 	indentation++;
 	switch(decl->kind){
 		case DECLARATION_ID:
-
+			printf("Type %s = ", decl->value.declaration_id.id);
 			printer_type(decl->value.declaration_id.type);
 			break;
 		case DECLARATION_FUNC:
 			printer_function(decl->value.function);
 			break;
 		case DECLARATION_VAR:
-
+			lineShift();
+			printf("Var ");
 			printer_var_decl_list(decl->value.var_decl_list);
-			printf(";\n");
+			printf(";");
 			break;
 	}
 	indentation--;
@@ -141,51 +155,56 @@ void printer_statement_list ( STATEMENT_LIST *slst){
 }
 
 void printer_statement ( STATEMENT *st){
-	indentation++;
 	switch(st->kind){
 		case STATEMENT_RETURN:
-
+			lineShift();
+			printf("Return ");
 			printer_expression(st->value.statement_return.exp);
-			printf(";\n"); 	
+			printf(";\n");
 			break;
 		case STATEMENT_WRITE:
-
+			lineShift();
+			printf("Write ");
 			printer_expression(st->value.exp);
 			printf(";\n");
 			break;
 		case STATEMENT_ALLOCATE:
-		
+			lineShift();
+			printf("Allocate ");
 			printer_variable(st->value.statement_allocate.var);
 			printer_opt_length(st->value.statement_allocate.opt_length);
 			printf(";\n");
 			break;
 		case STATEMENT_ASSIGN:
+			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" := ");
 			printer_expression(st->value.statement_assign.exp);
 			printf(";\n");
 			break;
 		case STATEMENT_IFBRANCH:
-
+			printf("If ");
 			printer_expression(st->value.statement_ifbranch.exp);
-			printf(" then\n");
+			printf(" then");
+			indentation++;
 			printer_statement(st->value.statement_ifbranch.statement);
+			indentation--;
+			lineShift();
 			printer_opt_else(st->value.statement_ifbranch.opt_else);
 			printf("\n");
 			break;
 		case STATEMENT_WHILE:
-	
+			printf("While ");
 			printer_expression(st->value.statement_while.exp);
 			printer_statement(st->value.statement_while.statement);
 			printf("\n");
 			break;
 		case STATEMENT_LISTS:
-	
+			printf("{\n");
 			printer_statement_list(st->value.statement_list);
-		
+			printf("}");
 			break; 
 	}
-	indentation--;
 } 
 
 void printer_opt_length ( OPT_LENGTH *oplen){
@@ -202,8 +221,10 @@ void printer_opt_length ( OPT_LENGTH *oplen){
 void printer_opt_else ( OPT_ELSE *opel){
 	switch(opel->kind){
 		case OPT_ELSE_STATEMENT:
-			
+			printf("else:");
+			indentation++;
 			printer_statement(opel->statement);
+			indentation--;
 			break;
 		case OPT_ELSE_EMPTY:
 			break;
@@ -355,7 +376,7 @@ void printer_term ( TERM *term){
 			printf("FALSE");
 			break;
 		case TERM_NUM:
-			printf("%i",term->value.intconst);
+			printf("(%i)",term->value.intconst);
 			break;
 	}
 }
