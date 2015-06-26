@@ -6,9 +6,9 @@
 
 //Computes the hash values
 int Hash(char *str){
-	int i;
+	unsigned int i;
 	int result = 0;
-	int str_size = strlen(str);
+	size_t str_size = strlen(str);
 
 	for(i = 0 ; i < str_size; i++){
 		result += str[i]; // add character value to partial result
