@@ -45,6 +45,7 @@ typedef struct SYMBOL {
     char *uniquename;
     int offset;
     int tableid;
+    int isTypeDef;
 } SYMBOL;
 
 typedef struct SYMBOLTABLE {

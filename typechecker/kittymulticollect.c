@@ -1,7 +1,7 @@
 #include "kittymulticollect.h"
 
 extern int unknownTypesCount;
-extern SYMBOLTABLE *typeDefs;
+//extern SYMBOLTABLE *typeDefs;
 
 void begin_multi_collect ( BODY * main ) {
 
@@ -39,7 +39,7 @@ void multi_collect_type ( TYPE *type ) {
 	switch(type->kind) {
 		case TYPE_ID:
 			if ( type->symboltype->type == SYMBOL_UNKNOWN 
-				&& (symbol = getSymbol(typeDefs,type->value.id))
+				&& (symbol = getSymbol(type->symboltable,type->value.id))
 				!= NULL && symbol->symboltype->type != SYMBOL_UNKNOWN ) {
 				type->symboltype = symbol->symboltype;
 			}
@@ -113,14 +113,16 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 			multi_collect_type(declaration->value.declaration_id.type);
 			symboltype = declaration->value.declaration_id.type->symboltype;
 
-			if( (symbol = getSymbol(typeDefs, declaration->value.
-					declaration_id.id)) != NULL
-				&& symbol->symboltype->type == SYMBOL_UNKNOWN
+			if( ( symbol = getSymbol(declaration->symboltable,
+									declaration->value.declaration_id.id) )
+				!= NULL && symbol->symboltype->type == SYMBOL_UNKNOWN
 				&& symboltype->type != SYMBOL_UNKNOWN) {
 
 				unknownTypesCount--;
+				symbol->isTypeDef = 1;
 				symbol->symboltype = symboltype;
 			}
+
 			break;
 		case DECLARATION_FUNC:
 			multi_collect_function(declaration->value.function);

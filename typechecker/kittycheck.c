@@ -3,7 +3,7 @@
 #include "../parserscanner/kittytree.h"
 #include <stdio.h>
 
-extern SYMBOLTABLE *typeDefs;
+//extern SYMBOLTABLE *typeDefs;
 
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
@@ -14,31 +14,31 @@ void check_error_report(const char* errorMsg, int lineno) {
 	exit(1);
 }
 
-void begin_check(BODY *main) {
+void begin_check ( BODY *main ) {
 
 	fprintf(stderr, "%s\n", "Initializing typecheck phase");
 	check_body(main);
 }
 
-void check_function(FUNC *func) {
+void check_function ( FUNC *function ) {
 
-	check_head(func->head);
-	check_body(func->body);
+	check_head(function->head);
+	check_body(function->body);
 }
 
-void check_head (HEAD *header) {
+void check_head ( HEAD *header ) {
 
 	check_par_decl_list(header->pdlist);
 	check_type(header->returntype);
 }
 
-void check_body (BODY *body) {
+void check_body ( BODY *body ) {
 
 	check_decl_list(body->decl_list);
 	check_statement_list(body->statement_list);
 }
 
-void check_type (TYPE *type) {
+void check_type ( TYPE *type ) {
 	switch(type->kind){
 		case TYPE_ID:
 			break;
@@ -55,8 +55,7 @@ void check_type (TYPE *type) {
 	}
 }
 
-void check_var_decl_list (VAR_DECL_LIST *var_decl_list) {
-
+void check_var_decl_list ( VAR_DECL_LIST *var_decl_list ) {
 	switch(var_decl_list->kind){
 		case VAR_DECL_LIST_LIST:
 			check_var_decl_list(var_decl_list->var_decl_list);
@@ -84,16 +83,16 @@ void check_decl_list ( DECL_LIST *decl_list){
 }
 
 
-void check_declaration ( DECLARATION *decl){
-	switch(decl->kind){
+void check_declaration ( DECLARATION *declaration){
+	switch(declaration->kind){
 		case DECLARATION_ID:
-			check_type(decl->value.declaration_id.type);
+			check_type(declaration->value.declaration_id.type);
 			break;
 		case DECLARATION_FUNC:
-			check_function(decl->value.function);
+			check_function(declaration->value.function);
 			break;
 		case DECLARATION_VAR:
-			check_var_decl_list(decl->value.var_decl_list);
+			check_var_decl_list(declaration->value.var_decl_list);
 			break;
 	}
 }
@@ -183,9 +182,7 @@ void check_statement ( STATEMENT *statement){
 									   statement->lineno);
 				}
 
-			} /*else if(st->value.statement_assign.var->kind == VAR_ID) {
-
-			}*/ else if (leftHand->type == SYMBOL_ARRAY && rightHand->type ==
+			} else if (leftHand->type == SYMBOL_ARRAY && rightHand->type ==
 														 leftHand->type) {
 
 				leftHand = get_base_array_type(leftHand);
@@ -302,8 +299,9 @@ int check_variable ( VAR *var){
 		case VAR_ID:
 			if( (symbol = getSymbol(var->symboltable, var->id)) != NULL ) {
 				var->symboltype = symbol->symboltype;
-			} else if ( getSymbol(typeDefs,var->id) != NULL ) {
-				check_error_report("Symbol is a type",var->lineno);
+				if ( symbol->isTypeDef == 1 ) {
+					check_error_report("Symbol is a type",var->lineno);
+				}
 			} else {
 				check_error_report("Symbol not recognized",var->lineno);
 			}
