@@ -1,8 +1,9 @@
 #include "kittycheck.h"
 #include "kittycollect.h"
+#include "../parserscanner/kittytree.h"
 #include <stdio.h>
 
-//static int parameterCounter = 0;
+extern SYMBOLTABLE *typeDefs;
 
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
@@ -54,28 +55,28 @@ void check_type (TYPE *type) {
 	}
 }
 
-void check_var_decl_list (VAR_DECL_LIST *vdecl) {
+void check_var_decl_list (VAR_DECL_LIST *var_decl_list) {
 
-	switch(vdecl->kind){
+	switch(var_decl_list->kind){
 		case VAR_DECL_LIST_LIST:
-			check_var_decl_list(vdecl->var_decl_list);
-			check_var_type(vdecl->var_type);
+			check_var_decl_list(var_decl_list->var_decl_list);
+			check_var_type(var_decl_list->var_type);
 			break;
 		case VAR_DECL_LIST_TYPE:
-			check_var_type(vdecl->var_type);
+			check_var_type(var_decl_list->var_type);
 			break;
 	}
 }
 
-void check_var_type ( VAR_TYPE *vtype){
-	check_type(vtype->type);
+void check_var_type ( VAR_TYPE *var_type){
+	check_type(var_type->type);
 }
 
-void check_decl_list ( DECL_LIST *dlst){
-	switch(dlst->kind){
+void check_decl_list ( DECL_LIST *decl_list){
+	switch(decl_list->kind){
 		case DECL_LIST_LIST:
-			check_decl_list(dlst->decl_list);
-			check_declaration(dlst->declaration);
+			check_decl_list(decl_list->decl_list);
+			check_declaration(decl_list->declaration);
 			break;
 		case DECL_LIST_EMPTY:
 			break;
@@ -97,93 +98,95 @@ void check_declaration ( DECLARATION *decl){
 	}
 }
 
-void check_statement_list ( STATEMENT_LIST *slst){
-
-	switch(slst->kind){
+void check_statement_list ( STATEMENT_LIST *statement_list){
+	switch(statement_list->kind){
 		case STATEMENT_LIST_STATEMENT:
-			check_statement(slst->statement);
+			check_statement(statement_list->statement);
 			break;
 
 		case STATEMENT_LIST_LIST:
-			check_statement(slst->statement);
-			check_statement_list(slst->statement_list);
+			check_statement_list(statement_list->statement_list);
+			check_statement(statement_list->statement);
 			break;
 	}
 }
 
-void check_statement ( STATEMENT *st){
+void check_statement ( STATEMENT *statement){
 
 	SYMBOLTYPE *rightHand;
 	SYMBOLTYPE *leftHand;
 	SYMBOLTYPE *returnType;
 
-	switch(st->kind){
+	switch(statement->kind) {
 		case STATEMENT_RETURN:
-			check_expression(st->value.statement_return.exp);
+			check_expression(statement->value.statement_return.exp);
 
 			// Note: return type set in weeder
-			leftHand = st->value.statement_return.exp->symboltype;
-			returnType = st->value.statement_return.function->symboltype
-				->return_type;
+			leftHand = statement->value.statement_return.exp->symboltype;
+			returnType = statement->value.statement_return.
+							function->symboltype->return_type;
 
-			if ( leftHand->type != returnType->type 
-				&& ((returnType->type == SYMBOL_RECORD || returnType->type == 
-					SYMBOL_ARRAY) && leftHand->type != SYMBOL_NULL) ) {
+			if (leftHand->type != returnType->type
+				&& ((returnType->type == SYMBOL_RECORD || returnType->type ==
+														  SYMBOL_ARRAY) &&
+					leftHand->type != SYMBOL_NULL)) {
 				check_error_report(
-					"type error: Return type does not match function", 
-					st->lineno);				
+						"type error: Return type does not match function",
+						statement->lineno);
 			}
 			break;
 
 		case STATEMENT_WRITE:
-			check_expression(st->value.exp);
+			check_expression(statement->value.exp);
 
-			if(st->value.exp->symboltype->type == SYMBOL_ARRAY &&
-				 st->value.exp->value.term->kind != TERM_ABS){
-					check_error_report("Only length of arrays can be written", 
-					st->lineno);
+			if (statement->value.exp->symboltype->type == SYMBOL_ARRAY &&
+				statement->value.exp->value.term->kind != TERM_ABS) {
+				check_error_report("Only length of arrays can be written",
+								   statement->lineno);
 			}
 			break;
 
 		case STATEMENT_ALLOCATE:
-			
-			check_variable(st->value.statement_allocate.var);
-			check_opt_length(st->value.statement_allocate.opt_length);
-			
-			leftHand = st->value.statement_allocate.var->symboltype;
 
-			if ( !(leftHand->type == SYMBOL_RECORD || 
-				leftHand->type == SYMBOL_ARRAY) ) {
+			check_variable(statement->value.statement_allocate.var);
+			check_opt_length(statement->value.statement_allocate.opt_length);
+
+			leftHand = statement->value.statement_allocate.var->symboltype;
+
+			if (!(leftHand->type == SYMBOL_RECORD ||
+				  leftHand->type == SYMBOL_ARRAY)) {
 				check_error_report(
-					"Cannot allocate to specific variable type", 
-					st->lineno);
+						"Cannot allocate to specific variable type",
+						statement->lineno);
 			}
 
-			if(st->value.statement_allocate.opt_length->kind == 
+			if (statement->value.statement_allocate.opt_length->kind ==
 				OPT_LENGTH_EMPTY && leftHand->type != SYMBOL_RECORD) {
 				check_error_report(
-					"Only records can be allocated without length", 
-					st->lineno);
+						"Only records can be allocated without length",
+						statement->lineno);
 			}
 			break;
 
 		case STATEMENT_ASSIGN:
-			check_variable(st->value.statement_assign.var);
-			check_expression(st->value.statement_assign.exp);
+			check_variable(statement->value.statement_assign.var);
+			check_expression(statement->value.statement_assign.exp);
 
-			leftHand = st->value.statement_assign.var->symboltype;
-			rightHand = st->value.statement_assign.exp->symboltype;
+			leftHand = statement->value.statement_assign.var->symboltype;
+			rightHand = statement->value.statement_assign.exp->symboltype;
 
-			if ( leftHand->type == SYMBOL_RECORD && rightHand->type ==
-				SYMBOL_RECORD ) {
-				
-				if( compare_record_as_sets(leftHand,rightHand) != 1 ) {
+			if (leftHand->type == SYMBOL_RECORD && rightHand->type ==
+												   SYMBOL_RECORD) {
+
+				if (compare_record_as_sets(leftHand, rightHand) != 1) {
 					check_error_report("Invalid assignment, type mismatch",
-						st->lineno);
+									   statement->lineno);
 				}
 
-			} else if ( leftHand->type == SYMBOL_ARRAY && rightHand->type == 
-				leftHand->type ) { 
+			} /*else if(st->value.statement_assign.var->kind == VAR_ID) {
+
+			}*/ else if (leftHand->type == SYMBOL_ARRAY && rightHand->type ==
+														 leftHand->type) {
 
 				leftHand = get_base_array_type(leftHand);
 				rightHand = get_base_array_type(rightHand);
@@ -191,72 +194,74 @@ void check_statement ( STATEMENT *st){
 				/* checking if the base type and dimension of the arrays
 					are the same */
 
-				if ( leftHand->type != rightHand->type ||
-					leftHand->arrayDim != rightHand->arrayDim ) {
+				if (leftHand->type != rightHand->type ||
+					leftHand->arrayDim != rightHand->arrayDim) {
 					check_error_report("Invalid assignment; type mismatch",
-						st->lineno);
+									   statement->lineno);
 				}
 
-			} else if ( leftHand->type == SYMBOL_ARRAY ) {
+			} else if (leftHand->type == SYMBOL_ARRAY) {
 
 				leftHand = get_base_array_type(leftHand);
 
-				if ( leftHand->type != rightHand->type && 
-					rightHand->type != SYMBOL_NULL ){
+				if (leftHand->type != rightHand->type &&
+					rightHand->type != SYMBOL_NULL) {
 					check_error_report("Invalid assignment; type mismatch",
-						st->lineno);	
+									   statement->lineno);
 				}
-				
-			} else if ( rightHand->type == SYMBOL_ARRAY ){
+
+			} else if (rightHand->type == SYMBOL_ARRAY) {
 
 				rightHand = get_base_array_type(rightHand);
 
-				if ( leftHand->type != rightHand->type ){
+				if (leftHand->type != rightHand->type) {
 					check_error_report("Invalid assignment; type mismatch",
-						st->lineno);	
+									   statement->lineno);
 				}
 
-			} else if ( leftHand->type == SYMBOL_RECORD ) {
+			} else if (leftHand->type == SYMBOL_RECORD) {
 
-				if (rightHand->type != SYMBOL_NULL ){
+				if (rightHand->type != SYMBOL_NULL) {
 					check_error_report(
-						"Invalid assignment; type mismatch", st->lineno);
+							"Invalid assignment; type mismatch",
+							statement->lineno);
 				}
 
 			} else { //Standard check
 				if( rightHand->type != leftHand->type ) {
 					check_error_report(
-						"Invalid assignment; type mismatch", st->lineno);
+						"Invalid assignment; type mismatch",
+						statement->lineno);
 				} 
 			}
 			break;
 
 		case STATEMENT_IFBRANCH:
-			check_expression(st->value.statement_ifbranch.exp);
-			check_statement(st->value.statement_ifbranch.statement);
-			check_opt_else(st->value.statement_ifbranch.opt_else);
+			check_expression(statement->value.statement_ifbranch.exp);
+			check_statement(statement->value.statement_ifbranch.statement);
+			check_opt_else(statement->value.statement_ifbranch.opt_else);
 
-			if(st->value.statement_ifbranch.exp->
+			if(statement->value.statement_ifbranch.exp->
 			   symboltype->type != SYMBOL_BOOL) {
 				check_error_report("Expected condition to evaluate"
 					" to a boolean value",
-				st->lineno);
+				statement->lineno);
 			}
 			break;
 
 		case STATEMENT_WHILE:
-			check_expression(st->value.statement_while.exp);
-			check_statement(st->value.statement_while.statement);
-			if(st->value.statement_while.exp->symboltype->type 
+			check_expression(statement->value.statement_while.exp);
+			check_statement(statement->value.statement_while.statement);
+			if(statement->value.statement_while.exp->symboltype->type
 				!= SYMBOL_BOOL) {
 				check_error_report("Expected condition to"
 					" evaluate to a boolean value",
-				st->lineno);
+				statement->lineno);
 			}
 			break;
 
 		case STATEMENT_LISTS:
-			check_statement_list(st->value.statement_list);
+			check_statement_list(statement->value.statement_list);
 			break;
 
 	}
@@ -295,8 +300,10 @@ int check_variable ( VAR *var){
 
 	switch(var->kind){
 		case VAR_ID:
-			if((symbol = getSymbol(var->symboltable, var->id)) != NULL){
+			if( (symbol = getSymbol(var->symboltable, var->id)) != NULL ) {
 				var->symboltype = symbol->symboltype;
+			} else if ( getSymbol(typeDefs,var->id) != NULL ) {
+				check_error_report("Symbol is a type",var->lineno);
 			} else {
 				check_error_report("Symbol not recognized",var->lineno);
 			}
