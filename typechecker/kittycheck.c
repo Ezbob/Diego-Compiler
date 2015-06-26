@@ -3,8 +3,6 @@
 #include "../parserscanner/kittytree.h"
 #include <stdio.h>
 
-//extern SYMBOLTABLE *typeDefs;
-
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
 		fprintf(stderr, "Error: %s \n",errorMsg);
@@ -70,7 +68,7 @@ void check_var_decl_list ( VAR_DECL_LIST *var_decl_list ) {
 void check_var_type ( VAR_TYPE *var_type){
 	check_type(var_type->type);
 
-	if ( var_type->symbol->symboltype->type == SYMBOL_UNKNOWN ) {
+	if ( var_type->symbol->symbolType->type == SYMBOL_UNKNOWN ) {
 		check_error_report("Unknown type; cannot infer type",
 						   var_type->lineno);
 	}
@@ -117,9 +115,9 @@ void check_statement_list ( STATEMENT_LIST *statement_list){
 
 void check_statement ( STATEMENT *statement){
 
-	SYMBOLTYPE *rightHand;
-	SYMBOLTYPE *leftHand;
-	SYMBOLTYPE *returnType;
+	SYMBOL_TYPE *rightHand;
+	SYMBOL_TYPE *leftHand;
+	SYMBOL_TYPE *returnType;
 
 	switch(statement->kind) {
 		case STATEMENT_RETURN:
@@ -151,7 +149,6 @@ void check_statement ( STATEMENT *statement){
 			break;
 
 		case STATEMENT_ALLOCATE:
-
 			check_variable(statement->value.statement_allocate.var);
 			check_opt_length(statement->value.statement_allocate.opt_length);
 
@@ -297,13 +294,13 @@ void check_opt_else ( OPT_ELSE *opel){
 
 int check_variable ( VAR *var){
 	SYMBOL *symbol;
-	SYMBOLTABLE *innerScope;
+	SYMBOL_TABLE *innerScope;
 	int depth = 1;
 
 	switch(var->kind){
 		case VAR_ID:
 			if( (symbol = getSymbol(var->symboltable, var->id)) != NULL ) {
-				var->symboltype = symbol->symboltype;
+				var->symboltype = symbol->symbolType;
 				if ( symbol->isTypeDef == 1 ) {
 					check_error_report("Symbol is a type",var->lineno);
 				}
@@ -347,7 +344,7 @@ int check_variable ( VAR *var){
 
 				if((symbol = getSymbol(innerScope, var->value.var_record
 					.id)) != NULL){
-					var->symboltype = symbol->symboltype;
+					var->symboltype = symbol->symbolType;
 				} else {
 					check_error_report("Symbol not recognized",var->lineno);
 				}	
@@ -362,12 +359,12 @@ int check_variable ( VAR *var){
 
 
 void check_expression ( EXPRES *exp){
-	SYMBOLTYPE *rightHand;
-	SYMBOLTYPE *leftHand;
+	SYMBOL_TYPE *rightHand;
+	SYMBOL_TYPE *leftHand;
 
 	// if it's not a term it got two sides
 	if (exp->kind != EXPRES_TERM){
-		// getting base SYMBOLTYPE of arrays for both sides if it's a array
+		// getting base SYMBOL_TYPE of arrays for both sides if it's a array
 
 		check_expression(exp->value.sides.right);
 		check_expression(exp->value.sides.left);
@@ -393,7 +390,7 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOLTYPE(SYMBOL_INT);
+				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
 			}
 			break;
 
@@ -415,7 +412,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL ||
 			   		leftHand->type == SYMBOL_NULL) ) {
 
-				exp->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -425,7 +422,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL || 
 			   		leftHand->type == SYMBOL_ARRAY ) ) { 
 
-                exp->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+                exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -436,7 +433,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL || 
 			   		leftHand->type == SYMBOL_RECORD ) ) {
 
-                exp->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+                exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -452,7 +449,7 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			}
 			
 			break;
@@ -464,14 +461,14 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected boolean expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			}
 			break;
 	}
 }
 
 void check_term ( TERM *term ) {
-	SYMBOLTYPE *symbolT;
+	SYMBOL_TYPE *symbolT;
 	SYMBOL *symbol;
 	int actualParameterCount;
 	int numberOfParametersNeeded;
@@ -489,13 +486,13 @@ void check_term ( TERM *term ) {
 			symbol = getSymbol(term->symboltable, 
 						term->value.term_act_list.id);
 
-			if(symbol == NULL || symbol->symboltype->type 
+			if(symbol == NULL || symbol->symbolType->type
 					!= SYMBOL_FUNCTION ){
 				check_error_report(
 					"Function not defined or not a function", term->lineno);
 			}
 
-			numberOfParametersNeeded = symbol->noArguments;
+			numberOfParametersNeeded = symbol->noParameters;
 
 			if (actualParameterCount < numberOfParametersNeeded ) {
 				check_error_report("Too few arguments for function", 
@@ -511,12 +508,12 @@ void check_term ( TERM *term ) {
 
 			EXP_LIST *callParameters = term->value.term_act_list.actlist->
 				exp_list;
-			VAR_DECL_LIST *functionParameters = symbol->parameters->
+			VAR_DECL_LIST *functionParameters = symbol->functionParameters->
 				var_decl_list;
 
 			function_parameter_compaire(callParameters,functionParameters);
 
-			symbolT = symbol->symboltype->return_type;
+			symbolT = symbol->symbolType->return_type;
 			term->symboltype = symbolT;
 			break;
 
@@ -544,16 +541,16 @@ void check_term ( TERM *term ) {
 			break;
 
 		case TERM_NULL:
-			term->symboltype = make_SYMBOLTYPE(SYMBOL_NULL);
+			term->symboltype = make_SYMBOL_TYPE(SYMBOL_NULL);
 			break;
 
 		case TERM_TRUE:
 		case TERM_FALSE:
-			term->symboltype = make_SYMBOLTYPE(SYMBOL_BOOL);
+			term->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			break;
 
 		case TERM_NUM:
-			term->symboltype = make_SYMBOLTYPE(SYMBOL_INT);
+			term->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
 			break;
 
 		default:
@@ -601,9 +598,9 @@ int check_expression_list ( EXP_LIST *explst ) {
 
 /* Note: this also sets the array dim of the function parameter and the
 	return value */
-SYMBOLTYPE *get_base_array_type ( SYMBOLTYPE *type_of_array ) {
+SYMBOL_TYPE *get_base_array_type ( SYMBOL_TYPE *type_of_array ) {
 
-	SYMBOLTYPE *iterator = type_of_array;
+	SYMBOL_TYPE *iterator = type_of_array;
 	int arrayDim = 1;
 
 	while( iterator->nextArrayType != NULL ) {
@@ -617,9 +614,9 @@ SYMBOLTYPE *get_base_array_type ( SYMBOLTYPE *type_of_array ) {
 	return iterator; // reached base type of array
 }
 
-int get_array_dim ( SYMBOLTYPE *type_of_array ) {
+int get_array_dim ( SYMBOL_TYPE *type_of_array ) {
 
-	SYMBOLTYPE *iterator = type_of_array;
+	SYMBOL_TYPE *iterator = type_of_array;
 	int arrayDim = 1;
 
 	while( iterator->nextArrayType != NULL ) {
@@ -634,7 +631,7 @@ int get_array_dim ( SYMBOLTYPE *type_of_array ) {
  * are treated as sets.
  * Returns 0 if the records are different, 1 if they match
  */
-int compare_record_as_sets(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
+int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 
 	VAR_DECL_LIST *leftRecordMembers = leftHand->recordMembers;
 	VAR_DECL_LIST *rightRecordMembers = rightHand->recordMembers;
@@ -653,9 +650,9 @@ int compare_record_as_sets(SYMBOLTYPE *leftHand, SYMBOLTYPE *rightHand) {
 
 	// idear: counting up the diffrent types
 	int typeCount[2][NUMBER_OF_TYPES_SUPPORTED];
-	SYMBOLTYPE *currentSymbolType;
+	SYMBOL_TYPE *currentSymbolType;
 
-	// init the count matrix/table
+	// init the count matrix/uniqueName
 	for(int i = 0; i < NUMBER_OF_TYPES_SUPPORTED; i++){
 		typeCount[0][i] = 0;
 		typeCount[1][i] = 0;
@@ -762,7 +759,7 @@ void function_parameter_compaire ( EXP_LIST *callParameters,
 
 			if( callParameters->exp->symboltype->type !=
 			   functionParameters->var_type->symbol
-			   			->symboltype->type ) {
+			   			->symbolType->type ) {
 				check_error_report("Wrong parameter type", 
 					callParameters->lineno);
 			}
@@ -772,7 +769,7 @@ void function_parameter_compaire ( EXP_LIST *callParameters,
 			
 			if( callParameters->exp->symboltype->type !=
 			   functionParameters->var_type->symbol
-			   			->symboltype->type){
+			   			->symbolType->type){
 				check_error_report("Wrong parameter type", 
 					callParameters->lineno);
 			}

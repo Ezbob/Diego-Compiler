@@ -3,7 +3,6 @@
 #define HASH_SIZE 317
 #include "../parserscanner/memory.h"
 
-
 typedef enum TYPES_SUPPORTED {
     SYMBOL_FUNCTION, 
     SYMBOL_INT, 
@@ -15,62 +14,51 @@ typedef enum TYPES_SUPPORTED {
     SYMBOL_UNKNOWN 
 } TYPES_SUPPORTED;
 
-typedef struct SYMBOLTYPE {
-    int visited;
-    struct SYMBOLTYPE *nextArrayType; // for arrays
+typedef struct SYMBOL_TYPE {
+    struct SYMBOL_TYPE *nextArrayType; // for arrays
     struct VAR_DECL_LIST *recordMembers; // for records
-    struct SYMBOLTYPE *return_type; // for functions
-    struct SYMBOLTABLE *child; // for records
+    struct SYMBOL_TYPE *return_type; // for functions
+    struct SYMBOL_TABLE *child; // for records
     TYPES_SUPPORTED type;
-    struct TYPE *declaration_type; //for records scap?
-    struct FUNCTION *func;
-    struct VAR_DECL_LIST *parameters;
     int arguments; // or members
     int arrayDim;
-} SYMBOLTYPE;
-
+} SYMBOL_TYPE;
 
 typedef struct SYMBOL {
     char *name;
-    int value;
-    int noArguments;
-    int visited;
-    SYMBOLTYPE *symboltype;
-    struct SYMBOL *next;
-    struct PAR_DECL_LIST *parameters;
-    struct FUNCTION *func;
-    struct TYPE *returntype;
-    struct TYPE *array;
-    struct TYPE *realtype;
-    char *uniquename;
-    int offset;
-    int tableid;
-    int isTypeDef;
+    SYMBOL_TYPE *symbolType;
+    struct SYMBOL *next; // for hash chaining
+    struct PAR_DECL_LIST *functionParameters;
+    int noParameters; // number of parameters needed by the function
+    char *uniqueName; // The function name at assembler level
+    int offset; // for offsetting into the stack
+    int tableId; // for checking when to use static link
+    int isTypeDef; // whether symbol is symbol for a type defined type
 } SYMBOL;
 
-typedef struct SYMBOLTABLE {
+typedef struct SYMBOL_TABLE {
     SYMBOL *table[HASH_SIZE];
-    struct SYMBOLTABLE *next;
+    struct SYMBOL_TABLE *next;
     int temps;
-    int localVars;
+    int localVars; // used in allocation of local variables
     int id;
-} SYMBOLTABLE;
+} SYMBOL_TABLE;
 
 int Hash(char *str);
 
-SYMBOLTABLE *initSymbolTable(int id);
+SYMBOL_TABLE *initSymbolTable(int id);
 
-SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t, int parentid);
+SYMBOL_TABLE *scopeSymbolTable(SYMBOL_TABLE *parentTable, int parentId);
 
-SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT);
+SYMBOL *putSymbol(SYMBOL_TABLE *t, char *name, SYMBOL_TYPE *symbolT);
 
-SYMBOL *getSymbol(SYMBOLTABLE *t, char *name);
+SYMBOL *getSymbol(SYMBOL_TABLE *t, char *name);
 
-void dumpSymbolTable(SYMBOLTABLE *t);
+void dumpSymbolTable(SYMBOL_TABLE *t);
 
-void dumpTable(SYMBOLTABLE *t);
+void dumpTable(SYMBOL_TABLE *t);
 
-void destroySymbolTable(SYMBOLTABLE *t);
+void destroySymbolTable(SYMBOL_TABLE *t);
 
 void dumpSymbol(SYMBOL *symbol);
 #endif /* END OF __SYMBOL_H */

@@ -20,9 +20,9 @@ int Hash(char *str){
 	return result % HASH_SIZE;
 }
 
-//Returns a pointer to a new initialized hash table
-SYMBOLTABLE *initSymbolTable(int id){
-	SYMBOLTABLE *tablePointer = NEW(SYMBOLTABLE);
+//Returns a pointer to a new initialized hash uniqueName
+SYMBOL_TABLE *initSymbolTable(int id){
+	SYMBOL_TABLE *tablePointer = NEW(SYMBOL_TABLE);
 	tablePointer->next = NULL;
 	tablePointer->temps = 0;
 	tablePointer->localVars = 0;
@@ -37,29 +37,29 @@ SYMBOLTABLE *initSymbolTable(int id){
 }
 
 /*
- * Takes a pointer to a hash table t as argument and returns
- * a new hash table with a pointer to t in its next field.
+ * Takes a pointer to a hash uniqueName t as argument and returns
+ * a new hash uniqueName with a pointer to t in its next field.
  */
-SYMBOLTABLE *scopeSymbolTable(SYMBOLTABLE *t, int parentid){
-	SYMBOLTABLE *tablePointer;
-	int newid = parentid + 1;
-	if ((tablePointer = initSymbolTable(newid)) == NULL){
+SYMBOL_TABLE *scopeSymbolTable(SYMBOL_TABLE *parentTable, int parentId){
+	SYMBOL_TABLE *tablePointer;
+	int newId = parentId + 1;
+	if ((tablePointer = initSymbolTable(newId)) == NULL){
 		fprintf(stderr,
 			"Error: Table not allocated, memory not available \n");
 		return NULL;	
 	}
 
-	tablePointer->next = t;
+	tablePointer->next = parentTable;
 
 	return tablePointer;
 }
 
 /*
- * Takes a hash table and a string, name, as arguments and inserts
- * name into the hash table together with the associated value value. A 
+ * Takes a hash uniqueName and a string, name, as arguments and inserts
+ * name into the hash uniqueName together with the associated value value. A
  * pointer to the SYMBOL value which stores name is returned.
  */
-SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
+SYMBOL *putSymbol(SYMBOL_TABLE *t, char *name, SYMBOL_TYPE *symbolT){
 	int HashValue = Hash(name);
 	SYMBOL *PutSymbol = NEW(SYMBOL);
 	SYMBOL *Placeholder = NULL;
@@ -71,21 +71,21 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 	}
 	PutSymbol->name = calloc(strlen(name)+1,sizeof(char));
 	strncpy(PutSymbol->name,name,strlen(name)+1);
-	PutSymbol->value = value;
 	PutSymbol->next = NULL;
-	PutSymbol->symboltype = symbolT;
-	PutSymbol->uniquename = calloc(11,sizeof(char));
+	PutSymbol->symbolType = symbolT;
+	PutSymbol->uniqueName = calloc(11,sizeof(char));
 	PutSymbol->offset = 0;
-	PutSymbol->tableid = t->id;
-	PutSymbol->visited = 0;
+	PutSymbol->tableId = t->id;
 	PutSymbol->isTypeDef = 0;
 
-	Placeholder = t->table[HashValue]; 
+	Placeholder = t->table[HashValue];
 	if (Placeholder != NULL){ // has a SYMBOL in field 
 		do{
-			//Make sure that a SYMBOL name only appears once in a hash table
+			//Make sure that a SYMBOL name only appears once in
+			// a hash uniqueName
 			if (strcmp(Placeholder->name, name)  == 0){
-				fprintf(stderr, "Error: Symbol already exists at adress: %p\n", 
+				fprintf(stderr, "Error: Symbol already"
+								" exists at adress: %p\n",
 					   (void *) Placeholder);		
 				
 				free(PutSymbol->name);  // deallocate memory
@@ -100,7 +100,7 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 	}
 	
 	// then we stack collisions
-	PutSymbol->next = t->table[HashValue]; 
+	PutSymbol->next = t->table[HashValue];
 	t->table[HashValue] = PutSymbol;
 
 	return PutSymbol;
@@ -108,18 +108,18 @@ SYMBOL *putSymbol(SYMBOLTABLE *t, char *name, int value, SYMBOLTYPE *symbolT){
 }
 
 /*
- * Takes a hash table and a string name as arguments and searches for
- * name in the following manner: First search for name in the hash table which
- * is one of the arguments of the function call. If name is not there, 
- * continue the search in the next hash table. This process is repeatedly 
+ * Takes a hash uniqueName and a string name as arguments and searches for
+ * name in the following manner: First search for name in the hash uniqueName
+ * which is one of the arguments of the function call. If name is not there,
+ * continue the search in the next hash uniqueName. This process is repeatedly
  * recursively. If name has not been found after the root of the tree 
  * (see Fig. 1) has been checked, the result NULL is returned. 
  * If name is found, return a pointer to the SYMBOL value in which name 
  * is stored.
  */
-SYMBOL *getSymbol(SYMBOLTABLE *t, char *name){
+SYMBOL *getSymbol(SYMBOL_TABLE *t, char *name){
 	SYMBOL *GetSymbol;
-	SYMBOLTABLE *placeHolder;
+	SYMBOL_TABLE *placeHolder;
 	
 	if (t == NULL){
 		return NULL; // root reached, Symbol not found
@@ -128,8 +128,8 @@ SYMBOL *getSymbol(SYMBOLTABLE *t, char *name){
 	int HashValue = Hash(name);
 	placeHolder = t;
 
-	if (( GetSymbol = placeHolder->table[HashValue] ) == NULL){ 
-		// not found in this table
+	if (( GetSymbol = placeHolder->table[HashValue] ) == NULL){
+		// not found in this uniqueName
 		return getSymbol(t->next,name); 
 	
 	}else if(GetSymbol->next != NULL){ // collision detected
@@ -157,11 +157,11 @@ SYMBOL *getSymbol(SYMBOLTABLE *t, char *name){
 }
 
 /*
- * Takes a pointer to a hash table t as argument and prints all
+ * Takes a pointer to a hash uniqueName t as argument and prints all
  * the (name, value) pairs that are found in the hash tables from t up to the 
  * root.
  */
-void dumpSymbolTable(SYMBOLTABLE *t){
+void dumpSymbolTable(SYMBOL_TABLE *t){
 
 	SYMBOL *symbol;
 		
@@ -185,9 +185,9 @@ void dumpSymbolTable(SYMBOLTABLE *t){
 		
  	}
  
- 	dumpSymbolTable(t->next); // recursively print the next SYMBOLTABLE 
+ 	dumpSymbolTable(t->next); // recursively print the next SYMBOL_TABLE
 }
-void dumpTable(SYMBOLTABLE *t){
+void dumpTable(SYMBOL_TABLE *t){
 
 	SYMBOL *symbol;
 		
@@ -213,48 +213,55 @@ void dumpTable(SYMBOLTABLE *t){
 }
 void dumpSymbol(SYMBOL *symbol){
 				
-			switch(symbol->symboltype->type){
-				case SYMBOL_FUNCTION:
-					printf( "FUNCTION (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
-	
-				case SYMBOL_INT:
-					printf( "INT (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+	switch(symbol->symbolType->type){
+		case SYMBOL_FUNCTION:
+			printf( "FUNCTION (%s , offset: %i) ", symbol->name,
+					 symbol->offset);
+			break;
 
-				case SYMBOL_BOOL:
-					printf( "BOOL (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_INT:
+			printf( "INT (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-				case SYMBOL_ID:
-					printf( "IDENTIFIER (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_BOOL:
+			printf( "BOOL (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-				case SYMBOL_RECORD:
-					printf( "RECORD (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_ID:
+			printf( "IDENTIFIER (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-				case SYMBOL_ARRAY:
-					printf( "ARRAY (%s , %i, %i)", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_RECORD:
+			printf( "RECORD (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-				case SYMBOL_NULL:
-					printf( "NULL (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_ARRAY:
+			printf( "ARRAY (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-				default:
-					printf( "UNKNOWN (%s , %i, %i) ", symbol->name, symbol->value, symbol->offset);
-					break;
+		case SYMBOL_NULL:
+			printf( "NULL (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
-			}
+		default:
+			printf( "UNKNOWN (%s , offset: %i) ", symbol->name,
+					symbol->offset);
+			break;
 
+	}
 }
 
 
 /* 
- * Deallocate the specific SYMBOLTABLE, all it's SYMBOL
+ * Deallocate the specific SYMBOL_TABLE, all it's SYMBOL
  */
-void destroySymbolTable(SYMBOLTABLE *t){
+void destroySymbolTable(SYMBOL_TABLE *t){
 	int i;
 	SYMBOL *s, *s2, *s3;
 

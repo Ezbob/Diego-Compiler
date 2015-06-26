@@ -8,12 +8,12 @@
 #define testbit(A,k)	(A[(k / 32)] & (1 << (k % 32)) )
 
 extern SECTION *mainSection;
-struct SYMBOLTABLE *symboltable;
+struct SYMBOL_TABLE *symboltable;
 struct linked_list *code;
 struct LIVENESS *tmproot;
 
-BITARRAY *createarray(int i){
-	return calloc(i,sizeof(BITARRAY));
+BIT_ARRAY *createarray(int i){
+	return calloc(i,sizeof(BIT_ARRAY));
 }
 
 void begin_register(linked_list *ir_lines){

@@ -5,6 +5,7 @@
 
 #define MAX_LABEL_SIZE 20
 #define WORD_SIZE 4
+#define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char*)))
 
 typedef enum REGISTERS {
 	r_eax, r_ebx, r_ecx, r_edx, r_ebp, r_esp, r_esi, r_edi 
@@ -44,7 +45,7 @@ typedef struct ARGUMENT {
 typedef struct SECTION {
 	char *sectionName;
 	int temps;
-	struct SYMBOLTABLE *symboltable;
+	struct SYMBOL_TABLE *symboltable;
 	struct SECTION *nextSection;
 	struct SECTION *prevSection;
 	struct IR_INSTRUCTION *first;
@@ -77,7 +78,7 @@ void calleeRestore();
 void calleeStart();
 void calleeEnd();
 int getNextLabel();
-IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *);
+IR_INSTRUCTION *localVariableAllocation(SYMBOL_TABLE *);
 int getNextFunction();
 void addToStackPointer(int i);
 void IR_print_arguments(ARGUMENT *arg);

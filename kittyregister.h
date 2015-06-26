@@ -2,15 +2,15 @@
 #define __KITTYREGISTER_H
 #include "kittyir.h"
 
-typedef unsigned long BITARRAY;
+typedef unsigned long BIT_ARRAY;
 
 typedef struct LIVENESS {
 
 	int color;
-	BITARRAY *use;
-	BITARRAY *def;
-	BITARRAY *in;
-	BITARRAY *out;
+	BIT_ARRAY *use;
+	BIT_ARRAY *def;
+	BIT_ARRAY *in;
+	BIT_ARRAY *out;
 	int id;
 	struct LIVENESS *next;
 	struct LIVENESS *prev;

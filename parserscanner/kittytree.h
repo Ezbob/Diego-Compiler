@@ -1,13 +1,12 @@
 #ifndef __KITTYTREE_H
 #define __KITTYTREE_H
 
-#define NEW_SHORT_STR ((char*) Malloc(sizeof(char*)*17))
 #include "../symbol/symbol.h"
 
 typedef struct EXPRES {
 	int lineno;
-	SYMBOLTABLE *symboltable;
-	SYMBOLTYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
 	enum {
 		EXPRES_TERM, 
 		EXPRES_PLUS, 
@@ -34,8 +33,8 @@ typedef struct EXPRES {
 
 typedef struct TERM {
 	int lineno;
-	SYMBOLTABLE *symboltable;
-	SYMBOLTYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
 	enum {
 		TERM_VAR,
 		TERM_ACT_LIST,
@@ -61,7 +60,7 @@ typedef struct TERM {
 
 typedef struct ACT_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		ACT_LIST_EXPLIST, 
 		ACT_LIST_EMPTY 
@@ -71,7 +70,7 @@ typedef struct ACT_LIST {
 
 typedef struct EXP_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum {
 		EXP_LIST_EXP,
 		EXP_LIST_LIST
@@ -82,8 +81,8 @@ typedef struct EXP_LIST {
 
 typedef struct FUNC {
 	int lineno;
-	SYMBOLTABLE *symboltable;
-	SYMBOLTYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
 	struct HEAD *head; 
 	struct BODY *body; 
 	struct TAIL *tail;
@@ -92,8 +91,8 @@ typedef struct FUNC {
 typedef struct HEAD {
 	int lineno;
 	int arguments;
-	SYMBOLTABLE *symboltable;
-	SYMBOLTYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
 	char *id; 
 	struct PAR_DECL_LIST *pdlist;
 	struct TYPE *returntype; 
@@ -101,14 +100,14 @@ typedef struct HEAD {
 
 typedef struct TAIL {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	char *id;
 } TAIL;
 
 typedef struct TYPE {
 	int lineno;
-	SYMBOLTYPE *symboltype;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
 	enum {
 		TYPE_ID,
 		TYPE_INT,
@@ -125,7 +124,7 @@ typedef struct TYPE {
 
 typedef struct PAR_DECL_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		PAR_DECL_LIST_EMPTY,
 		PAR_DECL_LIST_LIST
@@ -137,7 +136,7 @@ typedef struct PAR_DECL_LIST {
 
 typedef struct VAR_DECL_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		VAR_DECL_LIST_LIST,
 		VAR_DECL_LIST_TYPE
@@ -149,7 +148,7 @@ typedef struct VAR_DECL_LIST {
 
 typedef struct VAR_TYPE {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	SYMBOL *symbol;
 	char *id;
 	struct TYPE *type;
@@ -157,14 +156,14 @@ typedef struct VAR_TYPE {
 
 typedef struct BODY {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	struct DECL_LIST *decl_list;
 	struct STATEMENT_LIST *statement_list;
 } BODY;
 
 typedef struct DECL_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		DECL_LIST_LIST,
 		DECL_LIST_EMPTY
@@ -175,7 +174,7 @@ typedef struct DECL_LIST {
 
 typedef struct DECLARATION {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		DECLARATION_ID,
 		DECLARATION_FUNC,
@@ -194,7 +193,7 @@ typedef struct DECLARATION {
 
 typedef struct STATEMENT_LIST {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		STATEMENT_LIST_LIST,
 		STATEMENT_LIST_STATEMENT
@@ -207,7 +206,7 @@ typedef struct STATEMENT_LIST {
 
 typedef struct STATEMENT {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	int foundReturn;
 	struct STATEMENT *next; //??
 	enum { 
@@ -252,7 +251,7 @@ typedef struct STATEMENT {
 
 typedef struct OPT_LENGTH {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 
 	enum { 
 		OPT_LENGTH_EXPRES,
@@ -265,7 +264,7 @@ typedef struct OPT_LENGTH {
 
 typedef struct OPT_ELSE {
 	int lineno;
-	SYMBOLTABLE *symboltable;
+	SYMBOL_TABLE *symboltable;
 	enum { 
 		OPT_ELSE_STATEMENT,
 		OPT_ELSE_EMPTY
@@ -278,8 +277,8 @@ typedef struct OPT_ELSE {
 typedef struct VAR {
 	int lineno;
 	char *id;
-	SYMBOLTABLE *symboltable;
-	SYMBOLTYPE *symboltype;
+	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symboltype;
 	enum { 
 		VAR_ID,
 		VAR_ARRAY,

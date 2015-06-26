@@ -50,7 +50,7 @@ void initStaticLink() {
 
 		append_element(ir_lines, make_instruction_movl(arg1, arg2));
 
-		// type check maybe? but symboltype of variabe is SYMBOL_ARRAY 
+		// type check maybe? but symbolType of variabe is SYMBOL_ARRAY
 		append_element(
 			ir_lines,
 			make_instruction_imul(
@@ -99,7 +99,7 @@ linked_list *IR_build( BODY *program ) {
 	for ( int i = 0; i < HASH_SIZE; i++ ) {
 		symbol = program->symboltable->table[i];
 
-		if ( symbol != NULL && symbol->symboltype->type != SYMBOL_FUNCTION ) {
+		if ( symbol != NULL && symbol->symbolType->type != SYMBOL_FUNCTION ) {
 			symbol->offset = offsetCount--;
 		}
 	}
@@ -151,8 +151,8 @@ linked_list *IR_build( BODY *program ) {
 void IR_builder_function(FUNC *func) {
 
 	int functionId = getNextFunction();
-	char *functionStartLabel = calloc(MAX_LABEL_SIZE ,sizeof(char));
-	char *functionEndLabel = calloc(MAX_LABEL_SIZE ,sizeof(char));
+	char *functionStartLabel = NEW_LABEL;
+	char *functionEndLabel = NEW_LABEL;
 
 	SYMBOL *symbol = getSymbol(func->symboltable, 
 		func->head->id);
@@ -160,7 +160,7 @@ void IR_builder_function(FUNC *func) {
 	sprintf(functionStartLabel, "func%d", functionId);
 	sprintf(functionEndLabel,"endFunc%d", functionId);
 
-	strcpy(symbol->uniquename, functionStartLabel);
+	strcpy(symbol->uniqueName, functionStartLabel);
 
 	sprintf(functionStartLabel, "%s", functionStartLabel);
 	
@@ -199,7 +199,7 @@ void IR_builder_head (HEAD *header) {
 
 	VAR_DECL_LIST *vars = header->pdlist->var_decl_list;
 	
-	while ( count < args->noArguments ) {
+	while ( count < args->noParameters) {
 
 		if ( vars->var_type != NULL ) {
 
@@ -256,7 +256,7 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 
 		case TYPE_ARRAY:
 			// vtype->symboltable->localVars += WORD_SIZE;
-			// parse by reference but we have to find out if it's parameters 
+			// parse by reference but we have to find out if it's functionParameters
 			break;
 		case TYPE_RECORD:
 			// vtype->symboltable->localVars += WORD_SIZE; // like arrays
@@ -343,9 +343,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					tempLabelCounter = getNextLabel();
 
-					falseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-					trueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-					printLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+					falseLabel = NEW_LABEL;
+					trueLabel = NEW_LABEL;
+					printLabel = NEW_LABEL;
 
 					sprintf(falseLabel,"bfalse%d", tempLabelCounter);
 					sprintf(trueLabel, "btrue%d", tempLabelCounter);
@@ -519,13 +519,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					if ( symbol != NULL ) {
 
-						if (symbol->tableid != st->symboltable->id) {
+						if (symbol->tableId != st->symboltable->id) {
 
 						append_element(ir_lines, make_instruction_pushl(ecx));
 
 						append_element(ir_lines, make_instruction_movl(
 											   make_argument_constant(
-													   symbol->tableid),
+													   symbol->tableId),
 											   ecx));
 
 						append_element(ir_lines, make_instruction_movl(
@@ -573,8 +573,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// generate code for boolean expression(s)
 			arg1 = IR_builder_expression(st->value.statement_ifbranch.exp); 
 
-			elseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			endLabelString = calloc(MAX_LABEL_SIZE,sizeof(char));
+			elseLabel = NEW_LABEL;
+			endLabelString = NEW_LABEL;
 
 			int labelno = getNextLabel();
 
@@ -804,7 +804,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-						// type check maybe? but symboltype 
+						// type check maybe? but symbolType
 						// of variabe is SYMBOL_RECORD
 						append_element(
 							ir_lines,
@@ -840,8 +840,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			tempLabelCounter = getNextLabel();
 
-			trueWhileString = calloc(MAX_LABEL_SIZE,sizeof(char));
-			endLabelString = calloc(MAX_LABEL_SIZE,sizeof(char));
+			trueWhileString = NEW_LABEL;
+			endLabelString = NEW_LABEL;
 
 			sprintf(trueWhileString, "whileStart%d", current_label);
 			sprintf(endLabelString, "whileEnd%d", current_label);
@@ -904,7 +904,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	ARGUMENT *arg1;
 	ARGUMENT *resultOfSubExp;
 	ARGUMENT *address_of_id;
-	SYMBOLTABLE *tmpTable;
+	SYMBOL_TABLE *tmpTable;
 	
 	switch ( var->kind ) {
 		case VAR_ID:
@@ -913,19 +913,19 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			if( symbol != NULL ){
 
-				if ( symbol->symboltype->type == SYMBOL_ARRAY ||
-						symbol->symboltype->type == SYMBOL_RECORD ) {
+				if ( symbol->symbolType->type == SYMBOL_ARRAY ||
+						symbol->symbolType->type == SYMBOL_RECORD ) {
 
 					// They're on the heap so we just use labels
 					arg = make_argument_label(var->id);
 
-				} else if (symbol->tableid != var->symboltable->id) {
+				} else if (symbol->tableId != var->symboltable->id) {
 					// basically, if variable is not in current,
 					// use static link
 
 					append_element(ir_lines, make_instruction_pushl(ecx));
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_constant(symbol->tableid), ecx));
+							make_argument_constant(symbol->tableId), ecx));
 
 					append_element(ir_lines,
 								   make_instruction_movl(
@@ -966,7 +966,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			if((symbol = getSymbol(var->symboltable,
 				var->value.var_record.var->id)) != NULL){
-				tmpTable = symbol->symboltype->child;
+				tmpTable = symbol->symbolType->child;
 				// get the inner scope of the record
 			}
 
@@ -1029,7 +1029,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_DIVIDE:
 			tempLabelCounter = getNextLabel();
 
-			char *notZeroDenominator = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *notZeroDenominator = NEW_LABEL;
 			sprintf(notZeroDenominator, "NotZeroDen%d", tempLabelCounter);
 
 			append_element(ir_lines, make_instruction_pushl(ebx));
@@ -1086,8 +1086,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			result = make_argument_temp_register(current_temporary++);
 			tempLabelCounter = getNextLabel();
 
-			char *boolTrueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			char *boolEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *boolTrueLabel = NEW_LABEL;
+			char *boolEndLabel = NEW_LABEL;
 
 			sprintf(boolTrueLabel, "booOPtrue%d", tempLabelCounter);
 			IR_INSTRUCTION *trueLabel = make_instruction_label(boolTrueLabel);
@@ -1149,8 +1149,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_AND:
 			tempLabelCounter = getNextLabel();
 
-			char *andFalseLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			char *andEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *andFalseLabel = NEW_LABEL;
+			char *andEndLabel = NEW_LABEL;
 			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
 			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
@@ -1182,8 +1182,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_OR:
 			tempLabelCounter = getNextLabel();
 
-			char *orTrueLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
-			char *orEndLabel = calloc(MAX_LABEL_SIZE,sizeof(char));
+			char *orTrueLabel = NEW_LABEL;
+			char *orEndLabel = NEW_LABEL;
 			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
 			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
@@ -1251,14 +1251,14 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			symbol = getSymbol(term->symboltable, term->value.
 					term_act_list.id);
 
-			// push parameters on stack recursively
+			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
 			append_element(ir_lines, make_instruction_call(
-					make_argument_label(symbol->uniquename)));
+					make_argument_label(symbol->uniqueName)));
 
-			// stack clean up for function parameters
-			addToStackPointer(symbol->noArguments);
+			// stack clean up for function functionParameters
+			addToStackPointer(symbol->noParameters);
 
 			//Handle return value as it can sit in eax
 			ARGUMENT *returnArg = make_argument_temp_register(
@@ -1287,7 +1287,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			if ( term->symboltype->type == SYMBOL_INT ) {
 
-				positiveNumberLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+				positiveNumberLabel = NEW_LABEL;
 				sprintf(positiveNumberLabel, "posNum%i", getNextLabel());
 
 				result = make_argument_temp_register(current_temporary++);
@@ -1345,7 +1345,7 @@ void IR_builder_act_list ( ACT_LIST *actList ) {
 }
 
 /* Since expression_list is used only by act list we can push function
- * parameters from here
+ * functionParameters from here
  */
 void IR_builder_expression_list ( EXP_LIST *expList ) {
 
@@ -1366,7 +1366,7 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 /* Adding allocation of local variables, this is by convention 
  *	a subtraction of the stack pointer
  */
-IR_INSTRUCTION *localVariableAllocation(SYMBOLTABLE *currentScope) {
+IR_INSTRUCTION *localVariableAllocation(SYMBOL_TABLE *currentScope) {
 	if (currentScope->localVars > 0){
 		IR_INSTRUCTION *instr = make_instruction_subl(
 				make_argument_constant(currentScope->localVars),
