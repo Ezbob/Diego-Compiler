@@ -25,11 +25,11 @@ void initRegisters() {
 	esp = make_argument_register(r_esp, "esp");
 }
 
-int getNextLabel() {
+int get_next_label() {
 	return current_label++;
 }
 
-int getNextFunction() {
+int get_next_function() {
 	return function_label++;
 }
 
@@ -115,18 +115,18 @@ linked_list *IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	calleeStart();
-	calleeSave();
+	callee_start();
+	callee_save();
 
-	localVariableAllocation(program->symboltable);
+	local_variable_allocation(program->symboltable);
 
-	callerSave();
+	caller_save();
 	initStaticLink();
 	IR_builder_statement_list(program->statement_list);
-	
-	calleeRestore();
-	callerRestore();
-	calleeEnd();
+
+	callee_restore();
+	caller_restore();
+	callee_end();
 
 	append_element(ir_lines, make_instruction_movl(
 		make_argument_constant(0),eax));
@@ -143,14 +143,13 @@ linked_list *IR_build( BODY *program ) {
 
 	repairMem(ir_lines);
 	ir_lines = save;
-	IR_printer(ir_lines);
-	
+
 	return ir_lines;
 }
 
 void IR_builder_function(FUNC *func) {
 
-	int functionId = getNextFunction();
+	int functionId = get_next_function();
 	char *functionStartLabel = NEW_LABEL;
 	char *functionEndLabel = NEW_LABEL;
 
@@ -181,9 +180,9 @@ void IR_builder_function(FUNC *func) {
 		);
 
 
-	calleeRestore();
-	callerRestore();
-	calleeEnd();
+	callee_restore();
+	caller_restore();
+	callee_end();
 	func->symboltable->localVars = 0; // reset local variables in scope 
 
 	append_element(ir_lines, make_instruction_ret());
@@ -221,11 +220,11 @@ void IR_builder_head (HEAD *header) {
 }
 
 void IR_builder_body (BODY *body) {
- 	calleeStart(); // shift in stackframe
+	callee_start(); // shift in stackframe
  	addStaticLink(body->symboltable->id);
-	calleeSave();
-	localVariableAllocation(body->symboltable);
-	callerSave();
+	callee_save();
+	local_variable_allocation(body->symboltable);
+	caller_save();
 
 	IR_builder_statement_list(body->statement_list);
 }
@@ -254,13 +253,6 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 			vtype->symboltable->localVars += WORD_SIZE;
 			break;
 
-		case TYPE_ARRAY:
-			// vtype->symboltable->localVars += WORD_SIZE;
-			// parse by reference but we have to find out if it's functionParameters
-			break;
-		case TYPE_RECORD:
-			// vtype->symboltable->localVars += WORD_SIZE; // like arrays
-			break;
 		default:
 			break;
 	}
@@ -341,7 +333,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// generating argument for boolean expression
 					arg1 = IR_builder_expression(st->value.exp);
 
-					tempLabelCounter = getNextLabel();
+					tempLabelCounter = get_next_label();
 
 					falseLabel = NEW_LABEL;
 					trueLabel = NEW_LABEL;
@@ -416,15 +408,15 @@ void IR_builder_statement ( STATEMENT *st ) {
 							)
 						);
 
-					addToStackPointer(2); // clean up
-					callerRestore();
+					add_to_stack_pointer(2); // clean up
+					caller_restore();
 
 					break;
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
 					//Push arguments for print then form for print
-					callerSave();
+					caller_save();
 					arg1 = IR_builder_expression(st->value.exp);
 
 					params = make_instruction_pushl(arg1);
@@ -446,13 +438,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 					call = make_instruction_call(arg2);
 					append_element(ir_lines, call);
 
-					addToStackPointer(2);
-					callerRestore();
+					add_to_stack_pointer(2);
+					caller_restore();
 
 					break;
 
 				case SYMBOL_ARRAY:
-					callerSave();
+					caller_save();
 					arg1 = IR_builder_expression(st->value.exp);
 
 					append_element(
@@ -468,8 +460,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_call(
 							make_argument_label("printf")));
 
-					addToStackPointer(2);
-					callerRestore();
+					add_to_stack_pointer(2);
+					caller_restore();
 					break;
 				default:
 					break;
@@ -478,22 +470,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_ASSIGN:  // todo with local variables
 			switch(st->value.statement_assign.var->kind) {
-
 				case VAR_ARRAY:
-					arg2 = IR_builder_variable(st->value.
-							statement_assign.var);
-					arg1 = IR_builder_expression(st->value.
-							statement_assign.exp);
-
-					append_element(
-							ir_lines,
-							make_instruction_movl(
-									arg1,
-									arg2
-							)
-					);
-					break;
-
 				case VAR_RECORD:
 
 					arg1 = IR_builder_expression(st->value.
@@ -547,8 +524,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 										arg2
 								)
 						);
-						} else if (symbol->offset == 0 &&
-							   st->symboltable->localVars >= WORD_SIZE) {
+					} else if (symbol->offset == 0 &&
+						   st->symboltable->localVars >= WORD_SIZE) {
 						// assigning offsets in stack
 
 							symbol->offset = -1 * (st->symboltable->
@@ -576,7 +553,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			elseLabel = NEW_LABEL;
 			endLabelString = NEW_LABEL;
 
-			int labelno = getNextLabel();
+			int labelno = get_next_label();
 
 			sprintf(elseLabel, "else%d", labelno);
 			sprintf(endLabelString, "endIf%d", labelno);
@@ -717,7 +694,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 						)
 					);
 
-
 					append_element(
 						ir_lines,
 						make_instruction_incl(
@@ -838,7 +814,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_WHILE:
 
-			tempLabelCounter = getNextLabel();
+			tempLabelCounter = get_next_label();
 
 			trueWhileString = NEW_LABEL;
 			endLabelString = NEW_LABEL;
@@ -1027,7 +1003,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
  			return result;
 
 		case EXPRES_DIVIDE:
-			tempLabelCounter = getNextLabel();
+			tempLabelCounter = get_next_label();
 
 			char *notZeroDenominator = NEW_LABEL;
 			sprintf(notZeroDenominator, "NotZeroDen%d", tempLabelCounter);
@@ -1042,14 +1018,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 					notZeroDenominator));
 				// denominator has to be check if zero
 
-			append_element(ir_lines,make_instruction_movl(
-								   make_argument_constant(3), ebx));
-
-			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(1), eax));
-
-			append_element(ir_lines, make_instruction_intcode("0x80"));
-				// code for throwing a divide by zero exception
+			build_exception("0x0");
 
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
@@ -1084,7 +1053,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
 			result = make_argument_temp_register(current_temporary++);
-			tempLabelCounter = getNextLabel();
+			tempLabelCounter = get_next_label();
 
 			char *boolTrueLabel = NEW_LABEL;
 			char *boolEndLabel = NEW_LABEL;
@@ -1147,7 +1116,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return result;
 
 		case EXPRES_AND:
-			tempLabelCounter = getNextLabel();
+			tempLabelCounter = get_next_label();
 
 			char *andFalseLabel = NEW_LABEL;
 			char *andEndLabel = NEW_LABEL;
@@ -1180,7 +1149,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return result;
 			break;
 		case EXPRES_OR:
-			tempLabelCounter = getNextLabel();
+			tempLabelCounter = get_next_label();
 
 			char *orTrueLabel = NEW_LABEL;
 			char *orEndLabel = NEW_LABEL;
@@ -1258,7 +1227,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 					make_argument_label(symbol->uniqueName)));
 
 			// stack clean up for function functionParameters
-			addToStackPointer(symbol->noParameters);
+			add_to_stack_pointer(symbol->noParameters);
 
 			//Handle return value as it can sit in eax
 			ARGUMENT *returnArg = make_argument_temp_register(
@@ -1288,7 +1257,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			if ( term->symboltype->type == SYMBOL_INT ) {
 
 				positiveNumberLabel = NEW_LABEL;
-				sprintf(positiveNumberLabel, "posNum%i", getNextLabel());
+				sprintf(positiveNumberLabel, "posNum%i", get_next_label());
 
 				result = make_argument_temp_register(current_temporary++);
 				append_element(ir_lines,make_instruction_movl(subArg,result));
@@ -1366,7 +1335,7 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 /* Adding allocation of local variables, this is by convention 
  *	a subtraction of the stack pointer
  */
-IR_INSTRUCTION *localVariableAllocation(SYMBOL_TABLE *currentScope) {
+IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	if (currentScope->localVars > 0){
 		IR_INSTRUCTION *instr = make_instruction_subl(
 				make_argument_constant(currentScope->localVars),
@@ -1378,7 +1347,20 @@ IR_INSTRUCTION *localVariableAllocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
-void callerSave(){
+/*
+ * Handy code sippet for throwing exceptions
+ */
+void build_exception(char *intCode) {
+	append_element(ir_lines,make_instruction_movl(
+			make_argument_constant(3), ebx));
+
+	append_element(ir_lines, make_instruction_movl(
+			make_argument_constant(1), eax));
+
+	append_element(ir_lines, make_instruction_intcode(intCode));
+}
+
+void caller_save(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_pushl(ecx);
 	IR_INSTRUCTION *instr2 = make_instruction_pushl(edx);
@@ -1387,7 +1369,7 @@ void callerSave(){
 
 }
 
-void callerRestore(){
+void caller_restore(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_popl(edx);
 	IR_INSTRUCTION *instr2 = make_instruction_popl(ecx);
@@ -1396,7 +1378,7 @@ void callerRestore(){
 
 }
 
-void calleeStart(){
+void callee_start(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebp);
 	IR_INSTRUCTION *instr2 = make_instruction_movl(esp, ebp);
@@ -1405,7 +1387,7 @@ void calleeStart(){
 
 }
 
-void calleeEnd(){
+void callee_end(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_movl(ebp, esp);
 	IR_INSTRUCTION *instr2 = make_instruction_popl(ebp);
@@ -1414,7 +1396,7 @@ void calleeEnd(){
 
 }
 
-void calleeSave(){
+void callee_save(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_pushl(ebx);
 	IR_INSTRUCTION *instr2 = make_instruction_pushl(esi);
@@ -1424,7 +1406,7 @@ void calleeSave(){
 	append_element(ir_lines, instr3);
 }
 
-void calleeRestore(){
+void callee_restore(){
 
 	IR_INSTRUCTION *instr1 = make_instruction_popl(ebx);
 	IR_INSTRUCTION *instr2 = make_instruction_popl(esi);
@@ -1435,7 +1417,7 @@ void calleeRestore(){
 
 }
 
-void addToStackPointer(int i){
+void add_to_stack_pointer(int i){
 
 	ARGUMENT *arg = make_argument_constant(i * WORD_SIZE);
 	IR_INSTRUCTION *instr = make_instruction_addl(arg, esp);

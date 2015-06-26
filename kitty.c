@@ -7,8 +7,8 @@
 #include "typechecker/kittycollect.h"
 #include "typechecker/kittymulticollect.h"
 #include "typechecker/kittycheck.h"
-
 #include "kittyir.h"
+#include "kittyemit.h"
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
@@ -25,6 +25,7 @@
 
 int lineno = 1;
 struct BODY *_main_;
+linked_list *ir_lines;
 
 int main ( int argc, char *argv[] ) {
 
@@ -45,7 +46,8 @@ int main ( int argc, char *argv[] ) {
 				|| strcmp(argv[1],"-p") ) ) {
 				printer_body(_main_);
 			} else {
-				IR_build(_main_);	
+				ir_lines = IR_build(_main_);
+				IR_printer(ir_lines);
 			}
 			break;
 		default:
