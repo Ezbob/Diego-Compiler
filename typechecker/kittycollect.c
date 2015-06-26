@@ -6,14 +6,14 @@
 
 int unknownTypesCount = 0; // decides whether more passes should be used.
 						// more passes are used when unknownTypesCount > 0
-SYMBOLTABLE *typeDefs;
+//SYMBOLTABLE *typeDefs;
 /*
  * Collecting symbols and setting symboltables in ast nodes
  */
 
 void collect ( BODY *main ) {
 	fprintf(stderr, "Initializing type collection phase\n");
-	typeDefs = initSymbolTable(-1);
+	//typeDefs = initSymbolTable(-1);
 	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
 }
 
@@ -48,8 +48,7 @@ void collect_head (HEAD *header, SYMBOLTABLE *inner, SYMBOLTABLE *outer) {
 	symbol->returntype = header->returntype;
 	symbol->noArguments = noArguments;
 
-	header->symboltype->return_type = 
-			collect_type(header->returntype, outer, NULL);
+	header->symboltype->return_type = collect_type(header->returntype, outer);
 	if ( header->symboltype->return_type == NULL ) {
 		fprintf(stderr,"Error: Could not collect function return type\n");
 		exit(1);
@@ -63,8 +62,7 @@ void collect_body (BODY *body, SYMBOLTABLE *st) {
 }
 
 /* Note: here parentTypeName is for recursively defined types */
-SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st, 
-		char* parentTypeName ) {
+SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st ) {
 
 	type->symboltable = st;
 	SYMBOLTYPE *symboltype = NULL;
@@ -72,7 +70,7 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 
 	switch(type->kind){
 		case TYPE_ID:
-			if((symbol = getSymbol(typeDefs,type->value.id)) != NULL &&
+			if( (symbol = getSymbol(st, type->value.id)) != NULL &&
 				symbol->symboltype->type != SYMBOL_UNKNOWN ) {
 				symboltype = symbol->symboltype;
 				type->symboltype = symboltype;
@@ -93,29 +91,12 @@ SYMBOLTYPE *collect_type ( TYPE *type, SYMBOLTABLE *st,
 
 		case TYPE_ARRAY:
 			symboltype = make_SYMBOLTYPE(SYMBOL_ARRAY);
-			if (parentTypeName != NULL){ // if they contain recursive types
-				if (putSymbol(st, parentTypeName, 0, symboltype) == NULL){
-
-					fprintf(stderr, "Error at line %i: "
-						"Could not assign new type\n", type->lineno);
-					exit(1);
-				}
-			}
 			type->symboltype = symboltype;
-			symboltype->nextArrayType = collect_type(type->value.type, st,
-				NULL);
+			symboltype->nextArrayType = collect_type(type->value.type, st);
 			return symboltype;
 
 		case TYPE_RECORD:
 			symboltype = make_SYMBOLTYPE(SYMBOL_RECORD);
-			if (parentTypeName != NULL){ // if they contain recursive types
-				if (putSymbol(st, parentTypeName, 0, symboltype) == NULL){
-					printf("hello");
-					fprintf(stderr, "Error at line %i: "
-						"Could not assign new type\n", type->lineno);
-					exit(1);
-				}
-			}
 			type->symboltype = symboltype;
 			symboltype->child = scopeSymbolTable(st, st->id);
 			symboltype->arguments =	collect_var_decl_list(
@@ -164,7 +145,7 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOLTABLE *st, int offset ) {
 
 	vtype->symboltable = st;
 
-	SYMBOLTYPE *symboltype = collect_type(vtype->type, st, NULL);
+	SYMBOLTYPE *symboltype = collect_type(vtype->type, st);
 
 	if ( symboltype->type == SYMBOL_UNKNOWN ) {
 		unknownTypesCount++;
@@ -212,26 +193,21 @@ void collect_declaration ( DECLARATION *decl, SYMBOLTABLE *st ) {
 	switch(decl->kind){
 		case DECLARATION_ID:
 
-			symboltype = collect_type(decl->value.declaration_id.type, 
-				st, decl->value.declaration_id.id);
+			symboltype = collect_type(decl->value.declaration_id.type, st);
 
 			if(symboltype->type == SYMBOL_UNKNOWN){
 				unknownTypesCount++;
 			}
 
-			if ( (symbol = getSymbol(typeDefs, decl->value.declaration_id.id))
-						   == NULL ) {
-				if ( (symbol = putSymbol(typeDefs, decl->value.declaration_id.
-						id, 0, symboltype)) == NULL) {
-					fprintf(stderr, "Error at line %i: "
-							"Could not assignment new type\n", decl->lineno );
-					exit(1);
-				}
-
-			} else if ( symbol->symboltype->type != symboltype->type ) {
-				// redefinition of the symbol type
-				symbol->symboltype = symboltype;
+			if ( ( symbol = putSymbol(st, decl->value.declaration_id.id,
+									  0, symboltype) ) != NULL) {
+				symbol->isTypeDef = 1;
+			} else {
+				fprintf(stderr, "Error at line %i: "
+						"Could not assignment new type\n", decl->lineno);
+				exit(1);
 			}
+
 			break;
 
 		case DECLARATION_FUNC:
