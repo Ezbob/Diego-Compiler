@@ -69,6 +69,11 @@ void check_var_decl_list ( VAR_DECL_LIST *var_decl_list ) {
 
 void check_var_type ( VAR_TYPE *var_type){
 	check_type(var_type->type);
+
+	if ( var_type->symbol->symboltype->type == SYMBOL_UNKNOWN ) {
+		check_error_report("Unknown type; cannot infer type",
+						   var_type->lineno);
+	}
 }
 
 void check_decl_list ( DECL_LIST *decl_list){
@@ -83,7 +88,7 @@ void check_decl_list ( DECL_LIST *decl_list){
 }
 
 
-void check_declaration ( DECLARATION *declaration){
+void check_declaration ( DECLARATION *declaration ) {
 	switch(declaration->kind){
 		case DECLARATION_ID:
 			check_type(declaration->value.declaration_id.type);
