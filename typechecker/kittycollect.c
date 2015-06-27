@@ -33,7 +33,7 @@ void collect_head (HEAD *header, SYMBOL_TABLE *inner, SYMBOL_TABLE *outer) {
 	SYMBOL *symbol;
 	
 	header->symboltable = outer;
-	header->symboltype = make_SYMBOL_TYPE(SYMBOL_FUNCTION);
+	header->symboltype = make_SYMBOL_TYPE( SYMBOL_FUNCTION );
 
 	int noArguments = collect_par_decl_list(header->pdlist, inner);
 
@@ -97,7 +97,8 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 			type->symboltype = symboltype;
 			symboltype->child = scopeSymbolTable(st, st->id);
 			symboltype->arguments =	collect_var_decl_list(
-				type->value.var_decl_list, symboltype->child);
+				type->value.var_decl_list, symboltype->child,
+				RECORD_MEMBER_SYMBOL);
 			symboltype->recordMembers = type->value.var_decl_list;
 			return symboltype;
 	}
@@ -111,7 +112,8 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st ) {
 	int arguments = 0;
 	switch(pdecl->kind){
 		case PAR_DECL_LIST_LIST:
-			arguments += collect_var_decl_list(pdecl->var_decl_list, st);
+			arguments += collect_var_decl_list(pdecl->var_decl_list, st,
+			PARAMETER_SYMBOL );
 			break;
 
 		case PAR_DECL_LIST_EMPTY:
@@ -121,40 +123,44 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st ) {
 }
 
 //Collecting lists and passing on offsets to variables
-int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st ) {
+int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st,
+							SYMBOL_KIND symbolKind ) {
 
 	vdecl->symboltable = st;
-	int no = 1;
+	int numberOfVariables = 1;
 	switch(vdecl->kind){
 		case VAR_DECL_LIST_LIST:
-			no += collect_var_decl_list(vdecl->var_decl_list, st);
-			collect_var_type(vdecl->var_type, st, no);
+			numberOfVariables += collect_var_decl_list(vdecl->var_decl_list,
+													   st, symbolKind);
+			collect_var_type(vdecl->var_type, st, numberOfVariables,
+							 symbolKind);
 			break;
 
 		case VAR_DECL_LIST_TYPE:
-			collect_var_type(vdecl->var_type, st, no);
+			collect_var_type(vdecl->var_type, st, numberOfVariables,
+							 symbolKind);
 			break;
 	}
-	return no;
+	return numberOfVariables;
 }
 
-void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset ) {
+void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset,
+						SYMBOL_KIND symbolKind ) {
 
 	vtype->symboltable = st;
+	SYMBOL_TYPE *symbolType = collect_type(vtype->type, st);
 
-	SYMBOL_TYPE *symboltype = collect_type(vtype->type, st);
-
-	if ( symboltype->type == SYMBOL_UNKNOWN ) {
+	if ( symbolType->type == SYMBOL_UNKNOWN ) {
 		unknownTypesCount++;
 	}
 
-	if (symboltype != NULL) {
-		vtype->symbol = putSymbol(st, vtype->id, symboltype);
-
-		if(vtype->symbol == NULL){
+	if (symbolType != NULL) {
+		vtype->symbol = putSymbol(st, vtype->id, symbolType);
+		if(vtype->symbol == NULL) {
 			fprintf(stderr, "Duplicate entry in symboltable\n");
 			exit(1);
 		}
+		vtype->symbol->symbolKind = symbolKind;
 		vtype->symbol->offset = offset;
 	} else {
 		fprintf(stderr, "Error at line %i: type of symbol not recognized \n"
@@ -198,7 +204,7 @@ void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st ) {
 
 			if ( ( symbol = putSymbol(st, decl->value.declaration_id.id,
 									  symboltype) ) != NULL) {
-				symbol->isTypeDef = 1;
+				symbol->symbolKind = TYPE_DEFINE_SYMBOL;
 			} else {
 				fprintf(stderr, "Error at line %i: "
 						"Could not assignment new type\n", decl->lineno);
@@ -212,7 +218,8 @@ void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st ) {
 			break;
 
 		case DECLARATION_VAR:
-			collect_var_decl_list(decl->value.var_decl_list, st);
+			collect_var_decl_list( decl->value.var_decl_list, st,
+			LOCAL_VARIABLE_SYMBOL);
 			break;
 	}
 }

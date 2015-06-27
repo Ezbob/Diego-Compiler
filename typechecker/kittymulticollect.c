@@ -118,7 +118,6 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 				&& symboltype->type != SYMBOL_UNKNOWN) {
 
 				unknownTypesCount--;
-				symbol->isTypeDef = 1;
 				symbol->symbolType = symboltype;
 			}
 

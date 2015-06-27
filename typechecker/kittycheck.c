@@ -301,7 +301,7 @@ int check_variable ( VAR *var){
 		case VAR_ID:
 			if( (symbol = getSymbol(var->symboltable, var->id)) != NULL ) {
 				var->symboltype = symbol->symbolType;
-				if ( symbol->isTypeDef == 1 ) {
+				if ( symbol->symbolKind == TYPE_DEFINE_SYMBOL ) {
 					check_error_report("Symbol is a type",var->lineno);
 				}
 			} else {

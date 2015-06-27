@@ -14,6 +14,13 @@ typedef enum TYPES_SUPPORTED {
     SYMBOL_UNKNOWN 
 } TYPES_SUPPORTED;
 
+typedef enum SYMBOL_KIND {
+    LOCAL_VARIABLE_SYMBOL,
+    PARAMETER_SYMBOL,
+    RECORD_MEMBER_SYMBOL,
+    TYPE_DEFINE_SYMBOL
+} SYMBOL_KIND;
+
 typedef struct SYMBOL_TYPE {
     struct SYMBOL_TYPE *nextArrayType; // for arrays
     struct VAR_DECL_LIST *recordMembers; // for records
@@ -27,13 +34,13 @@ typedef struct SYMBOL_TYPE {
 typedef struct SYMBOL {
     char *name;
     SYMBOL_TYPE *symbolType;
+    SYMBOL_KIND symbolKind;
     struct SYMBOL *next; // for hash chaining
     struct PAR_DECL_LIST *functionParameters;
     int noParameters; // number of parameters needed by the function
     char *uniqueName; // The function name at assembler level
     int offset; // for offsetting into the stack
     int tableId; // for checking when to use static link
-    int isTypeDef; // whether symbol is symbol for a type defined type
 } SYMBOL;
 
 typedef struct SYMBOL_TABLE {

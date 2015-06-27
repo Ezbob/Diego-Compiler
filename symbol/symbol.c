@@ -76,7 +76,6 @@ SYMBOL *putSymbol(SYMBOL_TABLE *t, char *name, SYMBOL_TYPE *symbolT){
 	PutSymbol->uniqueName = calloc(11,sizeof(char));
 	PutSymbol->offset = 0;
 	PutSymbol->tableId = t->id;
-	PutSymbol->isTypeDef = 0;
 
 	Placeholder = t->table[HashValue];
 	if (Placeholder != NULL){ // has a SYMBOL in field 

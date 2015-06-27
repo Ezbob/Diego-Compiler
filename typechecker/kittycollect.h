@@ -22,8 +22,10 @@ void collect_head ( HEAD *header, SYMBOL_TABLE *scope, SYMBOL_TABLE *st);
 void collect_body ( BODY *body, SYMBOL_TABLE *st);
 SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st);
 int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st);
-int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st);
-void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset);
+int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st,
+							SYMBOL_KIND);
+void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset,
+						SYMBOL_KIND);
 void collect_decl_list ( DECL_LIST *dlst, SYMBOL_TABLE *st);
 void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st);
 void collect_statement_list ( STATEMENT_LIST *slst, SYMBOL_TABLE *st);
