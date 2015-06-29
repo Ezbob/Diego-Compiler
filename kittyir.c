@@ -316,14 +316,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_movl(returnValue, eax));
 			break;
 
-		case STATEMENT_WRITE: 
+		case STATEMENT_WRITE:
+			caller_save();
+			arg1 = IR_builder_expression(st->value.exp);
 			switch(st->value.exp->symboltype->type){
-
 				case SYMBOL_BOOL:
-					
-					// generating argument for boolean expression
-					arg1 = IR_builder_expression(st->value.exp);
-
 					tempLabelCounter = GET_NEXT_LABEL_ID;
 
 					falseLabel = NEW_LABEL;
@@ -367,20 +364,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// printing section
 					append_element(ir_lines, make_instruction_label(
 							printLabel));
-
-					// call to print
-					append_element( ir_lines, make_instruction_call(
-							make_argument_label("printf")));
-
-					add_to_stack_pointer(2); // clean up
-					caller_restore();
 					break;
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
-					//Push arguments for print then form for print
-					caller_save();
-					arg1 = IR_builder_expression(st->value.exp);
 
 					append_element(ir_lines, make_instruction_pushl(arg1));
 
@@ -393,32 +380,23 @@ void IR_builder_statement ( STATEMENT *st ) {
 					}
 
 					append_element(ir_lines, pushForm);
-					append_element(ir_lines, make_instruction_call(
-							make_argument_label("printf")));
-
-					add_to_stack_pointer(2);
-					caller_restore();
-
 					break;
 
 				case SYMBOL_ARRAY:
-					caller_save();
-					arg1 = IR_builder_expression(st->value.exp);
-
 					append_element(ir_lines, make_instruction_pushl(arg1));
 
 					append_element(ir_lines, make_instruction_pushl(
 							make_argument_label("$formNUM")));
-
-					append_element(ir_lines, make_instruction_call(
-							make_argument_label("printf")));
-
-					add_to_stack_pointer(2);
-					caller_restore();
 					break;
 				default:
 					break;
 			}
+			// call to print
+			append_element( ir_lines, make_instruction_call(
+					make_argument_label("printf")));
+
+			add_to_stack_pointer(2); // clean up
+			caller_restore();
 			break;
 
 		case STATEMENT_ASSIGN:
