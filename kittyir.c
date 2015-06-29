@@ -306,11 +306,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *returnValue;
 	ARGUMENT *arg1;
 	ARGUMENT *arg2;
-	ARGUMENT *arg3;
 
 	IR_INSTRUCTION *pushForm;
-	IR_INSTRUCTION *params;
-	IR_INSTRUCTION *call;
 
 	switch(st->kind){
 
@@ -337,74 +334,46 @@ void IR_builder_statement ( STATEMENT *st ) {
 					sprintf(trueLabel, "btrue%d", tempLabelCounter);
 					sprintf(printLabel,"printbool%d", tempLabelCounter);
 
-					append_element( // compaire boolean value to true
-						ir_lines,
-						make_instruction_cmp(
-							make_argument_constant(1),
-							arg1
-							)
-						);
+					// compare boolean value to true
+					append_element(ir_lines, make_instruction_cmp(
+							make_argument_constant(1), arg1));
 
-					append_element( // true has to be printed?
-						ir_lines,
-						make_instruction_jne(
-								falseLabel
-							)
-						);
+					// true has to be printed?
+					append_element(ir_lines,
+								   make_instruction_jne(falseLabel));
 
-					append_element(ir_lines, // making a push to the stack
-											// with result of expression
-						make_instruction_pushl(
-							arg1
-							)
-						);
+					// making a push to the stack with result of expression
+					append_element(ir_lines, make_instruction_pushl(arg1));
 
-					append_element( // true case here
-						ir_lines,
-						make_instruction_pushl(
-							make_argument_label("$formTRUE")
-							)
-						);
+					// true case here
+					append_element(ir_lines, make_instruction_pushl(
+							make_argument_label("$formTRUE")));
 
-					append_element( // jmp to printf call 
-						ir_lines,
-						make_instruction_jmp(
-								printLabel
-							)
-						);
+					// jump to printf call
+					append_element(ir_lines,
+								   make_instruction_jmp(printLabel));
 
-					append_element( // false label section
-						ir_lines,
-						make_instruction_label(falseLabel)
-						);
+					// false label section
+					append_element(ir_lines,
+								   make_instruction_label(falseLabel));
 
-					append_element(ir_lines, // making a push to the stack
-											// with result of expression
-						make_instruction_pushl(arg1)
-						);
+					// making a push to the stack with result of expression
+					append_element(ir_lines, make_instruction_pushl(arg1));
 
-					append_element( // false case here
-						ir_lines,
-						make_instruction_pushl(
-							make_argument_label("$formFALSE")
-							)
-						);
+					// false case here
+					append_element(ir_lines, make_instruction_pushl(
+							make_argument_label("$formFALSE")));
 
-					append_element( // printing section
-						ir_lines,
-						make_instruction_label(printLabel)
-						);
+					// printing section
+					append_element(ir_lines, make_instruction_label(
+							printLabel));
 
-					append_element( // call to print
-						ir_lines,
-						make_instruction_call(
-							make_argument_label("printf")
-							)
-						);
+					// call to print
+					append_element( ir_lines, make_instruction_call(
+							make_argument_label("printf")));
 
 					add_to_stack_pointer(2); // clean up
 					caller_restore();
-
 					break;
 
 				case SYMBOL_INT:
@@ -436,12 +405,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					caller_save();
 					arg1 = IR_builder_expression(st->value.exp);
 
-					append_element(
-						ir_lines,
-						make_instruction_pushl(
-							arg1
-						)
-					);
+					append_element(ir_lines, make_instruction_pushl(arg1));
 
 					append_element(ir_lines, make_instruction_pushl(
 							make_argument_label("$formNUM")));
@@ -457,82 +421,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 			}
 			break;
 
-		case STATEMENT_ASSIGN:  // todo with local variables
-			switch(st->value.statement_assign.var->kind) {
-				case VAR_ARRAY:
-				case VAR_RECORD:
+		case STATEMENT_ASSIGN:
+			arg1 = IR_builder_expression(st->value.statement_assign.exp);
+			arg2 = IR_builder_variable(st->value.statement_assign.var);
 
-					arg1 = IR_builder_expression(st->value.
-							statement_assign.exp);
-					arg2 = IR_builder_variable(st->value.
-							statement_assign.var);
-
-					append_element(
-							ir_lines,
-							make_instruction_movl(
-									arg1,
-									arg2
-							)
-					);
-					break;
-
-				case VAR_ID:
-					arg1 = IR_builder_expression(st->value.
-							statement_assign.exp);
-
-					SYMBOL *symbol = getSymbol(st->symboltable, st->value
-							.statement_assign.var->id);
-
-					if ( symbol != NULL ) {
-
-						if (symbol->tableId != st->symboltable->id) {
-
-						append_element(ir_lines, make_instruction_pushl(ecx));
-
-						append_element(ir_lines, make_instruction_movl(
-											   make_argument_constant(
-													   symbol->tableId),
-											   ecx));
-
-						append_element(ir_lines, make_instruction_movl(
-											   make_argument_indexing(
-													   make_argument_label(
-															   "staticLinks"),
-													   ecx), ebx));
-
-						append_element(ir_lines, make_instruction_popl(ecx));
-
-						arg2 = make_argument_static(
-								WORD_SIZE * (symbol->offset)
-						);
-
-						append_element(
-								ir_lines,
-								make_instruction_movl(
-										arg1,
-										arg2
-								)
-						);
-					} else if (symbol->offset == 0 &&
-						   st->symboltable->localVars >= WORD_SIZE) {
-						// assigning offsets in stack
-
-							symbol->offset = -1 * (st->symboltable->
-									localVars / WORD_SIZE);
-							st->symboltable->localVars -= WORD_SIZE;
-						}
-						append_element( // actual assignment
-								ir_lines,
-								make_instruction_movl(
-										arg1,
-										make_argument_address(
-												(symbol->offset * WORD_SIZE)
-										)
-								)
-						);
-					}
-					break;
-				}
+			append_element(ir_lines, make_instruction_movl(arg1, arg2));
 			break;
 
 		case STATEMENT_IFBRANCH:
