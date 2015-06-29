@@ -31,7 +31,7 @@ void init_registers() {
 
 void init_static_link() {
 
-	if (get_length(data_lines) == 0) {
+	if ( get_length(data_lines) == 0 ) {
 		
 		append_element(ir_lines, make_instruction_movl(
 				make_argument_label("$heapNext"),
@@ -61,7 +61,7 @@ void add_Static_Link(int id) {
 	append_element(ir_lines, 
 		make_instruction_movl(ebp,
 			make_argument_indexing( 
-				make_argument_label("staticLinks"),ebx)));
+				make_argument_label("staticLinks"), NULL , ebx)));
 
 	append_element(ir_lines,make_instruction_popl(ebx));
 }
@@ -73,6 +73,7 @@ linked_list *IR_build( BODY *program ) {
 	data_lines = initialize_list();
 	init_registers();
 
+	/*
 	int offsetCount = -1;
 
 	SYMBOL *symbol;
@@ -85,7 +86,7 @@ linked_list *IR_build( BODY *program ) {
 			symbol->offset = offsetCount--;
 			//printf("after: %s --> %i \n", symbol->name, symbol->offset);
 		}
-	}
+	}*/
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -183,12 +184,11 @@ void IR_builder_head (HEAD *header) {
 		if ( vars->var_type != NULL ) {
 
 			symbol = getSymbol(header->pdlist->symboltable,
-				vars->var_type->id);
+							   vars->var_type->id);
 			if ( symbol == NULL ) {
 				fprintf(stderr, "%s\n", "Variable not found in symboltable");
 				exit(1);
 			}
-
 			symbol->offset = offset;
 			offset++;
 			vars = vars->var_decl_list;
@@ -495,7 +495,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_movl(arraySize,
 							make_argument_indexing(make_argument_label(
 									st->value.statement_allocate.var->id),
-												   arg2)));
+												   NULL, arg2)));
 
 					append_element(ir_lines,
 								   make_instruction_incl(arraySize));
@@ -631,8 +631,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	ARGUMENT *arg;
 	ARGUMENT *arg1;
 	ARGUMENT *resultOfSubExp;
-	ARGUMENT *address_of_id;
-	SYMBOL_TABLE *tmpTable;
+	ARGUMENT *resultOfSubVar;
+	ARGUMENT *addressOfId;
+	SYMBOL_TABLE *childTable;
 	
 	switch ( var->kind ) {
 		case VAR_ID:
@@ -660,15 +661,26 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 										   make_argument_indexing(
 												   make_argument_label(
 														   "staticLinks"),
-												   ecx ), ebx ));
+												   NULL, ecx ), ebx ));
 
 					append_element(ir_lines, make_instruction_popl(ecx));
 
-					arg = make_argument_static( WORD_SIZE *
-														(symbol->offset) );
+					if ( symbol->symbolKind ==  LOCAL_VARIABLE_SYMBOL ) {
+						arg = make_argument_static( -1 * ( WORD_SIZE *
+													symbol->offset) );
+					} else {
+						arg = make_argument_address( WORD_SIZE *
+													 (symbol->offset) );
+					}
+
 				} else {
-					arg = make_argument_address( WORD_SIZE *
-														 (symbol->offset) );
+					if ( symbol->symbolKind ==  LOCAL_VARIABLE_SYMBOL ) {
+						arg = make_argument_static( -1 * ( WORD_SIZE *
+														   symbol->offset) );
+					} else {
+						arg = make_argument_address( WORD_SIZE *
+													 (symbol->offset) );
+					}
 				}
 			}
 			return arg;
@@ -686,33 +698,27 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			arg1 = make_argument_indexing(
 						make_argument_label(
-								var->value.var_array.var->id), arg );
+								var->value.var_array.var->id),NULL, arg );
 					// return the indexing into the array
 
 			return arg1;
 		case VAR_RECORD:
+			resultOfSubVar = IR_builder_variable(var->value.var_record.var);
+			childTable = var->value.var_record.var->symboltype->child;
+				// This must be the child table
 
-			if((symbol = getSymbol(var->symboltable,
-				var->value.var_record.var->id)) != NULL){
-				tmpTable = symbol->symbolType->child;
-				// get the inner scope of the record
-			}
-
-			if((symbol = getSymbol(tmpTable,
-				var->value.var_record.id)) != NULL){
+			if( ( symbol = getSymbol(childTable, var->value.var_record.id) )
+			   != NULL) {
 				arg1 = make_argument_constant(symbol->offset);
 				// member index in the record as argument
 			}
 
 			arg = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-
 			append_element(ir_lines, make_instruction_movl(arg1, arg));
-
-			address_of_id = make_argument_indexing(
-					make_argument_label(var->value.var_record.var->id), arg);
+			addressOfId = make_argument_indexing(resultOfSubVar,NULL, arg);
 				// get the index of the member
 
-			return address_of_id;
+			return addressOfId;
 	}
 
 	return NULL;
@@ -933,7 +939,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_label(orEndLabel));
 
 			return result;
-			break;
 	}
 
 	return argLeft;
@@ -1040,7 +1045,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 															   zeroIndex));
 
 				append_element( ir_lines, make_instruction_movl(
-						make_argument_indexing(subArg, zeroIndex),
+						make_argument_indexing(subArg, NULL, zeroIndex),
 						firstElement));
 					// gets the first element of the array where the size is
 					// stored

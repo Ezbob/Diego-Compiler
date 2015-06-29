@@ -216,8 +216,14 @@ void IR_printer_arguments(ARGUMENT *arg){
 			break;
 
 		case indexing_arg:
-			IR_printer_arguments(arg->displace);
-			printf("(,");
+			if ( arg->displace != NULL ) {
+				IR_printer_arguments(arg->displace);
+			}
+			printf("(");
+			if ( arg->base != NULL ) {
+				IR_printer_arguments(arg->base);
+			}
+			printf(",");
 			IR_printer_arguments(arg->index);
 			printf(",4)");
 			break;

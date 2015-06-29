@@ -38,6 +38,7 @@ typedef struct ARGUMENT {
 	int intConst;
 	REGISTERS reg;
 	struct ARGUMENT *displace;
+	struct ARGUMENT *base;
 	struct ARGUMENT *index;
 	char *charConst;
 } ARGUMENT;

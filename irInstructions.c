@@ -314,11 +314,13 @@ ARGUMENT *make_argument_temp_register(int i){
 	return new_argument;
 }
 
-ARGUMENT *make_argument_indexing(ARGUMENT *displ, ARGUMENT *index){
+ARGUMENT *make_argument_indexing(ARGUMENT *displace, ARGUMENT *base,
+								 ARGUMENT *index){
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
-	new_argument->displace = displ;
+	new_argument->displace = displace;
 	new_argument->index = index;
+	new_argument->base = base;
 	new_argument->kind = indexing_arg;
 	return new_argument;
 }
