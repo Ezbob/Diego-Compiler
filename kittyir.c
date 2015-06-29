@@ -9,12 +9,16 @@ static int current_label = 0;
 static int function_label = 0;
 static int instruction_number = 0;
 
+#define GET_NEXT_LABEL_ID (current_label++)
+#define GET_NEXT_FUNCTION_ID (function_label++)
+#define GET_NEXT_TEMPORARY_ID (current_temporary++)
+
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
-void initRegisters() {
+void init_registers() {
 	eax = make_argument_register(r_eax, "eax");
 	ebx = make_argument_register(r_ebx, "ebx");
 	ecx = make_argument_register(r_ecx, "ecx");
@@ -25,15 +29,7 @@ void initRegisters() {
 	esp = make_argument_register(r_esp, "esp");
 }
 
-int get_next_label() {
-	return current_label++;
-}
-
-int get_next_function() {
-	return function_label++;
-}
-
-void initStaticLink() {
+void init_static_link() {
 
 	if (get_length(data_lines) == 0) { // init heap counter
 		
@@ -46,7 +42,7 @@ void initStaticLink() {
 		);
 
 		ARGUMENT *arg1 = make_argument_constant(function_label);
-		ARGUMENT *arg2 = make_argument_temp_register(current_temporary++);
+		ARGUMENT *arg2 = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
 		append_element(ir_lines, make_instruction_movl(arg1, arg2));
 
@@ -69,7 +65,7 @@ void initStaticLink() {
 	}
 }
 
-void addStaticLink( int id ) {
+void add_Static_Link(int id) {
 
 	ARGUMENT *place = make_argument_constant(id);
 
@@ -85,12 +81,12 @@ void addStaticLink( int id ) {
 	append_element(ir_lines,make_instruction_popl(ebx));
 }
 
-
 linked_list *IR_build( BODY *program ) {
-	fprintf(stderr, "%s\n", "Initializing intermediate code generation");
+	fprintf(stderr, "%s\n", "Initializing intermediate code generation phase"
+		);
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
-	initRegisters();
+	init_registers();
 
 	int offsetCount = -1;
 
@@ -121,7 +117,7 @@ linked_list *IR_build( BODY *program ) {
 	local_variable_allocation(program->symboltable);
 
 	caller_save();
-	initStaticLink();
+	init_static_link();
 	IR_builder_statement_list(program->statement_list);
 
 	callee_restore();
@@ -141,7 +137,7 @@ linked_list *IR_build( BODY *program ) {
 	basic_assign(ir_lines);
 	ir_lines = save;
 
-	repairMem(ir_lines);
+	repair_memory(ir_lines);
 	ir_lines = save;
 
 	return ir_lines;
@@ -149,7 +145,7 @@ linked_list *IR_build( BODY *program ) {
 
 void IR_builder_function(FUNC *func) {
 
-	int functionId = get_next_function();
+	int functionId = GET_NEXT_FUNCTION_ID;
 	char *functionStartLabel = NEW_LABEL;
 	char *functionEndLabel = NEW_LABEL;
 
@@ -174,11 +170,8 @@ void IR_builder_function(FUNC *func) {
 	IR_builder_head(func->head);
 	IR_builder_body(func->body);
 
-	append_element( // end of function label
-		ir_lines,
-		make_instruction_label(functionEndLabel)
-		);
-
+	// end of function label
+	append_element(ir_lines, make_instruction_label(functionEndLabel));
 
 	callee_restore();
 	caller_restore();
@@ -221,7 +214,7 @@ void IR_builder_head (HEAD *header) {
 
 void IR_builder_body (BODY *body) {
 	callee_start(); // shift in stackframe
- 	addStaticLink(body->symboltable->id);
+	add_Static_Link(body->symboltable->id);
 	callee_save();
 	local_variable_allocation(body->symboltable);
 	caller_save();
@@ -315,6 +308,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *arg2;
 	ARGUMENT *arg3;
 
+	IR_INSTRUCTION *pushForm;
 	IR_INSTRUCTION *params;
 	IR_INSTRUCTION *call;
 
@@ -333,7 +327,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// generating argument for boolean expression
 					arg1 = IR_builder_expression(st->value.exp);
 
-					tempLabelCounter = get_next_label();
+					tempLabelCounter = GET_NEXT_LABEL_ID;
 
 					falseLabel = NEW_LABEL;
 					trueLabel = NEW_LABEL;
@@ -419,24 +413,19 @@ void IR_builder_statement ( STATEMENT *st ) {
 					caller_save();
 					arg1 = IR_builder_expression(st->value.exp);
 
-					params = make_instruction_pushl(arg1);
-					append_element(ir_lines, params);
-		
-					if (st->value.exp->value.term->kind == TERM_NULL){
-						arg3 = make_argument_label("$formNULL");
-						IR_INSTRUCTION *pushform = 
-							make_instruction_pushl(arg3);
-						append_element(ir_lines, pushform);
+					append_element(ir_lines, make_instruction_pushl(arg1));
+
+					if (st->value.exp->value.term->kind == TERM_NULL) {
+						pushForm = make_instruction_pushl(
+								make_argument_label("$formNULL"));
 					} else {
-						arg3 = make_argument_label("$formNUM");
-						IR_INSTRUCTION *pushform = 
-							make_instruction_pushl(arg3);
-						append_element(ir_lines, pushform);
+						pushForm = make_instruction_pushl(
+								make_argument_label("$formNUM"));
 					}
 
-					arg2 = make_argument_label("printf");
-					call = make_instruction_call(arg2);
-					append_element(ir_lines, call);
+					append_element(ir_lines, pushForm);
+					append_element(ir_lines, make_instruction_call(
+							make_argument_label("printf")));
 
 					add_to_stack_pointer(2);
 					caller_restore();
@@ -553,10 +542,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 			elseLabel = NEW_LABEL;
 			endLabelString = NEW_LABEL;
 
-			int labelno = get_next_label();
+			int labelNo = GET_NEXT_LABEL_ID;
 
-			sprintf(elseLabel, "else%d", labelno);
-			sprintf(endLabelString, "endIf%d", labelno);
+			sprintf(elseLabel, "else%d", labelNo);
+			sprintf(endLabelString, "endIf%d", labelNo);
 
 			append_element( //Comparison with "true" boolean value
 				ir_lines, 
@@ -645,7 +634,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					);
 
 					arg2 = make_argument_temp_register( // grab a new reg
-							current_temporary++);
+							GET_NEXT_TEMPORARY_ID);
 
 					append_element( // store the value of the new reg
 						ir_lines,
@@ -655,7 +644,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					);
 
 					ARGUMENT *arraySize = make_argument_temp_register(
-							current_temporary++); // grab a new reg
+							GET_NEXT_TEMPORARY_ID); // grab a new reg
 
 					append_element( // save the reg value
 							ir_lines,
@@ -763,7 +752,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 						arg1 = make_argument_constant(0);
 
 						arg2 = make_argument_temp_register(
-								current_temporary++);
+								GET_NEXT_TEMPORARY_ID);
 
 						append_element(
 							ir_lines,
@@ -814,7 +803,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_WHILE:
 
-			tempLabelCounter = get_next_label();
+			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			trueWhileString = NEW_LABEL;
 			endLabelString = NEW_LABEL;
@@ -923,7 +912,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case VAR_ARRAY:
 			resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
 
-			arg = make_argument_temp_register(current_temporary++);
+			arg = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
 			append_element(ir_lines,
 				make_instruction_movl(resultOfSubExp, arg));
@@ -952,7 +941,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				// member index in the record as argument
 			}
 
-			arg = make_argument_temp_register(current_temporary++);
+			arg = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
 			append_element(ir_lines, make_instruction_movl(arg1, arg));
 
@@ -984,26 +973,26 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return IR_builder_term(exp->value.term);
 
 		case EXPRES_PLUS:
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			append_element(ir_lines,make_instruction_movl(argRight,result));
 				// right hand side must be a register
  			append_element(ir_lines, make_instruction_addl(argLeft, result));
  			return result;
 
 		case EXPRES_MINUS:
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			append_element(ir_lines,make_instruction_movl(argLeft,result));
 			append_element(ir_lines, make_instruction_subl(argRight, result));
  			return result;
 
 		case EXPRES_TIMES:
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			append_element(ir_lines,make_instruction_movl(argRight,result));
  			append_element(ir_lines, make_instruction_imul(argLeft, result));
  			return result;
 
 		case EXPRES_DIVIDE:
-			tempLabelCounter = get_next_label();
+			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *notZeroDenominator = NEW_LABEL;
 			sprintf(notZeroDenominator, "NotZeroDen%d", tempLabelCounter);
@@ -1052,8 +1041,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
-			result = make_argument_temp_register(current_temporary++);
-			tempLabelCounter = get_next_label();
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *boolTrueLabel = NEW_LABEL;
 			char *boolEndLabel = NEW_LABEL;
@@ -1116,14 +1105,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			return result;
 
 		case EXPRES_AND:
-			tempLabelCounter = get_next_label();
+			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *andFalseLabel = NEW_LABEL;
 			char *andEndLabel = NEW_LABEL;
 			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
 			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
 			truth = make_argument_constant(1);
 			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
@@ -1147,16 +1136,16 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_label(andEndLabel));
 
 			return result;
-			break;
+
 		case EXPRES_OR:
-			tempLabelCounter = get_next_label();
+			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *orTrueLabel = NEW_LABEL;
 			char *orEndLabel = NEW_LABEL;
 			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
 			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			truth = make_argument_constant(1);
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
@@ -1215,7 +1204,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			return IR_builder_variable(term->value.var);
 
 		case TERM_ACT_LIST:
-			addStaticLink(term->symboltable->id);
+			add_Static_Link(term->symboltable->id);
 
 			symbol = getSymbol(term->symboltable, term->value.
 					term_act_list.id);
@@ -1231,7 +1220,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			//Handle return value as it can sit in eax
 			ARGUMENT *returnArg = make_argument_temp_register(
-					current_temporary++);
+					GET_NEXT_TEMPORARY_ID);
 
 			append_element(ir_lines, make_instruction_movl(eax, returnArg));
 
@@ -1241,7 +1230,7 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 			subArg = IR_builder_term(term->value.term);
 
-			result = make_argument_temp_register(current_temporary++);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			append_element(ir_lines,make_instruction_movl(subArg,result));
 				// we need a new register to work on
 
@@ -1257,9 +1246,9 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			if ( term->symboltype->type == SYMBOL_INT ) {
 
 				positiveNumberLabel = NEW_LABEL;
-				sprintf(positiveNumberLabel, "posNum%i", get_next_label());
+				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
 
-				result = make_argument_temp_register(current_temporary++);
+				result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 				append_element(ir_lines,make_instruction_movl(subArg,result));
 
 				append_element(ir_lines,make_instruction_cmp(
@@ -1279,10 +1268,10 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 
 				firstElement = make_argument_temp_register(
-						current_temporary++);
+						GET_NEXT_TEMPORARY_ID);
 
 				zeroIndex = make_argument_temp_register(
-						current_temporary++);
+						GET_NEXT_TEMPORARY_ID);
 
 				append_element( ir_lines, make_instruction_xor(zeroIndex,
 															   zeroIndex));
@@ -1658,7 +1647,7 @@ void build_data_section() {
 }
 
 
-void repairMem(linked_list *ir_lines){
+void repair_memory(linked_list *ir_lines){
 
 	linked_list *temp;
 	temp = ir_lines->next;
