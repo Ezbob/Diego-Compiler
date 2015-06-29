@@ -78,6 +78,7 @@ void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void build_exception(char *intCode);
 void init_static_link();
+void init_heap();
 void add_Static_Link(int id);
 void add_to_stack_pointer(int i);
 ARGUMENT *get_register(int n);

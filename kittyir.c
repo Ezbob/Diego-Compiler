@@ -31,38 +31,23 @@ void init_registers() {
 
 void init_static_link() {
 
-	if (get_length(data_lines) == 0) { // init heap counter
+	if (get_length(data_lines) == 0) {
 		
-		append_element(
-			ir_lines,
-			make_instruction_movl(
+		append_element(ir_lines, make_instruction_movl(
 				make_argument_label("$heapNext"),
-				make_argument_label("(staticLinks)")
-			)
-		);
-
-		ARGUMENT *arg1 = make_argument_constant(function_label);
-		ARGUMENT *arg2 = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-
-		append_element(ir_lines, make_instruction_movl(arg1, arg2));
-
-		// type check maybe? but symbolType of variabe is SYMBOL_ARRAY
-		append_element(
-			ir_lines,
-			make_instruction_imul(
-				make_argument_constant(WORD_SIZE),
-				arg2
-			)
-		);
-
-		append_element(
-			ir_lines, // add to the next pointer
-			make_instruction_addl(
-				arg2, 
-				make_argument_label("(heapNext)")
-			)
+				make_argument_label("(staticLinks)"))
 		);
 	}
+}
+
+void init_heap() {
+	 if ( get_length(data_lines ) == 0 ) {
+
+		 append_element(ir_lines, make_instruction_movl(
+				 make_argument_label("$heap"),
+				 make_argument_label("(heapNext)"))
+		 );
+	 }
 }
 
 void add_Static_Link(int id) {
@@ -96,7 +81,9 @@ linked_list *IR_build( BODY *program ) {
 		symbol = program->symboltable->table[i];
 
 		if ( symbol != NULL && symbol->symbolType->type != SYMBOL_FUNCTION ) {
+			//printf("before: %s --> %i \n", symbol->name, symbol->offset);
 			symbol->offset = offsetCount--;
+			//printf("after: %s --> %i \n", symbol->name, symbol->offset);
 		}
 	}
 
@@ -294,6 +281,7 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 
 void IR_builder_statement ( STATEMENT *st ) {
 	int tempLabelCounter = 0;
+	int numberOfRecordMembers;
 
 	char *trueWhileString;
 	char *endLabelString;
@@ -418,55 +406,38 @@ void IR_builder_statement ( STATEMENT *st ) {
 			sprintf(elseLabel, "else%d", labelNo);
 			sprintf(endLabelString, "endIf%d", labelNo);
 
-			append_element( //Comparison with "true" boolean value
-				ir_lines, 
-				make_instruction_cmp(
-					make_argument_constant(1), 
-					arg1
-					) 
-				);
+			//Comparison with "true" boolean value
+			append_element(ir_lines, make_instruction_cmp(
+					make_argument_constant(1), arg1));
 
 			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
-				append_element( // if not equal goto else part
-					ir_lines,
-					make_instruction_jne(elseLabel)
-				);
+				// if not equal goto else part
+				append_element(ir_lines, make_instruction_jne(elseLabel));
 			} else {
-				append_element( // if not equal goto end-of-if
-					ir_lines,
-					make_instruction_jne(endLabelString)
-				);
+				// if not equal goto end-of-if
+				append_element(ir_lines,
+							   make_instruction_jne(endLabelString));
 			}
 
 			IR_builder_statement(st->value.statement_ifbranch.statement);
 				// build statements in if-case
 
-
 			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 
-				append_element( // we have to jump over 
-									//else when if-case is true
-					ir_lines, 
-					make_instruction_jmp(
-							endLabelString
-						)
-					);
+				// we have to jump over
+				//else when if-case is true
+				append_element(ir_lines,
+							   make_instruction_jmp(endLabelString));
 
-				append_element( // make else-label
-					ir_lines, 
-					make_instruction_label(elseLabel)
-				);
+				// make else-label
+				append_element(ir_lines, make_instruction_label(elseLabel));
 
 				IR_builder_statement( // build else statements
 					st->value.statement_ifbranch.opt_else->statement);
 			}
 
-
-			IR_INSTRUCTION *test = make_instruction_label(endLabelString);
-			append_element( // end-of-if label
-				ir_lines, 
-				test
-			);
+			// end-of-if label
+			append_element(ir_lines, make_instruction_label(endLabelString));
 			break;
 
 		case STATEMENT_ALLOCATE:
@@ -476,33 +447,22 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_ARRAY:
 					// assume that the checker has checked if "length of" is
 					// present
-
-					if (get_length(data_lines) == 0) {
-						// init heap counter
-						append_element(
-							ir_lines,
-							make_instruction_movl(
-								make_argument_label("$heap"),
-								make_argument_label("(heapNext)")
-								)
-						);
-					}
+					init_heap();
 
 					// put check out of memory here
 
+					// this assumes that st->value.
+					// statement_allocate.var->id is not null
 					address_of_id = calloc(strlen(st->value.
 					statement_allocate.var->id) + 4, sizeof(char));
 					sprintf(address_of_id, "(%s)",st->value.
 						statement_allocate.var->id);
 						// address of array
 
-					append_element( // allocate space to array
-						ir_lines,
-						make_instruction_movl(
+					// allocate space to array
+					append_element(ir_lines, make_instruction_movl(
 							make_argument_label("$heapNext"),
-							make_argument_label(address_of_id)
-						)
-					);
+							make_argument_label(address_of_id)));
 
 					arg2 = make_argument_temp_register( // grab a new reg
 							GET_NEXT_TEMPORARY_ID);
@@ -517,155 +477,87 @@ void IR_builder_statement ( STATEMENT *st ) {
 					ARGUMENT *arraySize = make_argument_temp_register(
 							GET_NEXT_TEMPORARY_ID); // grab a new reg
 
-					append_element( // save the reg value
-							ir_lines,
-							make_instruction_pushl(
-								arraySize
-							)
-					);
+					// save the reg value
+					append_element(ir_lines,
+								   make_instruction_pushl(arraySize));
 
-					append_element( // xored to get zero, aka the first index
-						ir_lines,
-						make_instruction_xor(
-							arg2,
-							arg2
-						)
-					);
+					// xored to get zero, aka the first index
+					append_element(ir_lines,
+								   make_instruction_xor(arg2, arg2));
 
-					append_element( // get the array size in terms of elements
-						ir_lines,
-						make_instruction_movl(
-								IR_builder_opt_length(st->value.
-										statement_allocate.opt_length),
-								arraySize
-						)
-					);
+					// get the array size in terms of elements
+					append_element(ir_lines, make_instruction_movl(
+										   IR_builder_opt_length(st->value.
+												   statement_allocate.
+												   opt_length), arraySize));
 
-					append_element( // move the array size to the first index
-						ir_lines,
-						make_instruction_movl(
-								arraySize,
-							make_argument_indexing(
-								make_argument_label(
-									st->value.statement_allocate.var->id
-									),
-								arg2
-							)
-						)
-					);
+					// move the array size to the first index
+					append_element(ir_lines, make_instruction_movl(arraySize,
+							make_argument_indexing(make_argument_label(
+									st->value.statement_allocate.var->id),
+												   arg2)));
 
-					append_element(
-						ir_lines,
-						make_instruction_incl(
-								arraySize
-						)
-					);
+					append_element(ir_lines,
+								   make_instruction_incl(arraySize));
 
-					append_element( // getting array size in bytes
-						ir_lines,
-						make_instruction_imul(
-							make_argument_constant(WORD_SIZE),
-							arraySize
-						)
-					);
+					// getting array size in bytes
+					append_element(ir_lines, make_instruction_imul(
+							make_argument_constant(WORD_SIZE), arraySize));
 
-					append_element( // update the heap free pointer
-						ir_lines,
-						make_instruction_addl(
-								arraySize,
-							make_argument_label("(heapNext)")
-						)
-					);
+					// update the heap free pointer
+					append_element(ir_lines, make_instruction_addl(arraySize,
+							make_argument_label("(heapNext)")));
 
-					append_element(
-						ir_lines,
-						make_instruction_popl(
-								arraySize
-						)
-					);
-					append_element(
-						ir_lines,
-						make_instruction_popl(
-							arg2
-						)
-					);
+					append_element(ir_lines,
+								   make_instruction_popl(arraySize));
+					append_element(ir_lines, make_instruction_popl(arg2));
 					// restore the used regs
 
 					append_element(data_lines, st);
 					break;
 
 				case SYMBOL_RECORD:
+					init_heap();
 
-						if(get_length(data_lines) == 0)	{ // init heap counter
-							append_element(
-								ir_lines, 
-								make_instruction_movl(
-									make_argument_label("$heap"),
-									make_argument_label("(heapNext)")		
-									)
-							);
-						}
+					address_of_id = calloc(strlen(st->value.
+					statement_allocate.var->id) + 4, sizeof(char));
 
-						address_of_id = calloc(strlen(st->value.
-						statement_allocate.var->id) + 4, sizeof(char));
+					sprintf(address_of_id, "(%s)",st->value.
+						statement_allocate.var->id);
 
-						sprintf(address_of_id, "(%s)",st->value.
-							statement_allocate.var->id);
+					append_element(
+						ir_lines,
+						make_instruction_movl(
+							make_argument_label("$heapNext"),
+							make_argument_label(address_of_id)
+						)
+					);
+					/* Something wrong here TODO */
+					numberOfRecordMembers = st->value.statement_allocate.
+							var->symboltype->arguments;
 
-						append_element(
-							ir_lines,
-							make_instruction_movl(
-								make_argument_label("$heapNext"),
-								make_argument_label(address_of_id)
-							)
-						);
-						/* Something wrong here TODO */
-						arg1 = make_argument_constant(0);
+					// we need number of members in record
+					arg1 = make_argument_constant(numberOfRecordMembers);
 
-						arg2 = make_argument_temp_register(
-								GET_NEXT_TEMPORARY_ID);
+					arg2 = make_argument_temp_register(
+							GET_NEXT_TEMPORARY_ID);
 
-						append_element(
-							ir_lines,
-							make_instruction_pushl(
-								arg2
-							)
-						);
+					append_element(ir_lines,
+								   make_instruction_pushl(arg2));
 
-						append_element(
-							ir_lines,
-							make_instruction_movl(
-								arg1,
-								arg2
-							)
-						);
+					append_element(ir_lines, make_instruction_movl(arg1,
+							arg2));
 
-						// type check maybe? but symbolType
-						// of variabe is SYMBOL_RECORD
-						append_element(
-							ir_lines,
-							make_instruction_imul(
-								make_argument_constant(WORD_SIZE),
-								ebx
-							)
-						);
+					append_element(ir_lines, make_instruction_imul(
+							make_argument_constant(WORD_SIZE), arg2));
 
-						append_element(
-							ir_lines, // add to the next pointer
-							make_instruction_addl(
-								ebx, 
-								make_argument_label("(heapNext)")
-							)
-						);
+					// add to the next pointer
+					append_element(ir_lines, make_instruction_addl(arg2,
+							make_argument_label("(heapNext)")));
 
-						append_element(
-							ir_lines,
-							make_instruction_popl(
-								arg2
-							)
-						);
-				
-						append_element(data_lines,st);
+					append_element(ir_lines, make_instruction_popl(arg2));
+
+					append_element(data_lines,st);
 					break;
 				default:
 					break;
