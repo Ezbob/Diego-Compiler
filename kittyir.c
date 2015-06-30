@@ -745,10 +745,14 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 		append_element(ir_lines,make_instruction_movl(
 				IR_builder_expression(exp->value.sides.left), argLeft));
+				// put this in reg since it maybe a memory index
+
 		append_element(ir_lines, make_instruction_pushl(argLeft));
+				// put lhs on stack since it may be a large expression
 
 		append_element(ir_lines, make_instruction_movl(
 				IR_builder_expression(exp->value.sides.right),argRight));
+				// put this in reg since it maybe a memory index
 
 	}
 
@@ -1243,7 +1247,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg1 != NULL && instr2->arg1->kind == 
 						indexing_arg){
-					if(instr2->arg1->index->temp_id == cmp1){
+					if(instr2->arg1->index != NULL &&
+							instr2->arg1->index->temp_id == cmp1){
 
 						instr2->arg1->index = reg;
 					}
@@ -1252,7 +1257,8 @@ void basic_assign(linked_list *ir_lines){
                 //Arrays
                 if(instr2->arg2 != NULL && instr2->arg2->kind == 
                 		indexing_arg){
-                        if(instr2->arg2->index->temp_id == cmp1){
+                        if(instr2->arg2->index != NULL &&
+								instr2->arg2->index->temp_id == cmp1){
 
                                 instr2->arg2->index = reg;
                         }
@@ -1261,7 +1267,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg1 != NULL && instr2->arg1->kind ==
 										   indexing_arg){
-					if(instr2->arg1->base->temp_id == cmp1){
+					if(instr2->arg1->base != NULL &&
+							instr2->arg1->base->temp_id == cmp1){
 
 						instr2->arg1->base = reg;
 					}
@@ -1270,7 +1277,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg2 != NULL && instr2->arg2->kind ==
 										   indexing_arg){
-					if(instr2->arg2->base->temp_id == cmp1){
+					if( instr2->arg2->base != NULL &&
+							instr2->arg2->base->temp_id == cmp1){
 
 						instr2->arg2->base = reg;
 					}
@@ -1312,7 +1320,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg1 != NULL && instr2->arg1->kind ==
 										   indexing_arg){
-					if(instr2->arg1->index->temp_id == cmp2){
+					if(instr2->arg1->index != NULL
+					   && instr2->arg1->index->temp_id == cmp2){
 
 						instr2->arg1->index = reg;
 					}
@@ -1321,7 +1330,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
                 if(instr2->arg2 != NULL && instr2->arg2->kind == 
                 		indexing_arg){
-                        if(instr2->arg2->index->temp_id == cmp2){
+                        if(instr2->arg2->index != NULL
+						   && instr2->arg2->index->temp_id == cmp2){
 
                                 instr2->arg2->index = reg;
                         }
@@ -1330,7 +1340,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg1 != NULL && instr2->arg1->kind ==
 										   indexing_arg){
-					if(instr2->arg1->base->temp_id == cmp2){
+					if(instr2->arg1->base != NULL &&
+							instr2->arg1->base->temp_id == cmp2){
 
 						instr2->arg1->base = reg;
 					}
@@ -1339,7 +1350,8 @@ void basic_assign(linked_list *ir_lines){
 				//Arrays
 				if(instr2->arg2 != NULL && instr2->arg2->kind ==
 										   indexing_arg){
-					if(instr2->arg2->base->temp_id == cmp2){
+					if(instr2->arg2->base != NULL &&
+							instr2->arg2->base->temp_id == cmp2){
 
 						instr2->arg2->base = reg;
 					}
