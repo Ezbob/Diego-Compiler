@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
+#include "parserscanner/kittytree.h"
 
 static int current_temporary = 1;
 static int current_label = 0;
@@ -628,97 +629,102 @@ ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol;
-	ARGUMENT *arg;
-	ARGUMENT *arg1;
+	ARGUMENT *result;
+	ARGUMENT *offset;
+	ARGUMENT *base;
+	ARGUMENT *index;
 	ARGUMENT *resultOfSubExp;
 	ARGUMENT *resultOfSubVar;
-	ARGUMENT *addressOfId;
 	SYMBOL_TABLE *childTable;
 	
 	switch ( var->kind ) {
 		case VAR_ID:
 			symbol = getSymbol(var->symboltable, var->id);
-			arg = NULL;
+			result = NULL;
 
-			if( symbol != NULL ){
+			if( symbol != NULL ) {
 
 				if ( symbol->symbolType->type == SYMBOL_ARRAY ||
 						symbol->symbolType->type == SYMBOL_RECORD ) {
 
 					// They're on the heap so we just use labels
-					arg = make_argument_label(var->id);
+					result = make_argument_label(var->id);
 
 				} else if (symbol->tableId != var->symboltable->id) {
 					// basically, if variable is not in current,
 					// use static link
 
 					append_element(ir_lines, make_instruction_pushl(ecx));
+
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(symbol->tableId), ecx));
 
-					append_element(ir_lines,
-								   make_instruction_movl(
-										   make_argument_indexing(
-												   make_argument_label(
-														   "staticLinks"),
-												   NULL, ecx ), ebx ));
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_indexing( make_argument_label(
+									"staticLinks"), NULL, ecx ), ebx ));
 
 					append_element(ir_lines, make_instruction_popl(ecx));
 
-					if ( symbol->symbolKind ==  LOCAL_VARIABLE_SYMBOL ) {
-						arg = make_argument_static( -1 * ( WORD_SIZE *
-													symbol->offset) );
+					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+						result = make_argument_static( -1 * ( WORD_SIZE *
+													symbol->offset ) );
 					} else {
-						arg = make_argument_address( WORD_SIZE *
-													 (symbol->offset) );
+						result = make_argument_address( WORD_SIZE *
+													 symbol->offset );
 					}
 
 				} else {
-					if ( symbol->symbolKind ==  LOCAL_VARIABLE_SYMBOL ) {
-						arg = make_argument_static( -1 * ( WORD_SIZE *
+					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+						result = make_argument_static( -1 * ( WORD_SIZE *
 														   symbol->offset) );
 					} else {
-						arg = make_argument_address( WORD_SIZE *
-													 (symbol->offset) );
+						result = make_argument_address( WORD_SIZE *
+													 symbol->offset );
 					}
 				}
 			}
-			return arg;
+			return result;
+
 		case VAR_ARRAY:
+			resultOfSubVar = IR_builder_variable(var->value.var_array.var);
 			resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
 
-			arg = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			index = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			base = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
-			append_element(ir_lines,
-				make_instruction_movl(resultOfSubExp, arg));
+			append_element(ir_lines, make_instruction_movl(resultOfSubExp,
+														   index));
 
-			append_element(ir_lines,
-				make_instruction_incl(arg));
+			append_element(ir_lines, make_instruction_incl(index));
 				// increment since we use the first element as the size
 
-			arg1 = make_argument_indexing(
-						make_argument_label(
-								var->value.var_array.var->id),NULL, arg );
-					// return the indexing into the array
+			append_element(ir_lines,make_instruction_leal(resultOfSubVar,
+														  base));
 
-			return arg1;
+			return make_argument_indexing(NULL, base, index);
+				// return the indexing into the array
 		case VAR_RECORD:
 			resultOfSubVar = IR_builder_variable(var->value.var_record.var);
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
 
+			index = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			base = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+
 			if( ( symbol = getSymbol(childTable, var->value.var_record.id) )
 			   != NULL) {
-				arg1 = make_argument_constant(symbol->offset);
+				offset = make_argument_constant(symbol->offset);
 				// member index in the record as argument
 			}
+			append_element(ir_lines, make_instruction_movl(offset, index));
 
-			arg = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			append_element(ir_lines, make_instruction_movl(arg1, arg));
-			addressOfId = make_argument_indexing(resultOfSubVar,NULL, arg);
-				// get the index of the member
+			append_element(ir_lines, make_instruction_leal(resultOfSubVar,
+														   base));
 
-			return addressOfId;
+			return make_argument_indexing(NULL, base, index);
+				// returns much the same as arrays
 	}
 
 	return NULL;
@@ -727,14 +733,23 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 	int tempLabelCounter = 0;
+	char *notZeroDenominator;
 	ARGUMENT *argLeft;
 	ARGUMENT *argRight;
 	ARGUMENT *result;
 	ARGUMENT *truth;
 
 	if ( exp->kind != EXPRES_TERM ) {
-		argLeft = IR_builder_expression(exp->value.sides.left);
-		argRight = IR_builder_expression(exp->value.sides.right);
+		argLeft = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+		argRight = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+
+		append_element(ir_lines,make_instruction_movl(
+				IR_builder_expression(exp->value.sides.left), argLeft));
+		append_element(ir_lines, make_instruction_pushl(argLeft));
+
+		append_element(ir_lines, make_instruction_movl(
+				IR_builder_expression(exp->value.sides.right),argRight));
+
 	}
 
 	switch(exp->kind){
@@ -743,28 +758,31 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 		case EXPRES_PLUS:
 			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			append_element(ir_lines,make_instruction_movl(argRight,result));
+			append_element(ir_lines, make_instruction_popl(argLeft));
 				// right hand side must be a register
- 			append_element(ir_lines, make_instruction_addl(argLeft, result));
+ 			append_element(ir_lines, make_instruction_addl(argRight,
+														   argLeft));
  			return result;
 
 		case EXPRES_MINUS:
 			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			append_element(ir_lines,make_instruction_movl(argLeft,result));
-			append_element(ir_lines, make_instruction_subl(argRight, result));
- 			return result;
+			append_element(ir_lines, make_instruction_popl(argLeft));
+			append_element(ir_lines, make_instruction_subl(argRight,
+														   argLeft));
+ 			return argLeft;
 
 		case EXPRES_TIMES:
 			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			append_element(ir_lines,make_instruction_movl(argRight,result));
- 			append_element(ir_lines, make_instruction_imul(argLeft, result));
+			append_element(ir_lines, make_instruction_popl(argLeft));
+ 			append_element(ir_lines, make_instruction_imul(argRight,
+														   argLeft));
  			return result;
 
 		case EXPRES_DIVIDE:
-			tempLabelCounter = GET_NEXT_LABEL_ID;
+			append_element(ir_lines, make_instruction_popl(argLeft));
 
-			char *notZeroDenominator = NEW_LABEL;
-			sprintf(notZeroDenominator, "NotZeroDen%d", tempLabelCounter);
+			notZeroDenominator = NEW_LABEL;
+			sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
 
 			append_element(ir_lines, make_instruction_pushl(ebx));
 			append_element(ir_lines, make_instruction_movl(argRight, ebx));
@@ -1213,20 +1231,21 @@ void basic_assign(linked_list *ir_lines){
 						instr2->arg1 = reg;
 					}
 				}
-				//Arrays
-				if(instr2->arg1 != NULL && instr2->arg1->kind == 
-						indexing_arg){
-					if(instr2->arg1->index->temp_id == cmp1){
-
-						instr2->arg1->index = reg;
-					}
-				}
 
 				if(instr2->arg2 != NULL && instr2->arg2->kind ==
 										   tempReg_arg){
 					if(instr2->arg2->temp_id == cmp1){
 
 						instr2->arg2 = reg;
+					}
+				}
+
+				//Arrays
+				if(instr2->arg1 != NULL && instr2->arg1->kind == 
+						indexing_arg){
+					if(instr2->arg1->index->temp_id == cmp1){
+
+						instr2->arg1->index = reg;
 					}
 				}
 
@@ -1238,6 +1257,24 @@ void basic_assign(linked_list *ir_lines){
                                 instr2->arg2->index = reg;
                         }
                 }
+
+				//Arrays
+				if(instr2->arg1 != NULL && instr2->arg1->kind ==
+										   indexing_arg){
+					if(instr2->arg1->base->temp_id == cmp1){
+
+						instr2->arg1->base = reg;
+					}
+				}
+
+				//Arrays
+				if(instr2->arg2 != NULL && instr2->arg2->kind ==
+										   indexing_arg){
+					if(instr2->arg2->base->temp_id == cmp1){
+
+						instr2->arg2->base = reg;
+					}
+				}
 
 				temp = temp->next;
 			} 
@@ -1264,16 +1301,6 @@ void basic_assign(linked_list *ir_lines){
 					}
 				}
 
-                //Arrays
-                if(instr2->arg1 != NULL && instr2->arg1->kind == 
-                		indexing_arg){
-                        if(instr2->arg1->index->temp_id == cmp2){
-
-                                instr2->arg1->index = reg;
-                        }
-                }
-
-
 				if(instr2->arg2 != NULL && instr2->arg2->kind == tempReg_arg){
 
 					if(instr2->arg2->temp_id == cmp2){
@@ -1282,7 +1309,16 @@ void basic_assign(linked_list *ir_lines){
 					}
 				}
 
-                //Arrays
+				//Arrays
+				if(instr2->arg1 != NULL && instr2->arg1->kind ==
+										   indexing_arg){
+					if(instr2->arg1->index->temp_id == cmp2){
+
+						instr2->arg1->index = reg;
+					}
+				}
+
+				//Arrays
                 if(instr2->arg2 != NULL && instr2->arg2->kind == 
                 		indexing_arg){
                         if(instr2->arg2->index->temp_id == cmp2){
@@ -1290,6 +1326,24 @@ void basic_assign(linked_list *ir_lines){
                                 instr2->arg2->index = reg;
                         }
                 }
+
+				//Arrays
+				if(instr2->arg1 != NULL && instr2->arg1->kind ==
+										   indexing_arg){
+					if(instr2->arg1->base->temp_id == cmp2){
+
+						instr2->arg1->base = reg;
+					}
+				}
+
+				//Arrays
+				if(instr2->arg2 != NULL && instr2->arg2->kind ==
+										   indexing_arg){
+					if(instr2->arg2->base->temp_id == cmp2){
+
+						instr2->arg2->base = reg;
+					}
+				}
 
 				temp = temp->next;
 			} 
