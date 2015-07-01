@@ -257,6 +257,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	char *trueLabel;
 
 	IR_INSTRUCTION *pushForm;
+	ARGUMENT *variable;
 
 	switch(st->kind){
 
@@ -352,14 +353,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_ASSIGN:
 			IR_builder_expression(st->value.statement_assign.exp);
-			IR_builder_variable(st->value.statement_assign.var);
+			variable = IR_builder_variable(st->value.statement_assign.var);
 
-			append_element(ir_lines, make_instruction_popl(eax));
-				// rhs
-			append_element(ir_lines,make_instruction_popl(ebx));
-				// lhs
+			append_element(ir_lines, make_instruction_popl(ebx));
+				// exp
 
-			append_element(ir_lines, make_instruction_movl(ebx, eax));
+			append_element(ir_lines, make_instruction_movl(ebx, variable));
 			break;
 
 		case STATEMENT_IFBRANCH:
@@ -421,8 +420,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// put check out of memory here
 
-					IR_builder_variable(st->value.statement_allocate.var);
-					append_element(ir_lines, make_instruction_popl(eax));
+					variable = IR_builder_variable(
+							st->value.statement_allocate.var);
+
+					append_element(ir_lines, make_instruction_leal(
+							variable,eax));
 
 					// allocate space to array
 					append_element(ir_lines, make_instruction_movl(
@@ -432,8 +434,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// xored to get zero, aka the first index
 					append_element(ir_lines, make_instruction_xor(ebx, ebx));
 
-					IR_builder_opt_length(st->value.
-							statement_allocate.opt_length);
+					IR_builder_opt_length(st->value.statement_allocate
+												  .opt_length);
 					append_element(ir_lines, make_instruction_popl(ecx));
 
 					// move the array size to the first index
@@ -457,8 +459,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_RECORD:
 					init_heap();
 
-					IR_builder_variable(st->value.statement_allocate.var);
-					append_element(ir_lines, make_instruction_popl(eax));
+					variable = IR_builder_variable(st->value.
+							statement_allocate.var);
+					append_element(ir_lines, make_instruction_leal(variable,
+																   eax));
 
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_label("$heapNext"), eax));
@@ -532,11 +536,13 @@ void IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
 	IR_builder_expression(opt_length->exp);
 }
 
-void IR_builder_variable (VAR *var) {
+ARGUMENT *IR_builder_variable (VAR *var) {
 
+	int offsetValue;
 	SYMBOL *symbol;
 	ARGUMENT *result;
 	ARGUMENT *offset;
+	ARGUMENT *base;
 	SYMBOL_TABLE *childTable;
 	
 	switch ( var->kind ) {
@@ -545,19 +551,20 @@ void IR_builder_variable (VAR *var) {
 			result = NULL;
 
 			if( symbol != NULL ) {
+				offsetValue = (symbol->offset + 1) * WORD_SIZE;
 
 				if ( symbol->symbolType->type == SYMBOL_ARRAY ||
 						symbol->symbolType->type == SYMBOL_RECORD ) {
 
 					// They're on the heap so we just use labels
-					append_element(ir_lines, make_instruction_leal(
-							make_argument_label(var->id), eax));
-
-					append_element(ir_lines, make_instruction_pushl(eax));
+					result = make_argument_label(var->id);
 
 				} else if (symbol->tableId != var->symboltable->id) {
 					// basically, if variable is not in current,
 					// use static link
+
+
+						// plus one because return address
 
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(symbol->tableId), ecx));
@@ -567,44 +574,41 @@ void IR_builder_variable (VAR *var) {
 									"staticLinks"), NULL, ecx ), ebx ));
 
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-						result = make_argument_static( -1 * ( WORD_SIZE *
-													symbol->offset ) );
+						result = make_argument_static( -1 * offsetValue );
 					} else {
-						result = make_argument_static( WORD_SIZE *
-													 symbol->offset );
+						result = make_argument_static( offsetValue );
 					}
-					append_element(ir_lines,make_instruction_pushl(result));
+
 				} else {
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-						result = make_argument_address( -1 * ( WORD_SIZE *
-														   symbol->offset) );
+						result = make_argument_address( -1 * offsetValue );
+
 					} else {
-						result = make_argument_address( WORD_SIZE *
-													 symbol->offset );
+						result = make_argument_address( offsetValue );
 					}
-					append_element(ir_lines,make_instruction_pushl(result));
+
 				}
 			}
-			break;
+
+			return result;
+
 		case VAR_ARRAY:
-			IR_builder_variable(var->value.var_array.var);
+			base = IR_builder_variable(var->value.var_array.var);
 			IR_builder_expression(var->value.var_array.exp);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, make_instruction_movl(base, esi));
 				// exp
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, make_instruction_popl(edi));
 				// var
 
-			append_element(ir_lines, make_instruction_incl(ebx));
+			append_element(ir_lines, make_instruction_incl(edi));
 				// increment since we use the first element as the size
 
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_indexing(NULL, eax, ebx)));
 				// return the indexing into the array
-			break;
+			return make_argument_indexing(NULL, esi, edi);
+
 		case VAR_RECORD:
-			IR_builder_variable(var->value.var_record.var);
-			append_element(ir_lines, make_instruction_popl(eax));
+			base = IR_builder_variable(var->value.var_record.var);
 
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
@@ -614,14 +618,14 @@ void IR_builder_variable (VAR *var) {
 				offset = make_argument_constant(symbol->offset);
 				// member index in the record as argument
 			}
-			append_element(ir_lines, make_instruction_movl(offset, ebx));
+			append_element(ir_lines, make_instruction_movl(base,esi));
 
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_indexing(NULL, eax, ebx)));
+			append_element(ir_lines, make_instruction_movl(offset, edi));
+
 				// returns much the same as arrays
-			break;
+			return make_argument_indexing(NULL, esi, edi);
 	}
-
+	return NULL;
 }
 
 void IR_builder_expression ( EXPRES *exp ) {
@@ -854,6 +858,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 void IR_builder_term ( TERM *term) {
 
 	SYMBOL *symbol;
+	ARGUMENT *variable;
 	char *positiveNumberLabel;
 
 	switch(term->kind){
@@ -878,7 +883,8 @@ void IR_builder_term ( TERM *term) {
 			break;
 
 		case TERM_VAR:
-			IR_builder_variable(term->value.var);
+			variable = IR_builder_variable(term->value.var);
+			append_element(ir_lines, make_instruction_pushl(variable));
 			break;
 
 		case TERM_ACT_LIST:
@@ -1083,15 +1089,12 @@ void build_data_section() {
 
 	// if there is allocation to the heap or a function is declared
 	// (need heap for the static link)
-	append_element(ir_lines,
-		make_instruction_space(
+	append_element(ir_lines, make_instruction_space(
 			make_argument_label("heap"),
 			make_argument_label("4194304")
-			)
-		);
+			));
 
-	append_element(ir_lines,
-		make_instruction_space(
+	append_element(ir_lines, make_instruction_space(
 			make_argument_label("heapNext"),
 			make_argument_label("4")
 			)
