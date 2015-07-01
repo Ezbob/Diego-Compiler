@@ -528,11 +528,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 	}
 } 
 
-ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
+void IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
 	IR_builder_expression(opt_length->exp);
 }
 
-ARGUMENT *IR_builder_variable (VAR *var) {
+void IR_builder_variable (VAR *var) {
 
 	SYMBOL *symbol;
 	ARGUMENT *result;
@@ -554,13 +554,14 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						symbol->symbolType->type == SYMBOL_RECORD ) {
 
 					// They're on the heap so we just use labels
-					result = make_argument_label(var->id);
+					append_element(ir_lines, make_instruction_leal(
+							make_argument_label(var->id), eax));
+
+					append_element(ir_lines, make_instruction_pushl(eax));
 
 				} else if (symbol->tableId != var->symboltable->id) {
 					// basically, if variable is not in current,
 					// use static link
-
-					append_element(ir_lines, make_instruction_pushl(ecx));
 
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(symbol->tableId), ecx));
@@ -569,8 +570,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 							make_argument_indexing( make_argument_label(
 									"staticLinks"), NULL, ecx ), ebx ));
 
-					append_element(ir_lines, make_instruction_popl(ecx));
-
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 						result = make_argument_static( -1 * ( WORD_SIZE *
 													symbol->offset ) );
@@ -578,7 +577,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						result = make_argument_static( WORD_SIZE *
 													 symbol->offset );
 					}
-
+					append_element(ir_lines,make_instruction_pushl(result));
 				} else {
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 						result = make_argument_address( -1 * ( WORD_SIZE *
@@ -587,53 +586,46 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						result = make_argument_address( WORD_SIZE *
 													 symbol->offset );
 					}
+					append_element(ir_lines,make_instruction_pushl(result));
 				}
 			}
-			return result;
-
+			break;
 		case VAR_ARRAY:
-			resultOfSubVar = IR_builder_variable(var->value.var_array.var);
-			resultOfSubExp = IR_builder_expression(var->value.var_array.exp);
+			IR_builder_variable(var->value.var_array.var);
+			IR_builder_expression(var->value.var_array.exp);
 
-			index = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			base = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
+			append_element(ir_lines, make_instruction_popl(ebx));
+				// exp
+			append_element(ir_lines, make_instruction_popl(eax));
+				// var
 
-			append_element(ir_lines, make_instruction_movl(resultOfSubExp,
-														   index));
-
-			append_element(ir_lines, make_instruction_incl(index));
+			append_element(ir_lines, make_instruction_incl(ebx));
 				// increment since we use the first element as the size
 
-			append_element(ir_lines,make_instruction_leal(resultOfSubVar,
-														  base));
-
-			return make_argument_indexing(NULL, base, index);
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_indexing(NULL, eax, ebx)));
 				// return the indexing into the array
+			break;
 		case VAR_RECORD:
-			resultOfSubVar = IR_builder_variable(var->value.var_record.var);
+			IR_builder_variable(var->value.var_record.var);
+			append_element(ir_lines, make_instruction_popl(eax));
+
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
-
-			index = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			base = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 
 			if( ( symbol = getSymbol(childTable, var->value.var_record.id) )
 			   != NULL) {
 				offset = make_argument_constant(symbol->offset);
 				// member index in the record as argument
 			}
-			append_element(ir_lines, make_instruction_movl(offset, index));
+			append_element(ir_lines, make_instruction_movl(offset, ebx));
 
-			append_element(ir_lines, make_instruction_leal(resultOfSubVar,
-														   base));
-
-			return make_argument_indexing(NULL, base, index);
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_indexing(NULL, eax, ebx)));
 				// returns much the same as arrays
+			break;
 	}
 
-	return NULL;
 }
 
 void IR_builder_expression ( EXPRES *exp ) {
@@ -653,6 +645,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 	switch(exp->kind){
 		case EXPRES_TERM: 
 			IR_builder_term(exp->value.term);
+			break;
 
 		case EXPRES_PLUS:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -662,6 +655,7 @@ void IR_builder_expression ( EXPRES *exp ) {
  			append_element(ir_lines, make_instruction_addl(ebx, ecx));
 
 			append_element(ir_lines, make_instruction_pushl(ecx));
+			break;
 
 		case EXPRES_MINUS:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -670,6 +664,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			// lhs
 			append_element(ir_lines, make_instruction_subl(ebx, ecx));
 			append_element(ir_lines, make_instruction_pushl(ecx));
+			break;
 
 		case EXPRES_TIMES:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -678,6 +673,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			// lhs
 			append_element(ir_lines, make_instruction_imul(ebx, ecx));
 			append_element(ir_lines, make_instruction_pushl(ecx));
+			break;
 
 		case EXPRES_DIVIDE:
 
@@ -714,6 +710,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			append_element(ir_lines, make_instruction_pushl(eax));
 				// result: "quotient" on the stack
+			break;
 
 		case EXPRES_EQ:
 		case EXPRES_NEQ:
@@ -785,6 +782,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// the true case
 
 			append_element(ir_lines, endLabel);
+			break;
 
 		case EXPRES_AND:
 			tempLabelCounter = GET_NEXT_LABEL_ID;
@@ -818,7 +816,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// in case one of the arguments are false
 
 			append_element(ir_lines, make_instruction_label(andEndLabel));
-
+			break;
 		case EXPRES_OR:
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
@@ -850,7 +848,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// true case
 
 			append_element(ir_lines, make_instruction_label(orEndLabel));
-
+			break;
 	}
 
 }
