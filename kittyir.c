@@ -256,24 +256,20 @@ void IR_builder_statement ( STATEMENT *st ) {
 	char *falseLabel;
 	char *trueLabel;
 
-	ARGUMENT *returnValue;
-	ARGUMENT *variableAddress;
-	ARGUMENT *variable;
-	ARGUMENT *arg1;
-	ARGUMENT *arg2;
-
 	IR_INSTRUCTION *pushForm;
 
 	switch(st->kind){
 
 		case STATEMENT_RETURN:	
-			returnValue = IR_builder_expression(st->value.exp);
-			append_element(ir_lines, make_instruction_movl(returnValue, eax));
+			IR_builder_expression(st->value.exp);
+			append_element(ir_lines, make_instruction_pushl(eax));
 			break;
 
 		case STATEMENT_WRITE:
 			caller_save();
-			arg1 = IR_builder_expression(st->value.exp);
+			IR_builder_expression(st->value.exp);
+			append_element(ir_lines, make_instruction_popl(eax));
+				// result from expression
 			switch(st->value.exp->symboltype->type){
 				case SYMBOL_BOOL:
 					tempLabelCounter = GET_NEXT_LABEL_ID;
@@ -288,14 +284,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// compare boolean value to true
 					append_element(ir_lines, make_instruction_cmp(
-							make_argument_constant(1), arg1));
+							make_argument_constant(1), eax));
 
 					// true has to be printed?
 					append_element(ir_lines,
 								   make_instruction_jne(falseLabel));
 
 					// making a push to the stack with result of expression
-					append_element(ir_lines, make_instruction_pushl(arg1));
+					append_element(ir_lines, make_instruction_pushl(eax));
 
 					// true case here
 					append_element(ir_lines, make_instruction_pushl(
@@ -310,7 +306,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 								   make_instruction_label(falseLabel));
 
 					// making a push to the stack with result of expression
-					append_element(ir_lines, make_instruction_pushl(arg1));
+					append_element(ir_lines, make_instruction_pushl(eax));
 
 					// false case here
 					append_element(ir_lines, make_instruction_pushl(
@@ -324,7 +320,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
 
-					append_element(ir_lines, make_instruction_pushl(arg1));
+					append_element(ir_lines, make_instruction_pushl(eax));
 
 					if (st->value.exp->value.term->kind == TERM_NULL) {
 						pushForm = make_instruction_pushl(
@@ -338,7 +334,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case SYMBOL_ARRAY:
-					append_element(ir_lines, make_instruction_pushl(arg1));
+					append_element(ir_lines, make_instruction_pushl(eax));
 
 					append_element(ir_lines, make_instruction_pushl(
 							make_argument_label("$formNUM")));
@@ -355,15 +351,22 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_ASSIGN:
-			arg1 = IR_builder_expression(st->value.statement_assign.exp);
-			arg2 = IR_builder_variable(st->value.statement_assign.var);
+			IR_builder_expression(st->value.statement_assign.exp);
+			IR_builder_variable(st->value.statement_assign.var);
 
-			append_element(ir_lines, make_instruction_movl(arg1, arg2));
+			append_element(ir_lines, make_instruction_popl(eax));
+				// rhs
+			append_element(ir_lines,make_instruction_popl(ebx));
+				// lhs
+
+			append_element(ir_lines, make_instruction_movl(ebx, eax));
 			break;
 
 		case STATEMENT_IFBRANCH:
 			// generate code for boolean expression(s)
-			arg1 = IR_builder_expression(st->value.statement_ifbranch.exp); 
+			IR_builder_expression(st->value.statement_ifbranch.exp);
+
+			append_element(ir_lines, make_instruction_popl(eax));
 
 			elseLabel = NEW_LABEL;
 			endLabelString = NEW_LABEL;
@@ -375,7 +378,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			//Comparison with "true" boolean value
 			append_element(ir_lines, make_instruction_cmp(
-					make_argument_constant(1), arg1));
+					make_argument_constant(1), eax));
 
 			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 				// if not equal goto else part
@@ -418,63 +421,35 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// put check out of memory here
 
-					variable = IR_builder_variable(
-							st->value.statement_allocate.var);
-
-					variableAddress = make_argument_temp_register(
-							GET_NEXT_TEMPORARY_ID);
-
-					append_element(ir_lines, make_instruction_leal(
-										   variable, variableAddress));
+					IR_builder_variable(st->value.statement_allocate.var);
+					append_element(ir_lines, make_instruction_popl(eax));
 
 					// allocate space to array
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_label("$heapNext"),
-							variableAddress));
-
-					arg2 = make_argument_temp_register( // grab a new reg
-							GET_NEXT_TEMPORARY_ID);
-
-					// store the value of the new reg
-					//append_element(ir_lines, make_instruction_pushl(arg2));
-
-					ARGUMENT *arraySize = make_argument_temp_register(
-							GET_NEXT_TEMPORARY_ID); // grab a new reg
-
-					// save the reg value
-					//append_element(ir_lines,
-					//			   make_instruction_pushl(arraySize));
+							eax));
 
 					// xored to get zero, aka the first index
-					append_element(ir_lines,
-								   make_instruction_xor(arg2, arg2));
+					append_element(ir_lines, make_instruction_xor(ebx, ebx));
 
-					// get the array size in terms of elements
-					append_element(ir_lines, make_instruction_movl(
-										   IR_builder_opt_length(st->value.
-												   statement_allocate.
-												   opt_length), arraySize));
+					IR_builder_opt_length(st->value.
+							statement_allocate.opt_length);
+					append_element(ir_lines, make_instruction_popl(ecx));
 
 					// move the array size to the first index
-					append_element(ir_lines, make_instruction_movl(arraySize,
-							make_argument_indexing(NULL, variableAddress,
-												   arg2)));
+					append_element(ir_lines, make_instruction_movl(ecx,
+							make_argument_indexing(NULL, eax, ebx)));
 
 					append_element(ir_lines,
-								   make_instruction_incl(arraySize));
+								   make_instruction_incl(ecx));
 
 					// getting array size in bytes
 					append_element(ir_lines, make_instruction_imul(
-							make_argument_constant(WORD_SIZE), arraySize));
+							make_argument_constant(WORD_SIZE), ecx));
 
 					// update the heap free pointer
-					append_element(ir_lines, make_instruction_addl(arraySize,
+					append_element(ir_lines, make_instruction_addl(ecx,
 							make_argument_label("(heapNext)")));
-
-					//append_element(ir_lines,
-					//			   make_instruction_popl(arraySize));
-					//append_element(ir_lines, make_instruction_popl(arg2));
-					// restore the used regs
 
 					append_element(data_lines, st);
 					break;
@@ -482,36 +457,26 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_RECORD:
 					init_heap();
 
-					variable = IR_builder_variable(
-							st->value.statement_allocate.var);
-
-					variableAddress = make_argument_temp_register(
-							GET_NEXT_TEMPORARY_ID);
-
-					append_element(ir_lines, make_instruction_leal(
-							variable, variableAddress));
+					IR_builder_variable(st->value.statement_allocate.var);
+					append_element(ir_lines, make_instruction_popl(eax));
 
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_label("$heapNext"),
-							variableAddress));
+							make_argument_label("$heapNext"), eax));
 
 					numberOfRecordMembers = st->value.statement_allocate.
 							var->symboltype->arguments;
 
 					// we need number of members in record
-					arg1 = make_argument_constant(numberOfRecordMembers);
 
-					arg2 = make_argument_temp_register(
-							GET_NEXT_TEMPORARY_ID);
-
-					append_element(ir_lines, make_instruction_movl(arg1,
-							arg2));
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_constant(numberOfRecordMembers)
+							, ebx));
 
 					append_element(ir_lines, make_instruction_imul(
-							make_argument_constant(WORD_SIZE), arg2));
+							make_argument_constant(WORD_SIZE), ebx));
 
 					// add to the next pointer
-					append_element(ir_lines, make_instruction_addl(arg2,
+					append_element(ir_lines, make_instruction_addl(ebx,
 							make_argument_label("(heapNext)")));
 
 					append_element(data_lines,st);
@@ -535,11 +500,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_label(trueWhileString));
 
 			// evaluating expressions
-			arg1 = IR_builder_expression(st->value.statement_while.exp);
+			IR_builder_expression(st->value.statement_while.exp);
+			append_element(ir_lines, make_instruction_popl(eax));
 
 			//Compare evaluated expression with true
 			append_element(ir_lines, make_instruction_cmp(
-					make_argument_constant(1), arg1));
+					make_argument_constant(1), eax));
 
 			// jump to end if while condition is false
 			append_element(ir_lines, make_instruction_jne(endLabelString));
@@ -557,14 +523,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_LISTS:
 			IR_builder_statement_list(st->value.statement_list);
 			break;
-
 		default:
 			break;
 	}
 } 
 
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
-	return IR_builder_expression(opt_length->exp);
+	IR_builder_expression(opt_length->exp);
 }
 
 ARGUMENT *IR_builder_variable (VAR *var) {
@@ -890,7 +855,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 }
 
-ARGUMENT *IR_builder_term ( TERM *term) {
+void IR_builder_term ( TERM *term) {
 
 	ARGUMENT *subArg;
 	ARGUMENT *firstElement;
@@ -902,20 +867,22 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 
 	switch(term->kind){
 		case TERM_NUM:
-			return make_argument_constant(term->value.intconst);
-
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(term->value.intconst)));
 		case TERM_TRUE:
-			return make_argument_constant(1);
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(1) ));
 
 		case TERM_NULL:
 		case TERM_FALSE:
-			return make_argument_constant(0);
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(0) ));
 
 		case TERM_PARENTESES: // parentheses just parses
-			return IR_builder_expression(term->value.exp);
+			IR_builder_expression(term->value.exp);
 
 		case TERM_VAR:
-			return IR_builder_variable(term->value.var);
+			IR_builder_variable(term->value.var);
 
 		case TERM_ACT_LIST:
 			add_Static_Link(term->symboltable->id);
@@ -936,80 +903,57 @@ ARGUMENT *IR_builder_term ( TERM *term) {
 			ARGUMENT *returnArg = make_argument_temp_register(
 					GET_NEXT_TEMPORARY_ID);
 
-			append_element(ir_lines, make_instruction_movl(eax, returnArg));
-
-			return returnArg; // by convention eax holds return values
-
+			append_element(ir_lines, make_instruction_pushl(eax));
 		case TERM_NOT:
 
-			subArg = IR_builder_term(term->value.term);
-
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-			append_element(ir_lines,make_instruction_movl(subArg,result));
-				// we need a new register to work on
+			append_element(ir_lines,make_instruction_popl(ebx));
 
 			append_element(ir_lines,make_instruction_xor(
-					make_argument_constant(1), result));
+					make_argument_constant(1), ebx));
 			// xor the term expression with true (1) to get the negated value
 
-			return result;
+			append_element(ir_lines,make_instruction_pushl(ebx));
 
 		case TERM_ABS:
-			subArg = IR_builder_expression(term->value.exp);
+			append_element(ir_lines, make_instruction_popl(ebx));
+				// the expression
 
 			if ( term->symboltype->type == SYMBOL_INT ) {
 
 				positiveNumberLabel = NEW_LABEL;
 				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
 
-				result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-				append_element(ir_lines,make_instruction_movl(subArg,result));
-
 				append_element(ir_lines,make_instruction_cmp(
-						make_argument_constant(0),result));
+						make_argument_constant(0), ebx));
 				append_element(ir_lines,make_instruction_JGE(
 						positiveNumberLabel));
 				// jump to end if number is positive
 
-				append_element(ir_lines,
-							   make_instruction_negl(result));
+				append_element(ir_lines, make_instruction_negl(ebx));
 				// false negates the argument as two's complement
+
+				append_element(ir_lines, make_instruction_pushl(ebx));
 
 				append_element(ir_lines,
 							   make_instruction_label(positiveNumberLabel));
-				return result;
+
+				append_element(ir_lines, make_instruction_pushl(ebx));
 
 			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 
-				firstElement = make_argument_temp_register(
-						GET_NEXT_TEMPORARY_ID);
+				append_element(ir_lines, make_instruction_popl(eax));
+					// may be variable
 
-				zeroIndex = make_argument_temp_register(
-						GET_NEXT_TEMPORARY_ID);
+				append_element( ir_lines, make_instruction_xor(ecx, ecx));
 
-				base = make_argument_temp_register(
-						GET_NEXT_TEMPORARY_ID);
-
-
-				append_element( ir_lines, make_instruction_leal(subArg,base));
-					// this may be a variable
-
-				append_element( ir_lines, make_instruction_xor(zeroIndex,
-															   zeroIndex));
-
-				append_element( ir_lines, make_instruction_movl(
-						make_argument_indexing(NULL, base, zeroIndex),
-						firstElement));
+				append_element( ir_lines, make_instruction_pushl(
+						make_argument_indexing(NULL, eax, ecx)));
 					// gets the first element of the array where the size is
 					// stored
-
-				return firstElement;
 			}
 		default:
 			break;
 	}
-
-	return NULL;
 }
 
 void IR_builder_act_list ( ACT_LIST *actList ) {
@@ -1030,14 +974,11 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 
 	switch(expList->kind){
 		case EXP_LIST_EXP:
-			append_element( ir_lines, make_instruction_pushl(
-					IR_builder_expression(expList->exp)));
+			IR_builder_expression(expList->exp);
 			break;
 		case EXP_LIST_LIST:
-		
 			IR_builder_expression_list(expList->explist);
-			append_element( ir_lines, make_instruction_pushl(
-					IR_builder_expression(expList->exp)));
+			IR_builder_expression(expList->exp);
 			break;
 	}
 }

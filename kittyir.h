@@ -90,7 +90,7 @@ void build_data_section();
 
 ARGUMENT *IR_builder_variable ( VAR *var);
 void IR_builder_expression ( EXPRES *exp);
-ARGUMENT *IR_builder_term ( TERM *term);
+void IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length);
 
 #endif
