@@ -6,13 +6,15 @@
 
 static int current_label = 0;
 static int function_label = 0;
+static int number_of_scopes = 0;
 
 #define GET_NEXT_LABEL_ID (current_label++)
 #define GET_NEXT_FUNCTION_ID (function_label++)
+#define NEW_SCOPE (number_of_scopes++)
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
-static int number_of_scopes = 0;
+
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
@@ -69,7 +71,7 @@ linked_list *IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	number_of_scopes++;
+	NEW_SCOPE;
 
 	callee_start();
 	callee_save();
@@ -100,8 +102,7 @@ void IR_builder_function(FUNC *func) {
 	char *functionStartLabel = NEW_LABEL;
 	char *functionEndLabel = NEW_LABEL;
 
-	SYMBOL *symbol = getSymbol(func->symboltable, 
-		func->head->id);
+	SYMBOL *symbol = getSymbol(func->symboltable, func->head->id);
 
 	sprintf(functionStartLabel, "func%d", functionId);
 	sprintf(functionEndLabel,"endFunc%d", functionId);
@@ -109,7 +110,7 @@ void IR_builder_function(FUNC *func) {
 	strcpy(symbol->uniqueName, functionStartLabel);
 
 	sprintf(functionStartLabel, "%s", functionStartLabel);
-	number_of_scopes++;
+	NEW_SCOPE;
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
@@ -947,8 +948,8 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 			IR_builder_expression(expList->exp);
 			break;
 		case EXP_LIST_LIST:
-			IR_builder_expression_list(expList->explist);
 			IR_builder_expression(expList->exp);
+			IR_builder_expression_list(expList->explist);
 			break;
 	}
 }
