@@ -1,6 +1,12 @@
 var list1 : array of array of int;
 
-allocate list1 of length 10; 	
+allocate list1 of length 10;
+
+allocate list1[0] of length 5; 
+
+list1[0][0] = 15;
+
+write list1[0][0];	
 
 (*
 write | |count| + count |;
