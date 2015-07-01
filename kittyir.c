@@ -860,20 +860,26 @@ void IR_builder_term ( TERM *term) {
 		case TERM_NUM:
 			append_element(ir_lines, make_instruction_pushl(
 					make_argument_constant(term->value.intconst)));
+			break;
+
 		case TERM_TRUE:
 			append_element(ir_lines, make_instruction_pushl(
 					make_argument_constant(1) ));
+			break;
 
 		case TERM_NULL:
 		case TERM_FALSE:
 			append_element(ir_lines, make_instruction_pushl(
 					make_argument_constant(0) ));
+			break;
 
 		case TERM_PARENTESES: // parentheses just parses
 			IR_builder_expression(term->value.exp);
+			break;
 
 		case TERM_VAR:
 			IR_builder_variable(term->value.var);
+			break;
 
 		case TERM_ACT_LIST:
 			add_Static_Link(term->symboltable->id);
@@ -891,6 +897,8 @@ void IR_builder_term ( TERM *term) {
 			add_to_stack_pointer(symbol->noParameters);
 
 			append_element(ir_lines, make_instruction_pushl(eax));
+			break;
+
 		case TERM_NOT:
 
 			append_element(ir_lines,make_instruction_popl(ebx));
@@ -900,6 +908,7 @@ void IR_builder_term ( TERM *term) {
 			// xor the term expression with true (1) to get the negated value
 
 			append_element(ir_lines,make_instruction_pushl(ebx));
+			break;
 
 		case TERM_ABS:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -938,6 +947,8 @@ void IR_builder_term ( TERM *term) {
 					// gets the first element of the array where the size is
 					// stored
 			}
+			break;
+
 		default:
 			break;
 	}

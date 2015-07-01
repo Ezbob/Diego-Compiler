@@ -2,11 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kittyweed.h"
-#include "../symbol/symbol.h"
-#include "../parserscanner/kittytree.h"
-
-#define TRUE 1
-#define FALSE 0
  
 stackT *the_stack;
 
@@ -262,7 +257,6 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 }
 
 STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
-	
 	if(slst->kind == STATEMENT_LIST_LIST){
 
 		slst->statement_list = weed_statement_list(slst->statement_list);
@@ -592,7 +586,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_GEQ:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -615,12 +610,16 @@ EXPRES *weed_expression( EXPRES *exp ){
 			break;
 
 		case EXPRES_EQ:
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
+
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 				if(left_term->kind == TERM_NUM && 
 				    right_term->kind == TERM_NUM ) { 
-					if( left_term->value.intconst == right_term->value.intconst ){
+					if( left_term->value.intconst ==
+							right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
 					} else {
@@ -633,8 +632,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_NEQ:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
-
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -654,7 +653,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_GREATER:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -664,7 +664,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 					break;
 				}
 
-				if( left_term->value.intconst > right_term->value.intconst ){
+				if( left_term->value.intconst >
+						right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
 				} else {
@@ -678,7 +679,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_LESS:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -706,9 +708,9 @@ EXPRES *weed_expression( EXPRES *exp ){
 }
 
 
-TERM *weed_term ( TERM *term){
+TERM *weed_term ( TERM *term) {
 
-	TERM *between = NEW(TERM); 
+	//TERM *between;// = NEW(TERM);
 
 	switch(term->kind){
 
@@ -736,15 +738,16 @@ TERM *weed_term ( TERM *term){
 
 		case TERM_PARENTESES:
 			term->value.exp = weed_expression(term->value.exp);
-			if (term->value.exp->kind == EXPRES_TERM){
+			/*if (term->value.exp->kind == EXPRES_TERM){
 				between = term->value.exp->value.term;
-				if(between->kind == TERM_VAR || between->kind == TERM_NUM 
+				if (between->kind == TERM_VAR || between->kind == TERM_NUM
 				   || between->kind == TERM_TRUE || between->kind == 
-     				TERM_FALSE || between->kind == TERM_NULL){
+     				TERM_FALSE || between->kind == TERM_NULL) {
 
 					term->kind = between->kind;
 					term->value = between->value;
 				}
+			}*/
 			break; 
 
 		case TERM_ABS:
@@ -772,8 +775,6 @@ TERM *weed_term ( TERM *term){
 		default:
 			break;
 	}
-		
-}
 return term;
 }
 
