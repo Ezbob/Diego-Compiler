@@ -91,7 +91,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case cmp:
-				printf("\t%s", "cmp ");
+				printf("\t%s", "cmpl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);

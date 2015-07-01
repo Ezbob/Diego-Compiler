@@ -385,7 +385,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// present
 					init_heap();
 
-					out_of_memory_check( st->lineno );
+					//out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(
 							st->value.statement_allocate.var);
@@ -426,7 +426,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_RECORD:
 					init_heap();
 
-					out_of_memory_check( st->lineno );
+					//out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(st->value.
 							statement_allocate.var);
@@ -562,7 +562,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			base = IR_builder_variable(var->value.var_array.var);
 			IR_builder_expression(var->value.var_array.exp);
 
-			append_element(ir_lines, make_instruction_movl(base, esi));
+			append_element(ir_lines, make_instruction_leal(base, esi));
 				// exp
 			append_element(ir_lines, make_instruction_popl(edi));
 				// var
@@ -584,7 +584,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				offset = make_argument_constant(symbol->offset);
 				// member index in the record as argument
 			}
-			append_element(ir_lines, make_instruction_movl(base,esi));
+			append_element(ir_lines, make_instruction_leal(base,esi));
 
 			append_element(ir_lines, make_instruction_movl(offset, edi));
 
