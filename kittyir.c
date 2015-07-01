@@ -158,18 +158,20 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
 
-	switch(vtype->type->kind){ // note: switching on type kind
-		case TYPE_INT:
-			vtype->symboltable->localVars += WORD_SIZE;
-			break;
- 
-		case TYPE_BOOL:
-			vtype->symboltable->localVars += WORD_SIZE;
-			break;
+	 if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+		 switch (vtype->type->kind) { // note: switching on type kind
+			 case TYPE_INT:
+				 vtype->symboltable->localVars += WORD_SIZE;
+				 break;
 
-		default:
-			break;
-	}
+			 case TYPE_BOOL:
+				 vtype->symboltable->localVars += WORD_SIZE;
+				 break;
+
+			 default:
+				 break;
+		 }
+	 }
  }
 
 void IR_builder_decl_list ( DECL_LIST *dlst ) {
@@ -520,7 +522,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			result = NULL;
 
 			if( symbol != NULL ) {
-				offsetValue = (symbol->offset + 1) * WORD_SIZE;
+				offsetValue = (symbol->offset) * WORD_SIZE;
 
 				if ( symbol->symbolType->type == SYMBOL_ARRAY ||
 						symbol->symbolType->type == SYMBOL_RECORD ) {
@@ -542,7 +544,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 						result = make_argument_static( -1 * offsetValue );
 					} else {
-						result = make_argument_static( offsetValue );
+						result = make_argument_static(
+								offsetValue + WORD_SIZE );
+						// beware of the return address on the stack
 					}
 
 				} else {
@@ -550,7 +554,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 						result = make_argument_address( -1 * offsetValue );
 
 					} else {
-						result = make_argument_address( offsetValue );
+						result = make_argument_address( offsetValue
+														+ WORD_SIZE );
+						// beware of the return address on the stack
 					}
 
 				}
@@ -850,7 +856,22 @@ void IR_builder_term ( TERM *term) {
 
 		case TERM_VAR:
 			variable = IR_builder_variable(term->value.var);
-			append_element(ir_lines, make_instruction_pushl(variable));
+			switch (variable->kind) {
+
+				case label_arg:
+					append_element(ir_lines, make_instruction_leal(variable,
+																   eax));
+					append_element(ir_lines, make_instruction_pushl(eax));
+					break;
+				case indexing_arg:
+				case staticLink_arg:
+				case address_arg:
+					append_element(ir_lines,
+								   make_instruction_pushl(variable));
+					break;
+				default:
+					break;
+			}
 			break;
 
 		case TERM_ACT_LIST:
