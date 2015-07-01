@@ -324,8 +324,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			variable = IR_builder_variable(st->value.statement_assign.var);
 
 			append_element(ir_lines, make_instruction_popl(ebx));
-				// exp
-
+				// expression
 			append_element(ir_lines, make_instruction_movl(ebx, variable));
 			break;
 
@@ -386,7 +385,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// present
 					init_heap();
 
-					// put check out of memory here
+					out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(
 							st->value.statement_allocate.var);
@@ -426,6 +425,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case SYMBOL_RECORD:
 					init_heap();
+
+					out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(st->value.
 							statement_allocate.var);
@@ -967,18 +968,30 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
-void out_of_memory_check(TYPES_SUPPORTED typeOfAllocation) {
+void out_of_memory_check( int lineno ) {
+	append_element(ir_lines, make_instruction_pushl(eax));
+	append_element(ir_lines, make_instruction_pushl(ebx));
 
-	switch (typeOfAllocation) {
-		case SYMBOL_RECORD:
+	char *notOutOfMemoryLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+	sprintf(notOutOfMemoryLabel,"notOutOfMem%i",GET_NEXT_LABEL_ID);
 
-			break;
-		case SYMBOL_ARRAY:
-			break;
+	append_element(ir_lines, make_instruction_leal(
+			make_argument_label("heap"),eax));
 
-		default:
-			return;
-	}
+	append_element(ir_lines, make_instruction_leal(
+			make_argument_label("heapNext"),ebx));
+
+	append_element(ir_lines, make_instruction_addl(
+			make_argument_constant(MAX_HEAP_SIZE), eax));
+
+	append_element(ir_lines, make_instruction_cmp(ebx,eax));
+	append_element(ir_lines, make_instruction_jl(notOutOfMemoryLabel));
+
+	halt_for_error("$errorOUTMEM", 1, lineno);
+
+	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
+	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, make_instruction_popl(eax));
 }
 
 /*
@@ -987,16 +1000,15 @@ void out_of_memory_check(TYPES_SUPPORTED typeOfAllocation) {
  */
 void halt_for_error(char *errorMessageCode, int signalCode, int lineno) {
 
-	if (lineno > 0 ){
-		append_element(ir_lines,make_instruction_pushl(
-				make_argument_constant(lineno)));
-	}
+	append_element(ir_lines,make_instruction_pushl(
+			make_argument_constant(lineno)));
+
 	append_element(ir_lines,make_instruction_pushl(
 			make_argument_label(errorMessageCode)));
 
 	append_element(ir_lines,make_instruction_call(
 			make_argument_label("printf")));
-	add_to_stack_pointer(1);
+	add_to_stack_pointer(2);
 
 	exit_assembler(signalCode);
 }
@@ -1082,6 +1094,11 @@ void add_error_forms(){
 	append_element(ir_lines, make_instruction_directive(
 			"errorDIVZERO: \n\t.string \"Error at line %i: "
 					"Division by zero\\n\" ")
+	);
+
+	append_element(ir_lines, make_instruction_directive(
+			"errorOUTMEM: \n\t.string \"Error at line %i: "
+					"Cannot allocate; out of memory\\n\" ")
 	);
 
 }
