@@ -537,10 +537,6 @@ void IR_builder_variable (VAR *var) {
 	SYMBOL *symbol;
 	ARGUMENT *result;
 	ARGUMENT *offset;
-	ARGUMENT *base;
-	ARGUMENT *index;
-	ARGUMENT *resultOfSubExp;
-	ARGUMENT *resultOfSubVar;
 	SYMBOL_TABLE *childTable;
 	
 	switch ( var->kind ) {
@@ -632,9 +628,6 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 	int tempLabelCounter = 0;
 	char *notZeroDenominator;
-	ARGUMENT *argLeft;
-	ARGUMENT *argRight;
-	ARGUMENT *result;
 	ARGUMENT *truth;
 
 	if ( exp->kind != EXPRES_TERM ) {
@@ -829,11 +822,16 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
 
-			append_element(ir_lines, make_instruction_popl(argLeft));
+			append_element(ir_lines, make_instruction_popl(ebx));
+			// rhs
+			append_element(ir_lines, make_instruction_popl(ecx));
+			// lhs
 
-			append_element(ir_lines, make_instruction_cmp(truth, argLeft));
+			append_element(ir_lines, make_instruction_popl(ecx));
+
+			append_element(ir_lines, make_instruction_cmp(truth, ecx));
 			append_element(ir_lines, jumpToTrue);
-			append_element(ir_lines,make_instruction_cmp(truth, argRight));
+			append_element(ir_lines,make_instruction_cmp(truth, ebx));
 			append_element(ir_lines, jumpToTrue);
 				// like in "and" we compare both arguments but jumps to true
 				// case instead of false case
@@ -855,11 +853,6 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 void IR_builder_term ( TERM *term) {
 
-	ARGUMENT *subArg;
-	ARGUMENT *firstElement;
-	ARGUMENT *zeroIndex;
-	ARGUMENT *base;
-	ARGUMENT *result;
 	SYMBOL *symbol;
 	char *positiveNumberLabel;
 
@@ -896,10 +889,6 @@ void IR_builder_term ( TERM *term) {
 
 			// stack clean up for function functionParameters
 			add_to_stack_pointer(symbol->noParameters);
-
-			//Handle return value as it can sit in eax
-			ARGUMENT *returnArg = make_argument_temp_register(
-					GET_NEXT_TEMPORARY_ID);
 
 			append_element(ir_lines, make_instruction_pushl(eax));
 		case TERM_NOT:
