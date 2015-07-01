@@ -60,7 +60,6 @@ typedef struct SECTION {
  */
 linked_list *IR_build(BODY *program);
 void IR_builder_function(FUNC *func);
-void IR_builder_head (HEAD *header);
 void IR_builder_body (BODY *body);
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl);
 void IR_builder_var_type ( VAR_TYPE *vtype);
@@ -78,16 +77,10 @@ void callee_start();
 void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void build_exception(char *intCode);
-void init_static_link();
 void init_heap();
 void add_Static_Link(int id);
 void add_to_stack_pointer(int i);
-ARGUMENT *get_register(int n);
-void basic_assign(linked_list *ir_lines);
-void assign_instruction_number(linked_list *ir_lines);
-void repair_memory(linked_list *ir_code);
 void build_data_section();
-
 ARGUMENT *IR_builder_variable ( VAR *var);
 void IR_builder_expression ( EXPRES *exp);
 void IR_builder_term ( TERM *term);

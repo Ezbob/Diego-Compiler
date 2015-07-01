@@ -3,16 +3,12 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
-#include "parserscanner/kittytree.h"
 
-//static int current_temporary = 1;
 static int current_label = 0;
 static int function_label = 0;
-//static int instruction_number = 0;
 
 #define GET_NEXT_LABEL_ID (current_label++)
 #define GET_NEXT_FUNCTION_ID (function_label++)
-//#define GET_NEXT_TEMPORARY_ID (current_temporary++)
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
@@ -57,8 +53,7 @@ void add_Static_Link( int id ) {
 }
 
 linked_list *IR_build( BODY *program ) {
-	fprintf(stderr, "%s\n", "Initializing intermediate code generation phase"
-		);
+	fprintf(stderr, "Initializing intermediate code generation phase\n");
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	init_registers();
@@ -123,7 +118,6 @@ void IR_builder_function(FUNC *func) {
 	// start function label
 	append_element(ir_lines, make_instruction_label(functionStartLabel));
 
-	IR_builder_head(func->head);
 	IR_builder_body(func->body);
 
 	// end of function label
@@ -136,36 +130,6 @@ void IR_builder_function(FUNC *func) {
 
 	append_element(ir_lines, make_instruction_ret());
 
-}
-
-void IR_builder_head (HEAD *header) {
-	/*
-	SYMBOL *symbol;
-	SYMBOL *args = getSymbol(header->symboltable, header->id);
-	int count = 0;
-	int offset = 2; 
-
-	VAR_DECL_LIST *vars = header->pdlist->var_decl_list;
-
-	while ( count < args->noParameters) {
-
-		if ( vars->var_type != NULL ) {
-
-			symbol = getSymbol(header->pdlist->symboltable,
-							   vars->var_type->id);
-			if ( symbol == NULL ) {
-				fprintf(stderr, "%s\n", "Variable not found in symboltable");
-				exit(1);
-			}
-			symbol->offset = offset;
-			printf("%i\n",offset);
-			offset++;
-			vars = vars->var_decl_list;
-			count++;
-		} else {
-			break;
-		}
-	}*/
 }
 
 void IR_builder_body (BODY *body) {
@@ -265,7 +229,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_RETURN:	
 			IR_builder_expression(st->value.exp);
-			append_element(ir_lines, make_instruction_pushl(eax));
+			append_element(ir_lines, make_instruction_popl(eax));
 			break;
 
 		case STATEMENT_WRITE:
