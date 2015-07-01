@@ -495,7 +495,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_MINUS:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -515,7 +516,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_TIMES:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
@@ -536,7 +538,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_DIVIDE:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 					left_term = left_exp->value.term;
 					right_term = right_exp->value.term;
@@ -562,7 +565,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 		case EXPRES_LEQ:
 
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;

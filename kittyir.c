@@ -15,7 +15,6 @@ static int number_of_scopes = 0;
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
 
-
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
 void init_registers() {
@@ -59,6 +58,7 @@ linked_list *IR_build( BODY *program ) {
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	init_registers();
+	NEW_SCOPE;
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -71,7 +71,6 @@ linked_list *IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	NEW_SCOPE;
 
 	callee_start();
 	callee_save();
@@ -97,6 +96,7 @@ linked_list *IR_build( BODY *program ) {
 }
 
 void IR_builder_function(FUNC *func) {
+	NEW_SCOPE;
 
 	int functionId = GET_NEXT_FUNCTION_ID;
 	char *functionStartLabel = NEW_LABEL;
@@ -110,7 +110,8 @@ void IR_builder_function(FUNC *func) {
 	strcpy(symbol->uniqueName, functionStartLabel);
 
 	sprintf(functionStartLabel, "%s", functionStartLabel);
-	NEW_SCOPE;
+
+
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
@@ -655,7 +656,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 					notZeroDenominator));
 				// denominator has to be check if zero
 
-			exit_assembler(1);
+			halt_for_error("$errorDIVZERO", 1, exp->lineno);
 
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
@@ -970,6 +971,26 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 }
 
 /*
+ * prints a error message and stops the runtime process
+ * errorMessage should match a error label in the data section
+ */
+void halt_for_error(char *errorMessageCode, int signalCode, int lineno) {
+
+	if (lineno > 0 ){
+		append_element(ir_lines,make_instruction_pushl(
+				make_argument_constant(lineno)));
+	}
+	append_element(ir_lines,make_instruction_pushl(
+			make_argument_label(errorMessageCode)));
+
+	append_element(ir_lines,make_instruction_call(
+			make_argument_label("printf")));
+	add_to_stack_pointer(1);
+
+	exit_assembler(signalCode);
+}
+
+/*
  * Works much like "exit()" in C.
  */
 void exit_assembler(int signalCode) {
@@ -1032,40 +1053,45 @@ void add_to_stack_pointer(int i){
 
 }
 
+void add_print_forms(){
+	append_element(ir_lines, make_instruction_directive(
+			"formNUM: \n\t.string \"%d\\n\" "));
+
+	append_element(ir_lines, make_instruction_directive(
+			"formTRUE: \n\t.string \"TRUE\\n\" "));
+
+	append_element(ir_lines, make_instruction_directive(
+			"formFALSE: \n\t.string \"FALSE\\n\" "));
+
+	append_element(ir_lines, make_instruction_directive(
+			"formNULL: \n\t.string \"NULL\\n\" "));
+}
+
+void add_error_forms(){
+	append_element(ir_lines, make_instruction_directive(
+			"errorDIVZERO: \n\t.string \"Error at line %i: "
+					"Division by zero\\n\" ")
+	);
+
+}
+
 // builds the data section at the end of the file
 // cannot build in top because data_lines is not filled
 void build_data_section() {
 
 	append_element(ir_lines, make_instruction_directive(".data"));
-	append_element(ir_lines, 
-		make_instruction_directive("formNUM: \n\t.string \"%d\\n\" ")
-		);
 
-	append_element(ir_lines, 
-		make_instruction_directive("formTRUE: \n\t.string \"TRUE\\n\" ")
-	);
+	add_print_forms();
 
-	append_element(ir_lines, 
-		make_instruction_directive("formFALSE: \n\t.string \"FALSE\\n\" ")
-	);
-
-	append_element(ir_lines, 
-		make_instruction_directive("formNULL: \n\t.string \"NULL\\n\" ")
-	);
-
+	add_error_forms();
 
 	// if there is allocation to the heap or a function is declared
 	// (need heap for the static link)
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heap"),
-			make_argument_label("4194304")
-			));
+			make_argument_label("heap"), make_argument_label("4194304")));
 
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heapNext"),
-			make_argument_label("4")
-			)
-		);
+			make_argument_label("heapNext"), make_argument_label("4")));
 
 	// make static link pointer (pointer to a array of static links)
 	char *static_display_size = calloc(MAX_LABEL_SIZE, sizeof(char));
@@ -1075,7 +1101,6 @@ void build_data_section() {
 	append_element(ir_lines, make_instruction_space(
 			make_argument_label("staticLinks"),
 			make_argument_label(static_display_size)));
-
 
 	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap
