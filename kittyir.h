@@ -89,7 +89,7 @@ void repair_memory(linked_list *ir_code);
 void build_data_section();
 
 ARGUMENT *IR_builder_variable ( VAR *var);
-ARGUMENT *IR_builder_expression ( EXPRES *exp);
+void IR_builder_expression ( EXPRES *exp);
 ARGUMENT *IR_builder_term ( TERM *term);
 ARGUMENT *IR_builder_opt_length ( OPT_LENGTH *opt_length);
 

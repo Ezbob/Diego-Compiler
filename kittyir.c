@@ -671,7 +671,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 	return NULL;
 }
 
-ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
+void IR_builder_expression ( EXPRES *exp ) {
 
 	int tempLabelCounter = 0;
 	char *notZeroDenominator;
@@ -687,7 +687,7 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 
 	switch(exp->kind){
 		case EXPRES_TERM: 
-			return IR_builder_term(exp->value.term);
+			IR_builder_term(exp->value.term);
 
 		case EXPRES_PLUS:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -695,9 +695,8 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_popl(ecx));
 				// lhs
  			append_element(ir_lines, make_instruction_addl(ebx, ecx));
-			append_element(ir_lines, make_instruction_pushl(ecx));
 
- 			return ecx;
+			append_element(ir_lines, make_instruction_pushl(ecx));
 
 		case EXPRES_MINUS:
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -707,8 +706,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_subl(ebx, ecx));
 			append_element(ir_lines, make_instruction_pushl(ecx));
 
- 			return ecx;
-
 		case EXPRES_TIMES:
 			append_element(ir_lines, make_instruction_popl(ebx));
 			// rhs
@@ -716,8 +713,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			// lhs
 			append_element(ir_lines, make_instruction_imul(ebx, ecx));
 			append_element(ir_lines, make_instruction_pushl(ecx));
-
-			return ecx;
 
 		case EXPRES_DIVIDE:
 
@@ -755,15 +750,12 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_pushl(eax));
 				// result: "quotient" on the stack
 
-			return eax;
-
 		case EXPRES_EQ:
 		case EXPRES_NEQ:
 		case EXPRES_GREATER:
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *boolTrueLabel = NEW_LABEL;
@@ -775,10 +767,12 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			sprintf(boolEndLabel, "boolOPend%d", tempLabelCounter);
 			IR_INSTRUCTION *endLabel = make_instruction_label(boolEndLabel);
 
-			append_element(ir_lines, make_instruction_popl(argLeft));
+			append_element(ir_lines, make_instruction_popl(ebx));
+				// rhs
+			append_element(ir_lines, make_instruction_popl(ecx));
+				// lhs
 
-			append_element(ir_lines,
-						   make_instruction_cmp( argRight, argLeft));
+			append_element(ir_lines, make_instruction_cmp( ebx, ecx ));
 				// compare both sides
 	
 			IR_INSTRUCTION *trueJump;
@@ -807,26 +801,25 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 				case EXPRES_GEQ:
 					trueJump = make_instruction_JGE(boolTrueLabel);
 					break;
-
 				default:
-					return argRight;
+					break;
 			}
 
 			append_element(ir_lines, trueJump);
 				// the jump to true instruction
 
-			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(0), result));
-			append_element(ir_lines, make_instruction_jmp(boolEndLabel));
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(0)));
 				// the false case
+			append_element(ir_lines, make_instruction_jmp(boolEndLabel));
 
 			append_element(ir_lines, trueLabel);
-			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(1), result));
+
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(1)));
 				// the true case
 
 			append_element(ir_lines, endLabel);
-			return result;
 
 		case EXPRES_AND:
 			tempLabelCounter = GET_NEXT_LABEL_ID;
@@ -836,32 +829,30 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
 			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
-
 			truth = make_argument_constant(1);
 			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
 
-			append_element(ir_lines, make_instruction_popl(argLeft));
+			append_element(ir_lines, make_instruction_popl(ebx));
+			// rhs
+			append_element(ir_lines, make_instruction_popl(ecx));
+			// lhs
 
-			append_element(ir_lines, make_instruction_cmp(truth, argLeft));
+			append_element(ir_lines, make_instruction_cmp(truth, ecx));
 			append_element(ir_lines, jumpToFalse);
-			append_element(ir_lines, make_instruction_cmp(truth, argRight));
+			append_element(ir_lines, make_instruction_cmp(truth, ebx));
 			append_element(ir_lines, jumpToFalse);
 				// check if both arguments evaluates to true
 
-			append_element(ir_lines,make_instruction_movl(
-					truth, result));
+			append_element(ir_lines,make_instruction_pushl(truth));
 			append_element(ir_lines, make_instruction_jmp(andEndLabel));
 				// in case both arguments are true
 
 			append_element(ir_lines, make_instruction_label(andFalseLabel));
-			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(0), result));
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(0)));
 				// in case one of the arguments are false
 
 			append_element(ir_lines, make_instruction_label(andEndLabel));
-
-			return result;
 
 		case EXPRES_OR:
 			tempLabelCounter = GET_NEXT_LABEL_ID;
@@ -871,7 +862,6 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
 			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
-			result = make_argument_temp_register(GET_NEXT_TEMPORARY_ID);
 			truth = make_argument_constant(1);
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
@@ -885,22 +875,18 @@ ARGUMENT *IR_builder_expression ( EXPRES *exp ) {
 				// like in "and" we compare both arguments but jumps to true
 				// case instead of false case
 
-			append_element(ir_lines, make_instruction_movl(
-					make_argument_constant(0), result));
-			append_element(ir_lines, make_instruction_jmp(orEndLabel));
+			append_element(ir_lines, make_instruction_pushl(
+					make_argument_constant(0)));
 				// false case
+			append_element(ir_lines, make_instruction_jmp(orEndLabel));
 
 			append_element(ir_lines, make_instruction_label(orTrueLabel));
-			append_element(ir_lines, make_instruction_movl(
-					truth, result));
+			append_element(ir_lines, make_instruction_pushl(truth));
 				// true case
 
 			append_element(ir_lines, make_instruction_label(orEndLabel));
 
-			return result;
 	}
-
-	return argLeft;
 
 }
 
