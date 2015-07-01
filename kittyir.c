@@ -4,14 +4,14 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 
-static int current_temporary = 1;
+//static int current_temporary = 1;
 static int current_label = 0;
 static int function_label = 0;
-static int instruction_number = 0;
+//static int instruction_number = 0;
 
 #define GET_NEXT_LABEL_ID (current_label++)
 #define GET_NEXT_FUNCTION_ID (function_label++)
-#define GET_NEXT_TEMPORARY_ID (current_temporary++)
+//#define GET_NEXT_TEMPORARY_ID (current_temporary++)
 
 static linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates

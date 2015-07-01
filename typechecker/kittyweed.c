@@ -3,7 +3,9 @@
 #include <string.h>
 #include "kittyweed.h"
 #include "../symbol/symbol.h"
-#define TRUE 1 
+#include "../parserscanner/kittytree.h"
+
+#define TRUE 1
 #define FALSE 0
  
 stackT *the_stack;
@@ -401,7 +403,6 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 }
 
-/* TODO */
 OPT_ELSE *weed_opt_else ( OPT_ELSE *opel){
 	switch(opel->kind){
 		case OPT_ELSE_STATEMENT:
@@ -422,7 +423,6 @@ OPT_ELSE *weed_opt_else ( OPT_ELSE *opel){
 }
 
 EXPRES *weed_expression( EXPRES *exp ){
-
 
 	EXPRES *left_exp;
 	EXPRES *right_exp;
@@ -492,7 +492,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 					break;
 				}
 
-				exp->value.term = make_TERM_NUM(left_term->value.intconst + 
+				exp->value.term = make_TERM_NUM(left_term->value.intconst +
 												right_term->value.intconst);
 
 				exp->kind = EXPRES_TERM;
@@ -747,7 +747,7 @@ TERM *weed_term ( TERM *term){
 				}
 			break; 
 
-		case TERM_ABS: //Absolut vaerdi |-vaerdi| = vaerdi
+		case TERM_ABS:
 			term->value.exp = weed_expression(term->value.exp);
 			if (term->value.exp->kind == EXPRES_TERM){
 
