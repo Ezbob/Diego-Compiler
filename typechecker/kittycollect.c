@@ -6,6 +6,8 @@
 
 int unknownTypesCount = 0; // decides whether more passes should be used.
 						// more passes are used when unknownTypesCount > 0
+
+static int currentScopeOffset = 1;
 /*
  * Collecting symbols and setting symboltables in ast nodes
  */
@@ -99,6 +101,7 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 			symboltype->arguments =	collect_var_decl_list(
 				type->value.var_decl_list, symboltype->child,
 				RECORD_MEMBER_SYMBOL);
+			currentScopeOffset = 0;
 			symboltype->recordMembers = type->value.var_decl_list;
 			return symboltype;
 	}
@@ -114,6 +117,7 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st ) {
 		case PAR_DECL_LIST_LIST:
 			arguments += collect_var_decl_list(pdecl->var_decl_list, st,
 			PARAMETER_SYMBOL );
+			currentScopeOffset = 0;
 			break;
 
 		case PAR_DECL_LIST_EMPTY:
@@ -132,19 +136,17 @@ int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st,
 		case VAR_DECL_LIST_LIST:
 			numberOfVariables += collect_var_decl_list(vdecl->var_decl_list,
 													   st, symbolKind);
-			collect_var_type(vdecl->var_type, st, numberOfVariables,
-							 symbolKind);
+			collect_var_type(vdecl->var_type, st, symbolKind);
 			break;
 
 		case VAR_DECL_LIST_TYPE:
-			collect_var_type(vdecl->var_type, st, numberOfVariables,
-							 symbolKind);
+			collect_var_type(vdecl->var_type, st, symbolKind);
 			break;
 	}
 	return numberOfVariables;
 }
 
-void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset,
+void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st,
 						SYMBOL_KIND symbolKind ) {
 
 	vtype->symboltable = st;
@@ -161,7 +163,8 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st, int offset,
 			exit(1);
 		}
 		vtype->symbol->symbolKind = symbolKind;
-		vtype->symbol->offset = offset;
+		vtype->symbol->offset = currentScopeOffset;
+		currentScopeOffset++;
 	} else {
 		fprintf(stderr, "Error at line %i: type of symbol not recognized \n"
 			, vtype->lineno);
@@ -215,6 +218,7 @@ void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st ) {
 
 		case DECLARATION_FUNC:
 			collect_function(decl->value.function, st);
+			currentScopeOffset = 0;
 			break;
 
 		case DECLARATION_VAR:

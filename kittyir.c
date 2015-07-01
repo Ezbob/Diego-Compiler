@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
+#include "parserscanner/kittytree.h"
 
 //static int current_temporary = 1;
 static int current_label = 0;
@@ -138,14 +139,14 @@ void IR_builder_function(FUNC *func) {
 }
 
 void IR_builder_head (HEAD *header) {
-
+	/*
 	SYMBOL *symbol;
 	SYMBOL *args = getSymbol(header->symboltable, header->id);
 	int count = 0;
 	int offset = 2; 
 
 	VAR_DECL_LIST *vars = header->pdlist->var_decl_list;
-	
+
 	while ( count < args->noParameters) {
 
 		if ( vars->var_type != NULL ) {
@@ -157,13 +158,14 @@ void IR_builder_head (HEAD *header) {
 				exit(1);
 			}
 			symbol->offset = offset;
+			printf("%i\n",offset);
 			offset++;
 			vars = vars->var_decl_list;
 			count++;
 		} else {
 			break;
 		}
-	}
+	}*/
 }
 
 void IR_builder_body (BODY *body) {
@@ -917,10 +919,10 @@ void IR_builder_term ( TERM *term) {
 			break;
 
 		case TERM_ABS:
-			append_element(ir_lines, make_instruction_popl(ebx));
-				// the expression
+			IR_builder_expression(term->value.exp);
 
 			if ( term->symboltype->type == SYMBOL_INT ) {
+				append_element(ir_lines, make_instruction_popl(ebx));
 
 				positiveNumberLabel = NEW_LABEL;
 				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
