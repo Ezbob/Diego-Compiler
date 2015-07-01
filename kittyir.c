@@ -655,7 +655,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 					notZeroDenominator));
 				// denominator has to be check if zero
 
-			build_exception("0x80");
+			exit_assembler(1);
 
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
@@ -970,16 +970,16 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 }
 
 /*
- * Handy code sippet for throwing exceptions
+ * Works much like "exit()" in C.
  */
-void build_exception(char *intCode) {
+void exit_assembler(int signalCode) {
 	append_element(ir_lines, make_instruction_movl(
-			make_argument_constant(3), ebx));
+			make_argument_constant(signalCode), ebx));
 
 	append_element(ir_lines, make_instruction_movl(
 			make_argument_constant(1), eax));
 
-	append_element(ir_lines, make_instruction_intcode(intCode));
+	append_element(ir_lines, make_instruction_intcode("0x80"));
 }
 
 void caller_save(){

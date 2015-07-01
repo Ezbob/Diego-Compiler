@@ -76,7 +76,7 @@ void callee_restore();
 void callee_start();
 void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
-void build_exception(char *intCode);
+void exit_assembler(int signalCode);
 void init_heap();
 void add_Static_Link(int id);
 void add_to_stack_pointer(int i);
