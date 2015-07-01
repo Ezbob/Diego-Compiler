@@ -306,6 +306,14 @@ ARGUMENT *make_argument_constant(int i) {
 	return new_argument;
 }
 
+ARGUMENT *make_argument_plain_constant(int i) {
+	ARGUMENT *new_argument;
+	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
+	new_argument->kind = plain_constant_arg;
+	new_argument->intConst = i;
+	return new_argument;
+}
+
 ARGUMENT *make_argument_temp_register(int i){
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));

@@ -14,23 +14,23 @@ void IR_printer(linked_list *ir_lines){
 		switch(instr_to_print->op_code){
 
 			case popl:
-				printf("\t%s", "popl ");
+				printf("\tpopl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
 
 			case pushl:
-				printf("\t%s", "pushl ");
+				printf("\tpushl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
 
 			case ret:
-				printf("\t%s\n", "ret");
+				printf("\tretl\n");
 				break;
 
 			case movl:
-				printf("\t%s", "movl ");
+				printf("\tmovl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);
@@ -38,7 +38,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case addl:
-				printf("\t%s", "addl ");
+				printf("\taddl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);
@@ -46,7 +46,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case subl:
-				printf("\t%s", "subl ");
+				printf("\tsubl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);
@@ -54,7 +54,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case imul:
-				printf("\t%s", "imul ");
+				printf("\timul ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);
@@ -62,7 +62,7 @@ void IR_printer(linked_list *ir_lines){
 				break;				
 
 			case xor:
-				printf("\t%s", "xorl ");
+				printf("\txorl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf(", ");
 				IR_printer_arguments(instr_to_print->arg2);
@@ -70,13 +70,13 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case divl:
-				printf("\t%s", "idivl ");
+				printf("\tidivl ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
 
 			case call:
-				printf("\t%s", "call ");
+				printf("\tcalll ");
 				IR_printer_arguments(instr_to_print->arg1);
 				printf("\n");
 				break;
@@ -153,7 +153,7 @@ void IR_printer(linked_list *ir_lines){
 				break;
 
 			case intCode:
-				printf("\t%s", "INT ");
+				printf("\t%s", "int ");
 				printf("$%s", instr_to_print->label);
 				printf("\n");
 				break;				
@@ -195,6 +195,10 @@ void IR_printer_arguments(ARGUMENT *arg){
 
 		case constant_arg:
 			printf("$%d", arg->intConst);
+			break;
+
+		case plain_constant_arg:
+			printf("%i", arg->intConst);
 			break;
 
 		case register_arg:

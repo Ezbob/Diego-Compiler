@@ -531,9 +531,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					// basically, if variable is not in current,
 					// use static link
 
-
-						// plus one because return address
-
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(symbol->tableId), ecx));
 
@@ -970,6 +967,20 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
+void out_of_memory_check(TYPES_SUPPORTED typeOfAllocation) {
+
+	switch (typeOfAllocation) {
+		case SYMBOL_RECORD:
+
+			break;
+		case SYMBOL_ARRAY:
+			break;
+
+		default:
+			return;
+	}
+}
+
 /*
  * prints a error message and stops the runtime process
  * errorMessage should match a error label in the data section
@@ -1088,10 +1099,12 @@ void build_data_section() {
 	// if there is allocation to the heap or a function is declared
 	// (need heap for the static link)
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heap"), make_argument_label("4194304")));
+			make_argument_label("heap"),
+			make_argument_plain_constant(MAX_HEAP_SIZE)));
 
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heapNext"), make_argument_label("4")));
+			make_argument_label("heapNext"),
+			make_argument_plain_constant(WORD_SIZE)));
 
 	// make static link pointer (pointer to a array of static links)
 	char *static_display_size = calloc(MAX_LABEL_SIZE, sizeof(char));
@@ -1115,7 +1128,8 @@ void build_data_section() {
 			if ( st->value.statement_allocate.var->kind == VAR_ID ) {
 				append_element(ir_lines, make_instruction_space(
 						make_argument_label(st->value.statement_allocate.
-								var->id), make_argument_label("4")));
+								var->id), make_argument_plain_constant(
+						WORD_SIZE)));
 			}
 
 			temp = temp->next;

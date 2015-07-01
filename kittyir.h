@@ -5,6 +5,7 @@
 
 #define MAX_LABEL_SIZE 20
 #define WORD_SIZE 4
+#define MAX_HEAP_SIZE 4194304
 #define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char*)))
 
 typedef enum REGISTERS {
@@ -20,7 +21,8 @@ typedef enum OP_CODES {
 
 typedef enum ARGUMENT_KIND {
 	address_arg, register_arg, label_arg,
-	constant_arg, tempReg_arg, indexing_arg, staticLink_arg
+	constant_arg, tempReg_arg, indexing_arg, staticLink_arg,
+	plain_constant_arg // note: this prints integer without the "$"
 } ARGUMENT_KIND;
 
 typedef struct IR_INSTRUCTION {
