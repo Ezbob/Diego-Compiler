@@ -80,6 +80,7 @@ void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
 void out_of_memory_check( int );
+void variable_decider(ARGUMENT *variable);
 void halt_for_error(char *, int, int);
 void exit_assembler(int);
 void add_Static_Link(int id);

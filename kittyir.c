@@ -33,7 +33,7 @@ void init_heap() {
 
 		 append_element(ir_lines, make_instruction_movl(
 				 make_argument_label("$heap"),
-				 make_argument_label("(heapNext)"))
+				 make_argument_label("heapNext"))
 		 );
 	 }
 }
@@ -392,35 +392,54 @@ void IR_builder_statement ( STATEMENT *st ) {
 					variable = IR_builder_variable(
 							st->value.statement_allocate.var);
 
-					append_element(ir_lines, make_instruction_leal(
-							variable,eax));
+					if (variable->kind == label_arg) {
 
-					// allocate space to array
-					append_element(ir_lines, make_instruction_movl(
-							make_argument_label("$heapNext"),
-							eax));
+						// allocate space to array
+						append_element(ir_lines, make_instruction_movl(
+								make_argument_label("$heapNext"),
+								variable));
 
-					// xored to get zero, aka the first index
-					append_element(ir_lines, make_instruction_xor(ebx, ebx));
+						// xored to get zero, aka the first index
+						append_element(ir_lines,
+									   make_instruction_xor(ebx, ebx));
 
-					IR_builder_opt_length(st->value.statement_allocate
-												  .opt_length);
-					append_element(ir_lines, make_instruction_popl(ecx));
+						IR_builder_opt_length(st->value.statement_allocate
+													  .opt_length);
+						append_element(ir_lines, make_instruction_popl(ecx));
 
-					// move the array size to the first index
-					append_element(ir_lines, make_instruction_movl(ecx,
-							make_argument_indexing(NULL, eax, ebx)));
+						// move the array size to the first index
+						append_element(ir_lines, make_instruction_movl(ecx,
+								make_argument_indexing(variable,
+													   NULL, ebx)));
+
+					} else {
+
+						append_element(ir_lines,
+									   make_instruction_leal(variable,eax));
+
+						// xored to get zero, aka the first index
+						append_element(ir_lines,
+									   make_instruction_xor(ebx, ebx));
+
+						IR_builder_opt_length(st->value.statement_allocate
+													  .opt_length);
+						append_element(ir_lines, make_instruction_popl(ecx));
+
+						// move the array size to the first index
+						append_element(ir_lines, make_instruction_movl(ecx,
+									make_argument_indexing(NULL, eax, ebx)));
+					}
 
 					append_element(ir_lines,
-								   make_instruction_incl(ecx));
+								   make_instruction_incl(ebx));
 
 					// getting array size in bytes
 					append_element(ir_lines, make_instruction_imul(
-							make_argument_constant(WORD_SIZE), ecx));
+							make_argument_constant(WORD_SIZE), ebx));
 
 					// update the heap free pointer
-					append_element(ir_lines, make_instruction_addl(ecx,
-							make_argument_label("(heapNext)")));
+					append_element(ir_lines, make_instruction_addl(ebx,
+							make_argument_label("heapNext")));
 
 					append_element(data_lines, st);
 					break;
@@ -432,11 +451,21 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					variable = IR_builder_variable(st->value.
 							statement_allocate.var);
-					append_element(ir_lines, make_instruction_leal(variable,
-																   eax));
 
-					append_element(ir_lines, make_instruction_movl(
-							make_argument_label("$heapNext"), eax));
+					if (variable->kind == label_arg) {
+
+						// allocate space to directly via label
+						append_element(ir_lines, make_instruction_movl(
+								make_argument_label("$heapNext"),
+								variable));
+					} else {
+						// has to be loaded
+						append_element(ir_lines,
+									   make_instruction_leal(variable,eax));
+
+						append_element(ir_lines, make_instruction_movl(
+								make_argument_label("$heapNext"), eax));
+					}
 
 					numberOfRecordMembers = st->value.statement_allocate.
 							var->symboltype->arguments;
@@ -452,7 +481,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ebx,
-							make_argument_label("(heapNext)")));
+							make_argument_label("heapNext")));
 
 					append_element(data_lines,st);
 					break;
@@ -856,22 +885,7 @@ void IR_builder_term ( TERM *term) {
 
 		case TERM_VAR:
 			variable = IR_builder_variable(term->value.var);
-			switch (variable->kind) {
-
-				case label_arg:
-					append_element(ir_lines, make_instruction_leal(variable,
-																   eax));
-					append_element(ir_lines, make_instruction_pushl(eax));
-					break;
-				case indexing_arg:
-				case staticLink_arg:
-				case address_arg:
-					append_element(ir_lines,
-								   make_instruction_pushl(variable));
-					break;
-				default:
-					break;
-			}
+			variable_decider(variable);
 			break;
 
 		case TERM_ACT_LIST:
@@ -970,6 +984,26 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 		case EXP_LIST_LIST:
 			IR_builder_expression(expList->exp);
 			IR_builder_expression_list(expList->explist);
+			break;
+	}
+}
+
+void variable_decider(ARGUMENT *variable) {
+
+	switch (variable->kind) {
+
+		case label_arg:
+			append_element(ir_lines, make_instruction_leal(variable,
+														   eax));
+			append_element(ir_lines, make_instruction_pushl(eax));
+			break;
+		case indexing_arg:
+		case staticLink_arg:
+		case address_arg:
+			append_element(ir_lines,
+						   make_instruction_pushl(variable));
+			break;
+		default:
 			break;
 	}
 }
