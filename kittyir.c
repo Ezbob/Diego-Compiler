@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
+#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
 static int function_label = 0;
@@ -232,8 +233,11 @@ void IR_builder_statement ( STATEMENT *st ) {
 	switch(st->kind){
 
 		case STATEMENT_RETURN:	
-			IR_builder_expression(st->value.exp);
+			IR_builder_expression(st->value.statement_return.exp);
 			append_element(ir_lines, make_instruction_popl(eax));
+			callee_restore();
+			callee_end();
+			append_element(ir_lines, make_instruction_ret());
 			break;
 
 		case STATEMENT_WRITE:
