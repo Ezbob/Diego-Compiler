@@ -886,9 +886,14 @@ void IR_builder_term ( TERM *term) {
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			append_element(ir_lines, make_instruction_pushl(ebp));
-			// put base pointer on stack
-
+			if (term->symboltable->id > symbol->tableId) {
+				append_element(ir_lines, make_instruction_pushl(
+						make_argument_address(8, ebp)));
+				// pass the previous base pointer
+			} else {
+				append_element(ir_lines, make_instruction_pushl(ebp));
+				// put base pointer on stack
+			}
 			append_element(ir_lines, make_instruction_call(
 					make_argument_label(symbol->uniqueName)));
 
