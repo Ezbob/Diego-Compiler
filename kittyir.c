@@ -30,13 +30,10 @@ void init_registers() {
 }
 
 void init_heap() {
-	 if ( get_length(data_lines ) == 0 ) {
-
-		 append_element(ir_lines, make_instruction_movl(
-				 make_argument_label("$heap"),
-				 make_argument_label("heapNext"))
-		 );
-	 }
+	 append_element(ir_lines, make_instruction_movl(
+			 make_argument_label("$heap"),
+			 make_argument_label("heapNext"))
+	 );
 }
 
 linked_list *IR_build( BODY *program ) {
@@ -57,13 +54,14 @@ linked_list *IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-
 	callee_start();
 	callee_save();
 
 	local_variable_allocation(program->symboltable);
+	init_heap();
 
 	caller_save();
+
 	IR_builder_statement_list(program->statement_list);
 
 	callee_restore();
@@ -95,10 +93,6 @@ void IR_builder_function(FUNC *func) {
 
 	strcpy(symbol->uniqueName, functionStartLabel);
 
-	sprintf(functionStartLabel, "%s", functionStartLabel);
-
-
-
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
 	IR_builder_decl_list(func->body->decl_list);
@@ -114,9 +108,10 @@ void IR_builder_function(FUNC *func) {
 	callee_restore();
 	caller_restore();
 	callee_end();
-	func->symboltable->localVars = 0; // reset local variables in scope 
 
 	append_element(ir_lines, make_instruction_ret());
+
+	func->symboltable->localVars = 0; // reset local variables in scope
 
 }
 
@@ -143,17 +138,14 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 }
 
  void IR_builder_var_type ( VAR_TYPE * vtype ) {
-
 	 if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 		 switch (vtype->type->kind) { // note: switching on type kind
 			 case TYPE_INT:
 				 vtype->symboltable->localVars += WORD_SIZE;
 				 break;
-
 			 case TYPE_BOOL:
 				 vtype->symboltable->localVars += WORD_SIZE;
 				 break;
-
 			 default:
 				 break;
 		 }
@@ -161,8 +153,7 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
  }
 
 void IR_builder_decl_list ( DECL_LIST *dlst ) {
-
-	switch(dlst->kind){
+	switch(dlst->kind) {
 		case DECL_LIST_LIST:
 			IR_builder_decl_list(dlst->decl_list);
 			IR_builder_declaration(dlst->declaration);
@@ -170,11 +161,10 @@ void IR_builder_decl_list ( DECL_LIST *dlst ) {
 		case DECL_LIST_EMPTY:
 			break;
 	}
-
 }
 
 void IR_builder_declaration ( DECLARATION *decl ) {
-	switch(decl->kind){
+	switch(decl->kind) {
 		case DECLARATION_ID:
 			break;
 		case DECLARATION_FUNC:
@@ -374,9 +364,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_ARRAY:
 					// assume that the checker has checked if "length of" is
 					// present
-					init_heap();
-
-					//out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(
 							st->value.statement_allocate.var);
@@ -400,8 +387,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 						// move the array size to the first index
 						append_element(ir_lines, make_instruction_movl(ecx,
-								make_argument_indexing(variable,
-													   NULL, ebx)));
+								make_argument_indexing(variable, NULL, ebx)));
 
 					} else {
 
@@ -422,23 +408,23 @@ void IR_builder_statement ( STATEMENT *st ) {
 					}
 
 					append_element(ir_lines,
-								   make_instruction_incl(ebx));
+								   make_instruction_incl(ecx));
 
 					// getting array size in bytes
 					append_element(ir_lines, make_instruction_imul(
-							make_argument_constant(WORD_SIZE), ebx));
+							make_argument_constant(WORD_SIZE), ecx));
+
+					out_of_memory_check( st->lineno , ecx );
 
 					// update the heap free pointer
-					append_element(ir_lines, make_instruction_addl(ebx,
+					append_element(ir_lines, make_instruction_addl(ecx,
 							make_argument_label("heapNext")));
+
 
 					append_element(data_lines, st);
 					break;
 
 				case SYMBOL_RECORD:
-					init_heap();
-
-					//out_of_memory_check( st->lineno );
 
 					variable = IR_builder_variable(st->value.
 							statement_allocate.var);
@@ -472,9 +458,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ebx));
 
+					out_of_memory_check( st->lineno , ebx );
+
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ebx,
 							make_argument_label("heapNext")));
+
+
 
 					append_element(data_lines,st);
 					break;
@@ -890,15 +880,13 @@ void IR_builder_term ( TERM *term) {
 			break;
 
 		case TERM_ACT_LIST:
-			//add_Static_Link(term->symboltable->id);
-
 			symbol = getSymbol(term->symboltable, term->value.
 					term_act_list.id);
 
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			append_element(ir_lines,make_instruction_pushl(ebp));
+			append_element(ir_lines, make_instruction_pushl(ebp));
 			// put base pointer on stack
 
 			append_element(ir_lines, make_instruction_call(
@@ -1032,29 +1020,32 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
-void out_of_memory_check( int lineno ) {
+void out_of_memory_check( int lineno, ARGUMENT *increase ) {
+
 	append_element(ir_lines, make_instruction_pushl(eax));
-	append_element(ir_lines, make_instruction_pushl(ebx));
+	append_element(ir_lines, make_instruction_pushl(edx));
 
 	char *notOutOfMemoryLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
 	sprintf(notOutOfMemoryLabel,"notOutOfMem%i",GET_NEXT_LABEL_ID);
 
-	append_element(ir_lines, make_instruction_leal(
-			make_argument_label("heap"),eax));
-
-	append_element(ir_lines, make_instruction_leal(
-			make_argument_label("heapNext"),ebx));
-
+	append_element(ir_lines, make_instruction_movl(
+			make_argument_label("$heap"), edx));
 	append_element(ir_lines, make_instruction_addl(
-			make_argument_constant(MAX_HEAP_SIZE), eax));
+			make_argument_constant(MAX_HEAP_SIZE), edx));
 
-	append_element(ir_lines, make_instruction_cmp(ebx,eax));
-	append_element(ir_lines, make_instruction_jl(notOutOfMemoryLabel));
+	append_element(ir_lines, make_instruction_movl(
+			make_argument_label("heapNext"),eax));
+
+	append_element(ir_lines, make_instruction_addl(increase, eax));
+
+	append_element(ir_lines, make_instruction_cmp(eax, edx));
+
+	append_element(ir_lines, make_instruction_jg(notOutOfMemoryLabel));
 
 	halt_for_error("$errorOUTMEM", 1, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
-	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, make_instruction_popl(edx));
 	append_element(ir_lines, make_instruction_popl(eax));
 }
 
@@ -1186,7 +1177,7 @@ void build_data_section() {
 	append_element(ir_lines, make_instruction_space(
 			make_argument_label("heapNext"),
 			make_argument_plain_constant(WORD_SIZE)));
-	
+
 	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap
 

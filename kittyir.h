@@ -78,7 +78,7 @@ void callee_start();
 void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
-void out_of_memory_check( int );
+void out_of_memory_check( int , ARGUMENT *);
 void variable_decider(ARGUMENT *variable);
 void halt_for_error(char *, int, int);
 void exit_assembler(int);
