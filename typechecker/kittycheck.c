@@ -368,10 +368,10 @@ void check_expression ( EXPRES *exp){
 		check_expression(exp->value.sides.right);
 		check_expression(exp->value.sides.left);
 
-		rightHand = get_base_array_type(
-			exp->value.sides.right->symboltype);
-		leftHand = get_base_array_type(
-			exp->value.sides.left->symboltype);
+		rightHand = //get_base_array_type(
+			exp->value.sides.right->symboltype; //);
+		leftHand = //get_base_array_type(
+			exp->value.sides.left->symboltype; //);
 	}
 
 	switch(exp->kind){
@@ -384,8 +384,8 @@ void check_expression ( EXPRES *exp){
 		case EXPRES_MINUS:
 		case EXPRES_DIVIDE:
 		case EXPRES_TIMES:
-			if(rightHand->type != SYMBOL_INT && 
-			   leftHand->type != SYMBOL_INT ) {
+			if( !(rightHand->type == SYMBOL_INT &&
+			   leftHand->type == SYMBOL_INT) ) {
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
@@ -443,8 +443,9 @@ void check_expression ( EXPRES *exp){
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
-			if(rightHand->type != SYMBOL_INT &&
-			   leftHand->type != SYMBOL_INT ) {
+
+			if( !(rightHand->type == SYMBOL_INT &&
+			   leftHand->type == SYMBOL_INT) ) {
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
@@ -455,8 +456,8 @@ void check_expression ( EXPRES *exp){
 
 		case EXPRES_AND:
 		case EXPRES_OR:
-			if(rightHand->type != SYMBOL_BOOL && 
-			   leftHand->type != SYMBOL_BOOL) { 
+			if( !(rightHand->type == SYMBOL_BOOL &&
+			   leftHand->type == SYMBOL_BOOL) ) {
 				check_error_report("Expected boolean expression", 
 						exp->lineno);
 			} else {
@@ -536,7 +537,11 @@ void check_term ( TERM *term ) {
 				check_error_report("Expected integer or array", 
 					term->lineno);
 			}
-			term->symboltype = term->value.exp->symboltype;
+			if ( term->value.exp->symboltype->type == SYMBOL_ARRAY ) {
+				term->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
+			} else {
+				term->symboltype = term->value.exp->symboltype;
+			}
 			break;
 
 		case TERM_NULL:
