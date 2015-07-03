@@ -216,7 +216,9 @@ void IR_printer_arguments(ARGUMENT *arg){
 			break;
 
 		case address_arg:
-			printf("%d(%%ebp)", arg->intConst);
+			printf("%d(", arg->intConst);
+			IR_printer_arguments(arg->base);
+			printf(")");
 			break;
 
 		case indexing_arg:
@@ -231,10 +233,7 @@ void IR_printer_arguments(ARGUMENT *arg){
 			IR_printer_arguments(arg->index);
 			printf(",4)");
 			break;
-			
-		case staticLink_arg:
-			printf("%d(%%ebx)", arg->intConst);
-			break;
+
 		default:
 			break;
 	}

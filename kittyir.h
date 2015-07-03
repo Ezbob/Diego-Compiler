@@ -21,8 +21,7 @@ typedef enum OP_CODES {
 
 typedef enum ARGUMENT_KIND {
 	address_arg, register_arg, label_arg,
-	constant_arg, tempReg_arg, indexing_arg, staticLink_arg,
-	plain_constant_arg // note: this prints integer without the "$"
+	constant_arg, tempReg_arg, indexing_arg, plain_constant_arg
 } ARGUMENT_KIND;
 
 typedef struct IR_INSTRUCTION {
@@ -83,7 +82,6 @@ void out_of_memory_check( int );
 void variable_decider(ARGUMENT *variable);
 void halt_for_error(char *, int, int);
 void exit_assembler(int);
-void add_Static_Link(int id);
 void add_to_stack_pointer(int i);
 void build_data_section();
 ARGUMENT *IR_builder_variable ( VAR *var);

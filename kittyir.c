@@ -39,21 +39,6 @@ void init_heap() {
 	 }
 }
 
-void add_Static_Link( int id ) {
-
-	append_element(ir_lines, make_instruction_pushl(ebx));
-
-	append_element(ir_lines, make_instruction_movl(
-			make_argument_constant(id), ebx));
-
-	append_element(ir_lines, 
-		make_instruction_movl(ebp,
-			make_argument_indexing( 
-				make_argument_label("staticLinks"), NULL , ebx)));
-
-	append_element(ir_lines, make_instruction_popl(ebx));
-}
-
 linked_list *IR_build( BODY *program ) {
 	fprintf(stderr, "Initializing intermediate code generation phase\n");
 	ir_lines = initialize_list();
@@ -547,6 +532,7 @@ void IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	int offsetValue;
+	int currentTableId;
 	SYMBOL *symbol;
 	ARGUMENT *result;
 	ARGUMENT *offset;
@@ -567,32 +553,40 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					// They're on the heap so we just use labels
 					result = make_argument_label(var->id);
 
-				} else if (symbol->tableId != var->symboltable->id) {
+				} else if (symbol->tableId < var->symboltable->id) {
 					// basically, if variable is not in current,
 					// use static link
 
-					append_element(ir_lines, make_instruction_movl(
-							make_argument_constant(symbol->tableId), ecx));
+					currentTableId = var->symboltable->id;
 
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_indexing( make_argument_label(
-									"staticLinks"), NULL, ecx ), ebx ));
+							make_argument_address(8, ebp), eax));
+					currentTableId --;
+
+					while ( symbol->tableId != currentTableId ) {
+						// get previous base pointer by iteration
+						append_element(ir_lines, make_instruction_movl(
+								make_argument_address(8,eax), eax));
+						currentTableId --;
+					}
 
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-						result = make_argument_static( -1 * offsetValue );
+						result = make_argument_address( -1 * offsetValue,
+						eax );
 					} else {
-						result = make_argument_static(
-								offsetValue + WORD_SIZE );
+						offsetValue = offsetValue + (2 * WORD_SIZE);
+						result = make_argument_address( offsetValue, eax );
 						// beware of the return address on the stack
 					}
 
 				} else {
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-						result = make_argument_address( -1 * offsetValue );
+						result = make_argument_address( -1 * offsetValue,
+														ebp );
 
 					} else {
-						result = make_argument_address( offsetValue
-														+ WORD_SIZE );
+						offsetValue = offsetValue + (2 * WORD_SIZE);
+						result = make_argument_address( offsetValue, ebp );
 						// beware of the return address on the stack
 					}
 
@@ -682,7 +676,6 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_DIVIDE:
-
 			notZeroDenominator = NEW_LABEL;
 			sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
 
@@ -897,13 +890,16 @@ void IR_builder_term ( TERM *term) {
 			break;
 
 		case TERM_ACT_LIST:
-			add_Static_Link(term->symboltable->id);
+			//add_Static_Link(term->symboltable->id);
 
 			symbol = getSymbol(term->symboltable, term->value.
 					term_act_list.id);
 
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
+
+			append_element(ir_lines,make_instruction_pushl(ebp));
+			// put base pointer on stack
 
 			append_element(ir_lines, make_instruction_call(
 					make_argument_label(symbol->uniqueName)));
@@ -1012,7 +1008,6 @@ void variable_decider(ARGUMENT *variable) {
 			append_element(ir_lines, make_instruction_pushl(eax));
 			break;
 		case indexing_arg:
-		case staticLink_arg:
 		case address_arg:
 			append_element(ir_lines,
 						   make_instruction_pushl(variable));
@@ -1191,16 +1186,7 @@ void build_data_section() {
 	append_element(ir_lines, make_instruction_space(
 			make_argument_label("heapNext"),
 			make_argument_plain_constant(WORD_SIZE)));
-
-	// make static link pointer (pointer to a array of static links)
-	char *static_display_size = calloc(MAX_LABEL_SIZE, sizeof(char));
-	sprintf(static_display_size,"%d", WORD_SIZE * number_of_scopes );
-
-	// make static link pointer (pointer to a array of static links)
-	append_element(ir_lines, make_instruction_space(
-			make_argument_label("staticLinks"),
-			make_argument_label(static_display_size)));
-
+	
 	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap
 

@@ -511,7 +511,7 @@ void check_term ( TERM *term ) {
 			VAR_DECL_LIST *functionParameters = symbol->functionParameters->
 				var_decl_list;
 
-			function_parameter_compaire(callParameters,functionParameters);
+			function_parameter_compare(callParameters, functionParameters);
 
 			symbolT = symbol->symbolType->return_type;
 			term->symboltype = symbolT;
@@ -753,8 +753,8 @@ int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 	return result;
 }
 
-void function_parameter_compaire ( EXP_LIST *callParameters,
-	VAR_DECL_LIST *functionParameters ) {
+void function_parameter_compare(EXP_LIST *callParameters,
+								VAR_DECL_LIST *functionParameters) {
 
 	while ( callParameters != NULL && functionParameters != NULL) {
 		

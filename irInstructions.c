@@ -271,10 +271,11 @@ IR_INSTRUCTION *make_instruction_leal(ARGUMENT *arg1,ARGUMENT *arg2){
 	return new_instruction;	
 }
 
-ARGUMENT *make_argument_address(int i) {
+ARGUMENT *make_argument_address(int i, ARGUMENT *baseRegister) {
 	ARGUMENT *new_argument;
 	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
 	new_argument->kind = address_arg;
+	new_argument->base = baseRegister;
 	new_argument->intConst = i;
 	return new_argument;
 }
@@ -330,13 +331,5 @@ ARGUMENT *make_argument_indexing(ARGUMENT *displace, ARGUMENT *base,
 	new_argument->index = index;
 	new_argument->base = base;
 	new_argument->kind = indexing_arg;
-	return new_argument;
-}
-
-ARGUMENT *make_argument_static(int i){
-	ARGUMENT *new_argument;
-	new_argument = (ARGUMENT *) malloc(sizeof(ARGUMENT));
-	new_argument->kind = staticLink_arg;
-	new_argument->intConst = i;
 	return new_argument;
 }
