@@ -400,8 +400,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 						// allocate space to array
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("$heapNext"),
-								variable));
+								make_argument_label("heapNext"),
+								eax));
+						append_element(ir_lines,
+									   make_instruction_movl(eax, variable));
 
 						// xored to get zero, aka the first index
 						append_element(ir_lines,
@@ -460,15 +462,17 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 						// allocate space to directly via label
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("$heapNext"),
-								variable));
+								make_argument_label("heapNext"), eax));
+						append_element(ir_lines,
+									   make_instruction_movl(eax, variable));
+
 					} else {
 						// has to be loaded
 						append_element(ir_lines,
-									   make_instruction_leal(variable,eax));
+									   make_instruction_movl(variable,eax));
 
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("$heapNext"), eax));
+								make_argument_label("heapNext"), eax));
 					}
 
 					numberOfRecordMembers = st->value.statement_allocate.
@@ -620,14 +624,14 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			if( ( symbol = getSymbol(childTable, var->value.var_record.id) )
 			   != NULL) {
-				offset = make_argument_constant(symbol->offset);
+				offset = make_argument_constant(symbol->offset - 1);
 				// member index in the record as argument
 			}
-			append_element(ir_lines, make_instruction_leal(base,esi));
+			append_element(ir_lines, make_instruction_movl(base,esi));
 
 			append_element(ir_lines, make_instruction_movl(offset, edi));
 
-				// returns much the same as arrays
+			// returns much the same as arrays
 			return make_argument_indexing(NULL, esi, edi);
 	}
 	return NULL;
@@ -889,7 +893,7 @@ void IR_builder_term ( TERM *term) {
 
 		case TERM_VAR:
 			variable = IR_builder_variable(term->value.var);
-			variable_decider(variable);
+			append_element(ir_lines, make_instruction_pushl(variable));
 			break;
 
 		case TERM_ACT_LIST:
@@ -948,15 +952,21 @@ void IR_builder_term ( TERM *term) {
 
 			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
 
-				append_element(ir_lines, make_instruction_popl(eax));
+				if ( IR_builder_variable(term->value.exp->value.
+						term->value.var)->kind != label_arg ) {
+
+					append_element(ir_lines, make_instruction_popl(eax));
 					// may be variable
+					append_element( ir_lines, make_instruction_xor(ecx, ecx));
 
-				append_element( ir_lines, make_instruction_xor(ecx, ecx));
-
-				append_element( ir_lines, make_instruction_pushl(
-						make_argument_indexing(NULL, eax, ecx)));
+					append_element( ir_lines, make_instruction_pushl(
+							make_argument_indexing(NULL, eax, ecx)));
 					// gets the first element of the array where the size is
 					// stored
+				}
+
+				// else we get the label variable which automatically points
+				// to the first element of the array
 			}
 			break;
 
