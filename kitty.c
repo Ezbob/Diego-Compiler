@@ -24,8 +24,8 @@
 #endif
 
 int lineno = 1;
-struct BODY *_main_;
-linked_list *ir_lines;
+BODY *_main_; // root of the AST
+linked_list *ir_lines; // list of the IR lines of code
 
 int main ( int argc, char *argv[] ) {
 
@@ -39,14 +39,14 @@ int main ( int argc, char *argv[] ) {
 			return COMPILATION_FAILURE;
 		case PARSE_SUCCESS:
 			begin_weed(_main_);
-			collect(_main_);
+			begin_collect(_main_);
 			begin_multi_collect(_main_);
 			begin_check(_main_);
 			if( argc > 1 && ( strcmp(argv[1],"--print") 
 				|| strcmp(argv[1],"-p") ) ) {
 				printer_body(_main_);
 			} else {
-				ir_lines = IR_build(_main_);
+				IR_build(_main_);
 				IR_printer(ir_lines);
 			}
 			break;

@@ -15,15 +15,15 @@ typedef struct stackElement {
 
 
 typedef struct stackT {
-  int maxSize;
   struct stackElement *top;
 } stackT;
 
 
-stackT *funcStackInit(int maxSize);
+stackT *funcStackInit();
 
+FUNC *funcStackPeep(stackT *stackP);
 
-void stackDestroy(stackT *stackP);
+void funcStackDestroy(stackT *stackP);
 
 void funcStackPush(stackT *stackP, FUNC *element);
 FUNC *funcStackPop(stackT *stackP);

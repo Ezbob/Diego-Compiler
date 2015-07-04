@@ -5,12 +5,12 @@
 
 #include <stdio.h>
 #include <stdlib.h>  /* for dynamic allocation */
-#include "stack.h"
+#include "funcstack.h"
 
 
 /************************ Function Definitions **********************/
 
-stackT *funcStackInit(int maxSize)
+stackT *funcStackInit()
 {
 
   /* Allocate a new array to hold the contents. */
@@ -22,7 +22,6 @@ stackT *funcStackInit(int maxSize)
     return NULL;  /* Exit, returning error code. */
   }
 
-  the_stack->maxSize = maxSize;
   the_stack->top = NULL;  /* I.e., empty */
 
   return the_stack;
@@ -31,7 +30,6 @@ stackT *funcStackInit(int maxSize)
 void funcStackDestroy(stackT *stackP)
 {
   stackT *stack = stackP;
-  stack->maxSize = 0;
   stack->top = NULL;  /* I.e., empty */
   /* Get rid of array. */
   free(stack);
@@ -49,6 +47,14 @@ void funcStackPush(stackT *stackP, FUNC *element)
   newElement->next = stackP->top;
   stackP->top = newElement;
 
+}
+
+// get the top function on stack
+FUNC *funcStackPeep(stackT *stackP) {
+  if (StackIsEmpty(stackP)) {
+    return NULL;
+  }
+  return stackP->top->function;
 }
 
 FUNC *funcStackPop(stackT *stackP)

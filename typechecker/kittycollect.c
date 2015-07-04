@@ -15,7 +15,7 @@ static int currentScopeOffset = 1;
  * Collecting symbols and setting symboltables in ast nodes
  */
 
-void collect ( BODY *main ) {
+void begin_collect(BODY *main) {
 	fprintf(stderr, "Initializing type collection phase\n");
 	collect_body(main, initSymbolTable(FIRST_TABLE_ID));
 }
@@ -40,7 +40,9 @@ void collect_head (HEAD *header, SYMBOL_TABLE *inner, SYMBOL_TABLE *outer) {
 	header->symboltable = outer;
 	header->symboltype = make_SYMBOL_TYPE( SYMBOL_FUNCTION );
 
+	RESET_SCOPE_OFFSET;
 	int noArguments = collect_par_decl_list(header->pdlist, inner);
+	RESET_SCOPE_OFFSET;
 
 	header->arguments = noArguments;
 	inner->temps = noArguments;
@@ -101,6 +103,7 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 			symboltype = make_SYMBOL_TYPE(SYMBOL_RECORD);
 			type->symboltype = symboltype;
 			symboltype->child = scopeSymbolTable(st, st->id);
+			RESET_SCOPE_OFFSET;
 			symboltype->arguments =	collect_var_decl_list(
 				type->value.var_decl_list, symboltype->child,
 				RECORD_MEMBER_SYMBOL);
@@ -120,7 +123,6 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st ) {
 		case PAR_DECL_LIST_LIST:
 			arguments += collect_var_decl_list(pdecl->var_decl_list, st,
 			PARAMETER_SYMBOL );
-			RESET_SCOPE_OFFSET;
 			break;
 
 		case PAR_DECL_LIST_EMPTY:
@@ -192,7 +194,6 @@ void collect_decl_list ( DECL_LIST *dlst, SYMBOL_TABLE *st ) {
 	}
 }
 
-
 void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st ) {
 
 	decl->symboltable = st;
@@ -220,6 +221,7 @@ void collect_declaration ( DECLARATION *decl, SYMBOL_TABLE *st ) {
 			break;
 
 		case DECLARATION_FUNC:
+			RESET_SCOPE_OFFSET;
 			collect_function(decl->value.function, st);
 			RESET_SCOPE_OFFSET;
 			break;

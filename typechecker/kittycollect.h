@@ -16,7 +16,7 @@
 			printf("UNKNOWN>>> %i\n", symboltype->type == SYMBOL_UNKNOWN); \
 			printf("FUNCTION>>> %i\n", symboltype->type == SYMBOL_FUNCTION);
 
-void collect(BODY *body);
+void begin_collect(BODY *body);
 void collect_function ( FUNC *function, SYMBOL_TABLE *st);
 void collect_head ( HEAD *header, SYMBOL_TABLE *scope, SYMBOL_TABLE *st);
 void collect_body ( BODY *body, SYMBOL_TABLE *st);

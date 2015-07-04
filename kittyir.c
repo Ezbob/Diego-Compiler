@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
-#include "parserscanner/kittytree.h"
+#include "typechecker/funcstack.h"
 
 static int current_label = 0;
 static int function_label = 0;
@@ -13,8 +13,9 @@ static int number_of_scopes = 0;
 #define GET_NEXT_FUNCTION_ID (function_label++)
 #define NEW_SCOPE (number_of_scopes++)
 
-static linked_list *ir_lines; // plug IR code in here
+extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
+static stackT *function_stack;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 
@@ -31,15 +32,14 @@ void init_registers() {
 
 void init_heap() {
 	 append_element(ir_lines, make_instruction_movl(
-			 make_argument_label("$heap"),
-			 make_argument_label("heapNext"))
-	 );
+			 make_argument_label("$heap"), make_argument_label("heapNext")));
 }
 
-linked_list *IR_build( BODY *program ) {
+void IR_build( BODY *program ) {
 	fprintf(stderr, "Initializing intermediate code generation phase\n");
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
+	function_stack = funcStackInit();
 	init_registers();
 	NEW_SCOPE;
 
@@ -76,7 +76,7 @@ linked_list *IR_build( BODY *program ) {
 
 	build_data_section();
 
-	return ir_lines;
+	funcStackDestroy(function_stack);
 }
 
 void IR_builder_function(FUNC *func) {
@@ -84,13 +84,13 @@ void IR_builder_function(FUNC *func) {
 
 	int functionId = GET_NEXT_FUNCTION_ID;
 	char *functionStartLabel = NEW_LABEL;
-	char *functionEndLabel = NEW_LABEL;
+
+	funcStackPush(function_stack,func);
+	// we can now refer to the current function
 
 	SYMBOL *symbol = getSymbol(func->symboltable, func->head->id);
 
 	sprintf(functionStartLabel, "func%d", functionId);
-	sprintf(functionEndLabel,"endFunc%d", functionId);
-
 	strcpy(symbol->uniqueName, functionStartLabel);
 
 	// move the handling of the declaration list here instead of the body to
@@ -102,17 +102,10 @@ void IR_builder_function(FUNC *func) {
 
 	IR_builder_body(func->body);
 
-	// end of function label
-	append_element(ir_lines, make_instruction_label(functionEndLabel));
-
-	callee_restore();
-	caller_restore();
-	callee_end();
-
-	append_element(ir_lines, make_instruction_ret());
-
 	func->symboltable->localVars = 0; // reset local variables in scope
 
+	funcStackPop(function_stack);
+		// leaving the function
 }
 
 void IR_builder_body (BODY *body) {
@@ -189,7 +182,6 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 			break;
 	}
 }
-
 
 void IR_builder_statement ( STATEMENT *st ) {
 	int tempLabelCounter = 0;
@@ -372,8 +364,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 						// allocate space to array
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("heapNext"),
-								eax));
+								make_argument_label("heapNext"), eax));
 						append_element(ir_lines,
 									   make_instruction_movl(eax, variable));
 
@@ -886,19 +877,25 @@ void IR_builder_term ( TERM *term) {
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			if (term->symboltable->id > symbol->tableId) {
+			if ( !StackIsEmpty(function_stack) &&
+					strcmp(funcStackPeep(function_stack)->head->id,
+						   term->value.term_act_list.id) == 0 ) {
+				// recursion here
+
 				append_element(ir_lines, make_instruction_pushl(
 						make_argument_address(8, ebp)));
-				// pass the previous base pointer
+					// pass the previous base pointer
 			} else {
 				append_element(ir_lines, make_instruction_pushl(ebp));
 				// put base pointer on stack
 			}
+
 			append_element(ir_lines, make_instruction_call(
 					make_argument_label(symbol->uniqueName)));
 
-			// stack clean up for function functionParameters
-			add_to_stack_pointer(symbol->noParameters);
+			// stack clean up for function functionParameters plus 1 for
+			// static link
+			add_to_stack_pointer(symbol->noParameters + 1);
 
 			append_element(ir_lines, make_instruction_pushl(eax));
 			break;
