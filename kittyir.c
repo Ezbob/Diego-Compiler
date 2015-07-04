@@ -130,19 +130,24 @@ void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl) {
 	
 }
 
- void IR_builder_var_type ( VAR_TYPE * vtype ) {
-	 if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-		 switch (vtype->type->kind) { // note: switching on type kind
-			 case TYPE_INT:
-				 vtype->symboltable->localVars += WORD_SIZE;
-				 break;
-			 case TYPE_BOOL:
-				 vtype->symboltable->localVars += WORD_SIZE;
-				 break;
-			 default:
-				 break;
-		 }
-	 }
+void IR_builder_var_type ( VAR_TYPE * vtype ) {
+	// for int and bool we allocate place in stack.
+	// else we maybe have to heap it
+	switch (vtype->type->kind) {
+		case TYPE_INT:
+		if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+			vtype->symboltable->localVars += WORD_SIZE;
+		}
+		break;
+		case TYPE_BOOL:
+			if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+				vtype->symboltable->localVars += WORD_SIZE;
+			}
+			break;
+		default:
+			append_element(data_lines, vtype);
+			break;
+	}
  }
 
 void IR_builder_decl_list ( DECL_LIST *dlst ) {
@@ -261,7 +266,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
-
 					append_element(ir_lines, make_instruction_pushl(eax));
 
 					if (st->value.exp->value.term->kind == TERM_NULL) {
@@ -405,14 +409,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ecx));
 
-					out_of_memory_check( st->lineno , ecx );
+					out_of_memory_runtime_check(st->lineno, ecx);
 
 					// update the heap free pointer
 					append_element(ir_lines, make_instruction_addl(ecx,
 							make_argument_label("heapNext")));
 
 
-					append_element(data_lines, st);
+					//append_element(data_lines, st);
 					break;
 
 				case SYMBOL_RECORD:
@@ -449,7 +453,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ebx));
 
-					out_of_memory_check( st->lineno , ebx );
+					out_of_memory_runtime_check(st->lineno, ebx);
 
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ebx,
@@ -457,7 +461,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 
 
-					append_element(data_lines,st);
+					//append_element(data_lines,st);
 					break;
 				default:
 					break;
@@ -867,12 +871,13 @@ void IR_builder_term ( TERM *term) {
 
 		case TERM_VAR:
 			variable = IR_builder_variable(term->value.var);
+			//null_pointer_runtime_check(term->lineno, variable);
 			append_element(ir_lines, make_instruction_pushl(variable));
 			break;
 
 		case TERM_ACT_LIST:
-			symbol = getSymbol(term->symboltable, term->value.
-					term_act_list.id);
+			symbol = getSymbol(term->symboltable, term->value.term_act_list
+					.id);
 
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
@@ -988,25 +993,6 @@ void IR_builder_expression_list ( EXP_LIST *expList ) {
 	}
 }
 
-void variable_decider(ARGUMENT *variable) {
-
-	switch (variable->kind) {
-
-		case label_arg:
-			append_element(ir_lines, make_instruction_leal(variable,
-														   eax));
-			append_element(ir_lines, make_instruction_pushl(eax));
-			break;
-		case indexing_arg:
-		case address_arg:
-			append_element(ir_lines,
-						   make_instruction_pushl(variable));
-			break;
-		default:
-			break;
-	}
-}
-
 /* Adding allocation of local variables, this is by convention 
  *	a subtraction of the stack pointer
  */
@@ -1022,7 +1008,7 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
-void out_of_memory_check( int lineno, ARGUMENT *increase ) {
+void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 
 	append_element(ir_lines, make_instruction_pushl(eax));
 	append_element(ir_lines, make_instruction_pushl(edx));
@@ -1049,6 +1035,27 @@ void out_of_memory_check( int lineno, ARGUMENT *increase ) {
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
 	append_element(ir_lines, make_instruction_popl(edx));
 	append_element(ir_lines, make_instruction_popl(eax));
+}
+
+void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
+	append_element(ir_lines, make_instruction_pushl(ebx));
+	append_element(ir_lines, make_instruction_pushl(eax));
+
+	char *notNullLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+	sprintf(notNullLabel,"notNull%i", GET_NEXT_LABEL_ID);
+
+	append_element(ir_lines, make_instruction_movl(variable, eax));
+
+	append_element(ir_lines, make_instruction_cmp(make_argument_constant(0),
+												  eax));
+	append_element(ir_lines, make_instruction_jne(notNullLabel));
+
+	halt_for_error("$errorNULL", 1, lineno);
+
+	append_element(ir_lines, make_instruction_label(notNullLabel));
+
+	append_element(ir_lines, make_instruction_popl(eax));
+	append_element(ir_lines, make_instruction_popl(ebx));
 }
 
 /*
@@ -1158,6 +1165,10 @@ void add_error_forms(){
 					"Cannot allocate; out of memory\\n\" ")
 	);
 
+	append_element(ir_lines, make_instruction_directive(
+			"errorNULL: \n\t.string \"Error at line %i: "
+					"Null pointer exception\\n\" ")
+	);
 }
 
 // builds the data section at the end of the file
@@ -1188,13 +1199,15 @@ void build_data_section() {
 
 		while ( temp != data_lines ) { // making label pointers for allocated 
 										// items
-			STATEMENT *st = (STATEMENT *) temp->data;
+			VAR_TYPE *var_type = (VAR_TYPE *) temp->data;
+			SYMBOL *symbol = getSymbol(var_type->symboltable, var_type->id);
 
-			if ( st->value.statement_allocate.var->kind == VAR_ID ) {
+			if ( symbol != NULL && (symbol->symbolType->type == SYMBOL_ARRAY
+					 || symbol->symbolType->type == SYMBOL_RECORD) ) {
+
 				append_element(ir_lines, make_instruction_space(
-						make_argument_label(st->value.statement_allocate.
-								var->id), make_argument_plain_constant(
-						WORD_SIZE)));
+						make_argument_label(var_type->id),
+						make_argument_plain_constant(WORD_SIZE)));
 			}
 
 			temp = temp->next;
