@@ -18,6 +18,21 @@ static linked_list *data_lines; // for allocates
 static stackT *function_stack;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
+ARGUMENT *one, *zero;
+ARGUMENT *heapAddress, *heapFreePointer;
+ARGUMENT *printFormInt, *printFormNull, *printFormTrue, *printFormFalse;
+
+void init_argument_constants() {
+	init_registers();
+	one = make_argument_constant(1);
+	zero = make_argument_constant(0);
+	heapAddress = make_argument_label("$heap.");
+	heapFreePointer = make_argument_label("heap.NEXT");
+	printFormFalse = make_argument_label("$form.FALSE");
+	printFormTrue = make_argument_label("$form.TRUE");
+	printFormNull = make_argument_label("$form.NULL");
+	printFormInt = make_argument_label("$form.NUM");
+}
 
 void init_registers() {
 	eax = make_argument_register(r_eax, "eax");
@@ -31,8 +46,8 @@ void init_registers() {
 }
 
 void init_heap() {
-	 append_element(ir_lines, make_instruction_movl(
-			 make_argument_label("$heap"), make_argument_label("heapNext")));
+	 append_element(ir_lines, make_instruction_movl(heapAddress,
+													heapFreePointer));
 }
 
 void IR_build( BODY *program ) {
@@ -40,7 +55,7 @@ void IR_build( BODY *program ) {
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	function_stack = funcStackInit();
-	init_registers();
+	init_argument_constants();
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -67,8 +82,8 @@ void IR_build( BODY *program ) {
 	caller_restore();
 	callee_end();
 
-	append_element(ir_lines, make_instruction_movl(make_argument_constant(0),
-												   eax));
+	append_element(ir_lines, make_instruction_movl(zero, eax));
+		// return signal zero: all good
 
 	program->symboltable->localVars = 0; // resetting local variables counter
 	append_element(ir_lines, make_instruction_ret());
@@ -228,8 +243,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					sprintf(printLabel,"printbool%d", tempLabelCounter);
 
 					// compare boolean value to true
-					append_element(ir_lines, make_instruction_cmp(
-							make_argument_constant(1), eax));
+					append_element(ir_lines, make_instruction_cmp(one, eax));
 
 					// true has to be printed?
 					append_element(ir_lines,
@@ -240,7 +254,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// true case here
 					append_element(ir_lines, make_instruction_pushl(
-							make_argument_label("$formTRUE")));
+							printFormTrue));
 
 					// jump to printf call
 					append_element(ir_lines,
@@ -255,7 +269,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// false case here
 					append_element(ir_lines, make_instruction_pushl(
-							make_argument_label("$formFALSE")));
+							printFormFalse));
 
 					// printing section
 					append_element(ir_lines, make_instruction_label(
@@ -267,11 +281,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_pushl(eax));
 
 					if (st->value.exp->value.term->kind == TERM_NULL) {
-						pushForm = make_instruction_pushl(
-								make_argument_label("$formNULL"));
+						pushForm = make_instruction_pushl(printFormNull);
 					} else {
-						pushForm = make_instruction_pushl(
-								make_argument_label("$formNUM"));
+						pushForm = make_instruction_pushl(printFormInt);
 					}
 
 					append_element(ir_lines, pushForm);
@@ -281,7 +293,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_pushl(eax));
 
 					append_element(ir_lines, make_instruction_pushl(
-							make_argument_label("$formNUM")));
+							printFormInt));
 					break;
 				default:
 					break;
@@ -318,8 +330,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			sprintf(endLabelString, "endIf%d", labelNo);
 
 			//Comparison with "true" boolean value
-			append_element(ir_lines, make_instruction_cmp(
-					make_argument_constant(1), eax));
+			append_element(ir_lines, make_instruction_cmp(one, eax));
 
 			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
 				// if not equal goto else part
@@ -363,7 +374,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 							st->value.statement_allocate.var);
 
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_label("heapNext"), eax));
+							heapFreePointer, eax));
 
 					append_element(ir_lines,
 							   make_instruction_movl(eax, variable));
@@ -392,7 +403,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// update the heap free pointer
 					append_element(ir_lines, make_instruction_addl(ecx,
-							make_argument_label("heapNext")));
+							heapFreePointer));
 
 					break;
 
@@ -403,7 +414,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// copy heapFree pointer address to variable
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_label("heapNext"), eax));
+							heapFreePointer, eax));
 					append_element(ir_lines,
 								   make_instruction_movl(eax, variable));
 
@@ -422,7 +433,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ebx,
-							make_argument_label("heapNext")));
+							heapFreePointer));
 
 					break;
 				default:
@@ -448,8 +459,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_popl(eax));
 
 			//Compare evaluated expression with true
-			append_element(ir_lines, make_instruction_cmp(
-					make_argument_constant(1), eax));
+			append_element(ir_lines, make_instruction_cmp(one, eax));
 
 			// jump to end if while condition is false
 			append_element(ir_lines, make_instruction_jne(endLabelString));
@@ -635,13 +645,12 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_popl(eax));
 			// lhs
 
-			append_element(ir_lines, make_instruction_cmp(
-					make_argument_constant(0), ebx));
+			append_element(ir_lines, make_instruction_cmp(zero, ebx));
 			append_element(ir_lines, make_instruction_jne(
 					notZeroDenominator));
 				// denominator has to be check if zero
 
-			halt_for_error("$errorDIVZERO", 1, exp->lineno);
+			halt_for_error("$error.DIVZERO", 1, exp->lineno);
 
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
@@ -720,15 +729,13 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, trueJump);
 				// the jump to true instruction
 
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(0)));
+			append_element(ir_lines, make_instruction_pushl(zero));
 				// the false case
 			append_element(ir_lines, make_instruction_jmp(boolEndLabel));
 
 			append_element(ir_lines, trueLabel);
 
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(1)));
+			append_element(ir_lines, make_instruction_pushl(one));
 				// the true case
 
 			append_element(ir_lines, endLabel);
@@ -742,7 +749,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
 			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
-			truth = make_argument_constant(1);
+			truth = one;
 			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
 
 			append_element(ir_lines, make_instruction_popl(ebx));
@@ -761,8 +768,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// in case both arguments are true
 
 			append_element(ir_lines, make_instruction_label(andFalseLabel));
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(0)));
+			append_element(ir_lines, make_instruction_pushl(zero));
 				// in case one of the arguments are false
 
 			append_element(ir_lines, make_instruction_label(andEndLabel));
@@ -775,7 +781,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
 			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
 
-			truth = make_argument_constant(1);
+			truth = one;
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
 
@@ -793,8 +799,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// like in "and" we compare both arguments but jumps to true
 				// case instead of false case
 
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(0)));
+			append_element(ir_lines, make_instruction_pushl(zero));
 				// false case
 			append_element(ir_lines, make_instruction_jmp(orEndLabel));
 
@@ -822,14 +827,12 @@ void IR_builder_term ( TERM *term) {
 			break;
 
 		case TERM_TRUE:
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(1) ));
+			append_element(ir_lines, make_instruction_pushl(one));
 			break;
 
 		case TERM_NULL:
 		case TERM_FALSE:
-			append_element(ir_lines, make_instruction_pushl(
-					make_argument_constant(0) ));
+			append_element(ir_lines, make_instruction_pushl(zero));
 			break;
 
 		case TERM_PARENTESES: // parentheses just parses
@@ -876,8 +879,7 @@ void IR_builder_term ( TERM *term) {
 
 			append_element(ir_lines,make_instruction_popl(ebx));
 
-			append_element(ir_lines,make_instruction_xor(
-					make_argument_constant(1), ebx));
+			append_element(ir_lines,make_instruction_xor(one, ebx));
 			// xor the term expression with true (1) to get the negated value
 
 			append_element(ir_lines,make_instruction_pushl(ebx));
@@ -892,8 +894,7 @@ void IR_builder_term ( TERM *term) {
 				positiveNumberLabel = NEW_LABEL;
 				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
 
-				append_element(ir_lines,make_instruction_cmp(
-						make_argument_constant(0), ebx));
+				append_element(ir_lines,make_instruction_cmp(zero, ebx));
 				append_element(ir_lines,make_instruction_JGE(
 						positiveNumberLabel));
 				// jump to end if number is positive
@@ -975,13 +976,11 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 	char *notOutOfMemoryLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
 	sprintf(notOutOfMemoryLabel,"notOutOfMem%i",GET_NEXT_LABEL_ID);
 
-	append_element(ir_lines, make_instruction_movl(
-			make_argument_label("$heap"), edx));
+	append_element(ir_lines, make_instruction_movl(heapAddress, edx));
 	append_element(ir_lines, make_instruction_addl(
 			make_argument_constant(MAX_HEAP_SIZE), edx));
 
-	append_element(ir_lines, make_instruction_movl(
-			make_argument_label("heapNext"),eax));
+	append_element(ir_lines, make_instruction_movl(heapFreePointer,eax));
 
 	append_element(ir_lines, make_instruction_addl(increase, eax));
 
@@ -989,7 +988,7 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 
 	append_element(ir_lines, make_instruction_jg(notOutOfMemoryLabel));
 
-	halt_for_error("$errorOUTMEM", 1, lineno);
+	halt_for_error("$error.OUTMEM", 1, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
 	append_element(ir_lines, make_instruction_popl(edx));
@@ -1005,11 +1004,10 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 
 	append_element(ir_lines, make_instruction_movl(variable, eax));
 
-	append_element(ir_lines, make_instruction_cmp(make_argument_constant(0),
-												  eax));
+	append_element(ir_lines, make_instruction_cmp(zero, eax));
 	append_element(ir_lines, make_instruction_jne(notNullLabel));
 
-	halt_for_error("$errorNULL", 1, lineno);
+	halt_for_error("$error.NULL", 1, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNullLabel));
 
@@ -1043,8 +1041,7 @@ void exit_assembler(int signalCode) {
 	append_element(ir_lines, make_instruction_movl(
 			make_argument_constant(signalCode), ebx));
 
-	append_element(ir_lines, make_instruction_movl(
-			make_argument_constant(1), eax));
+	append_element(ir_lines, make_instruction_movl(one, eax));
 
 	append_element(ir_lines, make_instruction_intcode("0x80"));
 }
@@ -1101,31 +1098,31 @@ void add_to_stack_pointer(int i){
 
 void add_print_forms(){
 	append_element(ir_lines, make_instruction_directive(
-			"formNUM: \n\t.string \"%d\\n\" "));
+			"form.NUM: \n\t.string \"%d\\n\" "));
 
 	append_element(ir_lines, make_instruction_directive(
-			"formTRUE: \n\t.string \"TRUE\\n\" "));
+			"form.TRUE: \n\t.string \"TRUE\\n\" "));
 
 	append_element(ir_lines, make_instruction_directive(
-			"formFALSE: \n\t.string \"FALSE\\n\" "));
+			"form.FALSE: \n\t.string \"FALSE\\n\" "));
 
 	append_element(ir_lines, make_instruction_directive(
-			"formNULL: \n\t.string \"NULL\\n\" "));
+			"form.NULL: \n\t.string \"NULL\\n\" "));
 }
 
 void add_error_forms(){
 	append_element(ir_lines, make_instruction_directive(
-			"errorDIVZERO: \n\t.string \"Error at line %i: "
+			"error.DIVZERO: \n\t.string \"Error at line %i: "
 					"Division by zero\\n\" ")
 	);
 
 	append_element(ir_lines, make_instruction_directive(
-			"errorOUTMEM: \n\t.string \"Error at line %i: "
+			"error.OUTMEM: \n\t.string \"Error at line %i: "
 					"Cannot allocate; out of memory\\n\" ")
 	);
 
 	append_element(ir_lines, make_instruction_directive(
-			"errorNULL: \n\t.string \"Error at line %i: "
+			"error.NULL: \n\t.string \"Error at line %i: "
 					"Null pointer exception\\n\" ")
 	);
 }
@@ -1143,12 +1140,11 @@ void build_data_section() {
 	// if there is allocation to the heap or a function is declared
 	// (need heap for the static link)
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heap"),
+			make_argument_label("heap."),
 			make_argument_plain_constant(MAX_HEAP_SIZE)));
 
 	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heapNext"),
-			make_argument_plain_constant(WORD_SIZE)));
+			heapFreePointer, make_argument_plain_constant(WORD_SIZE)));
 
 	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap

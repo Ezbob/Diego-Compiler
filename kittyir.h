@@ -79,6 +79,8 @@ void callee_start();
 void callee_end();
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
+void init_argument_constants();
+void init_registers();
 void out_of_memory_runtime_check(int, ARGUMENT *);
 void null_pointer_runtime_check(int, ARGUMENT *);
 void halt_for_error(char *, int, int);
