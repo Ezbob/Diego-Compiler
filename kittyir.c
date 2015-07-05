@@ -4,6 +4,7 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 #include "typechecker/funcstack.h"
+#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
 static int function_label = 0;
@@ -85,7 +86,7 @@ void IR_builder_function(FUNC *func) {
 	int functionId = GET_NEXT_FUNCTION_ID;
 	char *functionStartLabel = NEW_LABEL;
 
-	funcStackPush(function_stack,func);
+	funcStackPush(function_stack, func);
 	// we can now refer to the current function
 
 	SYMBOL *symbol = getSymbol(func->symboltable, func->head->id);
@@ -135,10 +136,10 @@ void IR_builder_var_type ( VAR_TYPE * vtype ) {
 	// else we maybe have to heap it
 	switch (vtype->type->kind) {
 		case TYPE_INT:
-		if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-			vtype->symboltable->localVars += WORD_SIZE;
-		}
-		break;
+			if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
+				vtype->symboltable->localVars += WORD_SIZE;
+			}
+			break;
 		case TYPE_BOOL:
 			if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 				vtype->symboltable->localVars += WORD_SIZE;
@@ -364,44 +365,25 @@ void IR_builder_statement ( STATEMENT *st ) {
 					variable = IR_builder_variable(
 							st->value.statement_allocate.var);
 
-					if (variable->kind == label_arg) {
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_label("heapNext"), eax));
 
-						// allocate space to array
-						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("heapNext"), eax));
-						append_element(ir_lines,
-									   make_instruction_movl(eax, variable));
+					append_element(ir_lines,
+							   make_instruction_movl(eax, variable));
 
-						// xored to get zero, aka the first index
-						append_element(ir_lines,
-									   make_instruction_xor(ebx, ebx));
+					// xored to get zero, aka the first index
+					append_element(ir_lines,
+								   make_instruction_xor(ebx, ebx));
 
-						IR_builder_opt_length(st->value.statement_allocate
-													  .opt_length);
-						append_element(ir_lines, make_instruction_popl(ecx));
+					IR_builder_opt_length(st->value.statement_allocate
+												  .opt_length);
+					append_element(ir_lines, make_instruction_popl(ecx));
 
-						// move the array size to the first index
-						append_element(ir_lines, make_instruction_movl(ecx,
-								make_argument_indexing(variable, NULL, ebx)));
+					// move the array size to the first index
+					append_element(ir_lines, make_instruction_movl(ecx,
+								make_argument_indexing(NULL, eax, ebx)));
 
-					} else {
-
-						append_element(ir_lines,
-									   make_instruction_leal(variable,eax));
-
-						// xored to get zero, aka the first index
-						append_element(ir_lines,
-									   make_instruction_xor(ebx, ebx));
-
-						IR_builder_opt_length(st->value.statement_allocate
-													  .opt_length);
-						append_element(ir_lines, make_instruction_popl(ecx));
-
-						// move the array size to the first index
-						append_element(ir_lines, make_instruction_movl(ecx,
-									make_argument_indexing(NULL, eax, ebx)));
-					}
-
+					// array length + 1 since we use space
 					append_element(ir_lines,
 								   make_instruction_incl(ecx));
 
@@ -415,8 +397,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_addl(ecx,
 							make_argument_label("heapNext")));
 
-
-					//append_element(data_lines, st);
 					break;
 
 				case SYMBOL_RECORD:
@@ -424,28 +404,16 @@ void IR_builder_statement ( STATEMENT *st ) {
 					variable = IR_builder_variable(st->value.
 							statement_allocate.var);
 
-					if (variable->kind == label_arg) {
-
-						// allocate space to directly via label
-						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("heapNext"), eax));
-						append_element(ir_lines,
-									   make_instruction_movl(eax, variable));
-
-					} else {
-						// has to be loaded
-						append_element(ir_lines,
-									   make_instruction_movl(variable,eax));
-
-						append_element(ir_lines, make_instruction_movl(
-								make_argument_label("heapNext"), eax));
-					}
+					// copy heapFree pointer address to variable
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_label("heapNext"), eax));
+					append_element(ir_lines,
+								   make_instruction_movl(eax, variable));
 
 					numberOfRecordMembers = st->value.statement_allocate.
 							var->symboltype->arguments;
 
 					// we need number of members in record
-
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(numberOfRecordMembers)
 							, ebx));
@@ -459,9 +427,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_addl(ebx,
 							make_argument_label("heapNext")));
 
-
-
-					//append_element(data_lines,st);
 					break;
 				default:
 					break;
@@ -584,7 +549,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			base = IR_builder_variable(var->value.var_array.var);
 			IR_builder_expression(var->value.var_array.exp);
 
-			append_element(ir_lines, make_instruction_leal(base, esi));
+			append_element(ir_lines, make_instruction_movl(base, esi));
 				// exp
 			append_element(ir_lines, make_instruction_popl(edi));
 				// var
@@ -871,7 +836,6 @@ void IR_builder_term ( TERM *term) {
 
 		case TERM_VAR:
 			variable = IR_builder_variable(term->value.var);
-			//null_pointer_runtime_check(term->lineno, variable);
 			append_element(ir_lines, make_instruction_pushl(variable));
 			break;
 
@@ -919,7 +883,7 @@ void IR_builder_term ( TERM *term) {
 		case TERM_ABS:
 			IR_builder_expression(term->value.exp);
 
-			if ( term->symboltype->type == SYMBOL_INT ) {
+			if ( term->value.exp->symboltype->type == SYMBOL_INT ) {
 				append_element(ir_lines, make_instruction_popl(ebx));
 
 				positiveNumberLabel = NEW_LABEL;
@@ -941,23 +905,16 @@ void IR_builder_term ( TERM *term) {
 
 				append_element(ir_lines, make_instruction_pushl(ebx));
 
-			} else if ( term->symboltype->type == SYMBOL_ARRAY ) {
+			} else if ( term->value.exp->symboltype->type == SYMBOL_ARRAY ) {
 
-				if ( IR_builder_variable(term->value.exp->value.
-						term->value.var)->kind != label_arg ) {
+				append_element(ir_lines, make_instruction_popl(eax));
+				// may be variable
+				append_element( ir_lines, make_instruction_xor(ecx, ecx));
 
-					append_element(ir_lines, make_instruction_popl(eax));
-					// may be variable
-					append_element( ir_lines, make_instruction_xor(ecx, ecx));
-
-					append_element( ir_lines, make_instruction_pushl(
-							make_argument_indexing(NULL, eax, ecx)));
-					// gets the first element of the array where the size is
-					// stored
-				}
-
-				// else we get the label variable which automatically points
-				// to the first element of the array
+				append_element( ir_lines, make_instruction_pushl(
+						make_argument_indexing(NULL, eax, ecx)));
+				// gets the first element of the array where the size is
+				// stored
 			}
 			break;
 

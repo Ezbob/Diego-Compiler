@@ -1,7 +1,4 @@
 #include "kittycollect.h"
-#include "../parserscanner/kittytree.h"
-#include "../dlinkedlist.h"
-#include <stdio.h>
 #define FIRST_TABLE_ID 0
 #define RESET_SCOPE_OFFSET (currentScopeOffset = 1)
 #define NEXT_SCOPE_OFFSET (currentScopeOffset++)
@@ -168,8 +165,13 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st,
 			exit(1);
 		}
 		vtype->symbol->symbolKind = symbolKind;
-		vtype->symbol->offset = currentScopeOffset;
-		NEXT_SCOPE_OFFSET;
+		if( !( symbolType->type == SYMBOL_RECORD ||
+		   symbolType->type == SYMBOL_ARRAY ) ){
+			vtype->symbol->offset = currentScopeOffset;
+			NEXT_SCOPE_OFFSET;
+		} else {
+			vtype->symbol->offset = 0;
+		}
 	} else {
 		fprintf(stderr, "Error at line %i: type of symbol not recognized \n"
 			, vtype->lineno);
