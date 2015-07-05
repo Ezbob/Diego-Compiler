@@ -549,6 +549,8 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			base = IR_builder_variable(var->value.var_array.var);
 			IR_builder_expression(var->value.var_array.exp);
 
+			null_pointer_runtime_check(var->lineno, base);
+
 			append_element(ir_lines, make_instruction_movl(base, esi));
 				// exp
 			append_element(ir_lines, make_instruction_popl(edi));
@@ -562,6 +564,8 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 		case VAR_RECORD:
 			base = IR_builder_variable(var->value.var_record.var);
+
+			null_pointer_runtime_check(var->lineno, base);
 
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
