@@ -489,7 +489,9 @@ void IR_builder_opt_length ( OPT_LENGTH *opt_length ) {
 ARGUMENT *IR_builder_variable (VAR *var) {
 
 	int offsetValue;
-	int currentTableId;
+	int callScopeId;
+	int definedScopeId;
+
 	SYMBOL *symbol;
 	ARGUMENT *result;
 	ARGUMENT *offset;
@@ -514,17 +516,18 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					// basically, if variable is not in current,
 					// use static link
 
-					currentTableId = var->symboltable->id;
+					callScopeId = var->symboltable->id;
+					definedScopeId = symbol->tableId;
 
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_address(8, ebp), eax));
-					currentTableId --;
+					callScopeId--;
 
-					while ( symbol->tableId != currentTableId ) {
+					while ( definedScopeId != callScopeId) {
 						// get previous base pointer by iteration
 						append_element(ir_lines, make_instruction_movl(
 								make_argument_address(8,eax), eax));
-						currentTableId --;
+						callScopeId--;
 					}
 
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
@@ -820,6 +823,8 @@ void IR_builder_term ( TERM *term) {
 	ARGUMENT *variable;
 	char *positiveNumberLabel;
 	char *functionLabel;
+	int callScopeId;
+	int definedScopeId;
 
 	switch(term->kind){
 		case TERM_NUM:
@@ -850,20 +855,39 @@ void IR_builder_term ( TERM *term) {
 					.id);
 			GET_FUNCTION_LABEL(functionLabel,symbol->name,symbol->offset);
 
+			callScopeId = term->symboltable->id;
+			definedScopeId = symbol->tableId;
+
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
 			if ( !StackIsEmpty(function_stack) &&
 					strcmp(funcStackPeep(function_stack)->head->id,
 						   term->value.term_act_list.id) == 0 ) {
-				// recursion here
+				// recursion here just have to push the same base
+				// pointer again
 
 				append_element(ir_lines, make_instruction_pushl(
 						make_argument_address(8, ebp)));
 					// pass the previous base pointer
-			} else {
+			} else if( callScopeId > definedScopeId ) {
+				// we have to to fetch the right base pointer e.g.: the base
+				// pointer of the scope where the function is defined
+				append_element(ir_lines, make_instruction_movl(
+						make_argument_address(8, ebp), eax));
+				callScopeId--;
+
+				while ( definedScopeId != callScopeId) {
+					// get previous base pointer by iteration
+					append_element(ir_lines, make_instruction_movl(
+							make_argument_address(8,eax), eax));
+					callScopeId--;
+				}
+
+				append_element(ir_lines,make_instruction_pushl(eax));
+			} else if ( callScopeId == definedScopeId ) {
+				// top level, we just push the base pointer on the stack
 				append_element(ir_lines, make_instruction_pushl(ebp));
-				// put base pointer on stack
 			}
 
 			append_element(ir_lines, make_instruction_call(
