@@ -14,7 +14,7 @@ static int current_label = 0;
 #define GET_NEXT_LABEL_ID (current_label++)
 
 extern linked_list *ir_lines; // plug IR code in here
-static linked_list *data_lines; // for allocates
+static linked_list *data_lines; // for allocates, we use variables
 static stackT *function_stack;
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
@@ -581,6 +581,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			   != NULL) {
 				offset = make_argument_constant(symbol->offset - 1);
 				// member index in the record as argument
+				// member index is zero indiced
 			}
 			append_element(ir_lines, make_instruction_movl(base,esi));
 
