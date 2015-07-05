@@ -2,10 +2,11 @@
 #define FIRST_TABLE_ID 0
 #define RESET_SCOPE_OFFSET (currentScopeOffset = 1)
 #define NEXT_SCOPE_OFFSET (currentScopeOffset++)
+#define GET_NEXT_FUNCTION_ID (functionOffset++)
 
 int unknownTypesCount = 0; // decides whether more passes should be used.
 						// more passes are used when unknownTypesCount > 0
-
+static int functionOffset = 0;
 static int currentScopeOffset = 1;
 
 /*
@@ -48,6 +49,7 @@ void collect_head (HEAD *header, SYMBOL_TABLE *inner, SYMBOL_TABLE *outer) {
 	symbol = putSymbol(outer, header->id, header->symboltype);
 	symbol->functionParameters = header->pdlist;
 	symbol->noParameters = noArguments;
+	symbol->offset = GET_NEXT_FUNCTION_ID;
 
 	header->symboltype->return_type = collect_type(header->returntype, outer);
 	if ( header->symboltype->return_type == NULL ) {

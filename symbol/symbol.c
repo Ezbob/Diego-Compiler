@@ -214,46 +214,39 @@ void dumpSymbol(SYMBOL *symbol){
 				
 	switch(symbol->symbolType->type){
 		case SYMBOL_FUNCTION:
-			printf( "FUNCTION (%s , offset: %i) ", symbol->name,
-					 symbol->offset);
+			printf( "FUNCTION ");
 			break;
 
 		case SYMBOL_INT:
-			printf( "INT (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "INT ");
 			break;
 
 		case SYMBOL_BOOL:
-			printf( "BOOL (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "BOOL ");
 			break;
 
 		case SYMBOL_ID:
-			printf( "IDENTIFIER (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "IDENTIFIER ");
 			break;
 
 		case SYMBOL_RECORD:
-			printf( "RECORD (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "RECORD ");
 			break;
 
 		case SYMBOL_ARRAY:
-			printf( "ARRAY (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "ARRAY ");
 			break;
 
 		case SYMBOL_NULL:
-			printf( "NULL (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "NULL ");
 			break;
 
 		default:
-			printf( "UNKNOWN (%s , offset: %i) ", symbol->name,
-					symbol->offset);
+			printf( "UNKNOWN ");
 			break;
-
 	}
+	printf("(name: %s , offset: %i, address: %p) ", symbol->name,
+	symbol->offset, (void*) symbol);
 }
 
 

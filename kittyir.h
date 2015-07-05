@@ -61,6 +61,7 @@ typedef struct SECTION {
  */
 void IR_build(BODY *program);
 void IR_builder_function(FUNC *func);
+void IR_builder_head(HEAD *head);
 void IR_builder_body (BODY *body);
 void IR_builder_var_decl_list ( VAR_DECL_LIST *vdecl);
 void IR_builder_var_type ( VAR_TYPE *vtype);

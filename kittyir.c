@@ -4,15 +4,14 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 #include "typechecker/funcstack.h"
-#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
-static int function_label = 0;
-static int number_of_scopes = 0;
+
+// standardization of the building of function labels for calls
+#define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
+	NEW_LABEL; sprintf(functionLabel,"%s.%d", name, offset)
 
 #define GET_NEXT_LABEL_ID (current_label++)
-#define GET_NEXT_FUNCTION_ID (function_label++)
-#define NEW_SCOPE (number_of_scopes++)
 
 extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates
@@ -42,7 +41,6 @@ void IR_build( BODY *program ) {
 	data_lines = initialize_list();
 	function_stack = funcStackInit();
 	init_registers();
-	NEW_SCOPE;
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -69,8 +67,8 @@ void IR_build( BODY *program ) {
 	caller_restore();
 	callee_end();
 
-	append_element(ir_lines, make_instruction_movl(
-		make_argument_constant(0), eax));
+	append_element(ir_lines, make_instruction_movl(make_argument_constant(0),
+												   eax));
 
 	program->symboltable->localVars = 0; // resetting local variables counter
 	append_element(ir_lines, make_instruction_ret());
@@ -81,25 +79,16 @@ void IR_build( BODY *program ) {
 }
 
 void IR_builder_function(FUNC *func) {
-	NEW_SCOPE;
-
-	int functionId = GET_NEXT_FUNCTION_ID;
-	char *functionStartLabel = NEW_LABEL;
-
+	//NEW_SCOPE;
 	funcStackPush(function_stack, func);
 	// we can now refer to the current function
-
-	SYMBOL *symbol = getSymbol(func->symboltable, func->head->id);
-
-	sprintf(functionStartLabel, "func%d", functionId);
-	strcpy(symbol->uniqueName, functionStartLabel);
 
 	// move the handling of the declaration list here instead of the body to
 	// avoid nested function getting generated inside each others 
 	IR_builder_decl_list(func->body->decl_list);
 
-	// start function label
-	append_element(ir_lines, make_instruction_label(functionStartLabel));
+	// header makes the function label
+	IR_builder_head(func->head);
 
 	IR_builder_body(func->body);
 
@@ -107,6 +96,14 @@ void IR_builder_function(FUNC *func) {
 
 	funcStackPop(function_stack);
 		// leaving the function
+}
+
+void IR_builder_head(HEAD *head) {
+	char *functionStartLabel;
+	SYMBOL *symbol = getSymbol(head->symboltable, head->id);
+	GET_FUNCTION_LABEL(functionStartLabel, symbol->name, symbol->offset);
+
+	append_element(ir_lines, make_instruction_label(functionStartLabel));
 }
 
 void IR_builder_body (BODY *body) {
@@ -816,6 +813,7 @@ void IR_builder_term ( TERM *term) {
 	SYMBOL *symbol;
 	ARGUMENT *variable;
 	char *positiveNumberLabel;
+	char *functionLabel;
 
 	switch(term->kind){
 		case TERM_NUM:
@@ -846,6 +844,7 @@ void IR_builder_term ( TERM *term) {
 		case TERM_ACT_LIST:
 			symbol = getSymbol(term->symboltable, term->value.term_act_list
 					.id);
+			GET_FUNCTION_LABEL(functionLabel,symbol->name,symbol->offset);
 
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
@@ -864,7 +863,7 @@ void IR_builder_term ( TERM *term) {
 			}
 
 			append_element(ir_lines, make_instruction_call(
-					make_argument_label(symbol->uniqueName)));
+					make_argument_label(functionLabel)));
 
 			// stack clean up for function functionParameters plus 1 for
 			// static link
@@ -970,7 +969,6 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 }
 
 void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
-
 	append_element(ir_lines, make_instruction_pushl(eax));
 	append_element(ir_lines, make_instruction_pushl(edx));
 
