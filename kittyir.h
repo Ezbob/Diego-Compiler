@@ -83,6 +83,7 @@ void init_argument_constants();
 void init_registers();
 void out_of_memory_runtime_check(int, ARGUMENT *);
 void null_pointer_runtime_check(int, ARGUMENT *);
+void out_of_bounds_runtime_check( int, ARGUMENT* variable, ARGUMENT *index );
 void halt_for_error(char *, int, int);
 void exit_assembler(int);
 void add_to_stack_pointer(int i);

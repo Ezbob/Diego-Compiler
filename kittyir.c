@@ -9,7 +9,7 @@ static int current_label = 0;
 
 // standardization of the building of function labels for calls
 #define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
-	NEW_LABEL; sprintf(functionLabel,"%s.%d", name, offset)
+	NEW_LABEL; sprintf(functionLabel,"f_%s.%d", name, offset)
 
 #define GET_NEXT_LABEL_ID (current_label++)
 
@@ -566,10 +566,12 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			append_element(ir_lines, make_instruction_popl(edi));
 				// var
 
+			out_of_bounds_runtime_check(var->lineno, esi, edi);
+
 			append_element(ir_lines, make_instruction_incl(edi));
 				// increment since we use the first element as the size
 
-				// return the indexing into the array
+			// return the indexing into the array
 			return make_argument_indexing(NULL, esi, edi);
 
 		case VAR_RECORD:
@@ -994,12 +996,49 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
+void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
+								  ARGUMENT *index ) {
+
+	append_element(ir_lines, make_instruction_pushl(ebx));
+	append_element(ir_lines, make_instruction_pushl(ecx));
+
+	char *notOutOfBoundsLabel = NEW_LABEL;
+	char *outOfBoundsLabel = NEW_LABEL;
+	sprintf(notOutOfBoundsLabel,"notOutOfBounds%i", GET_NEXT_LABEL_ID);
+	sprintf(outOfBoundsLabel,"outOfBounds%i", GET_NEXT_LABEL_ID);
+
+	// index < 0
+	append_element(ir_lines, make_instruction_cmp(zero, index));
+	append_element(ir_lines, make_instruction_jl(outOfBoundsLabel));
+
+	append_element(ir_lines, make_instruction_movl(variable, ebx));
+	// get length of the array
+	append_element(ir_lines, make_instruction_xor(ecx, ecx));
+	append_element(ir_lines, make_instruction_movl(
+			make_argument_indexing(NULL, ebx, ecx), ecx));
+
+	// index >= length of array
+	append_element(ir_lines, make_instruction_cmp(ecx, index));
+	append_element(ir_lines, make_instruction_JGE(outOfBoundsLabel));
+
+	// all check passed
+	append_element(ir_lines, make_instruction_jmp(notOutOfBoundsLabel));
+
+	append_element(ir_lines, make_instruction_label(outOfBoundsLabel));
+
+	halt_for_error("$error.OUTBOUNDS", 1, lineno);
+
+	append_element(ir_lines, make_instruction_label(notOutOfBoundsLabel));
+	append_element(ir_lines, make_instruction_popl(ecx));
+	append_element(ir_lines, make_instruction_popl(ebx));
+}
+
 void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 	append_element(ir_lines, make_instruction_pushl(eax));
 	append_element(ir_lines, make_instruction_pushl(edx));
 
-	char *notOutOfMemoryLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
-	sprintf(notOutOfMemoryLabel,"notOutOfMem%i",GET_NEXT_LABEL_ID);
+	char *notOutOfMemoryLabel = NEW_LABEL;
+	sprintf(notOutOfMemoryLabel,"notOutOfMem%i", GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_movl(heapAddress, edx));
 	append_element(ir_lines, make_instruction_addl(
@@ -1024,7 +1063,7 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 	append_element(ir_lines, make_instruction_pushl(ebx));
 	append_element(ir_lines, make_instruction_pushl(eax));
 
-	char *notNullLabel = calloc(MAX_LABEL_SIZE, sizeof(char));
+	char *notNullLabel = NEW_LABEL;
 	sprintf(notNullLabel,"notNull%i", GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_movl(variable, eax));
@@ -1149,6 +1188,11 @@ void add_error_forms(){
 	append_element(ir_lines, make_instruction_directive(
 			"error.NULL: \n\t.string \"Error at line %i: "
 					"Null pointer exception\\n\" ")
+	);
+
+	append_element(ir_lines, make_instruction_directive(
+			"error.OUTBOUNDS: \n\t.string \"Error at line %i: "
+					"Index out of bounds\\n\" ")
 	);
 }
 
