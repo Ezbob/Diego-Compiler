@@ -6,11 +6,12 @@
 #define MAX_LABEL_SIZE 20
 #define WORD_SIZE 4
 #define MAX_HEAP_SIZE 4194304
-#define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char*)))
+#define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char)))
+// standardization of the building of function labels for calls
+#define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
+	NEW_LABEL; sprintf(functionLabel,"f_%s.%d", name, offset)
 
-typedef enum REGISTERS {
-	r_eax, r_ebx, r_ecx, r_edx, r_ebp, r_esp, r_esi, r_edi 
-} REGISTERS;
+#define GET_NEXT_LABEL_ID (current_label++)
 
 typedef enum OP_CODES {
 	directive, label, movl, call, pushl, popl, addl,
@@ -37,7 +38,6 @@ typedef struct ARGUMENT {
 	ARGUMENT_KIND kind;
 	char *label;
 	int intConst;
-	REGISTERS reg;
 	struct ARGUMENT *displace;
 	struct ARGUMENT *base;
 	struct ARGUMENT *index;
@@ -77,6 +77,8 @@ void callee_save();
 void callee_restore();
 void callee_start();
 void callee_end();
+void function_epilog();
+void function_prolog(int, SYMBOL_TABLE*);
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
 void init_argument_constants();

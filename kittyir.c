@@ -7,12 +7,6 @@
 
 static int current_label = 0;
 
-// standardization of the building of function labels for calls
-#define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
-	NEW_LABEL; sprintf(functionLabel,"f_%s.%d", name, offset)
-
-#define GET_NEXT_LABEL_ID (current_label++)
-
 extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates, we use variables
 static stackT *function_stack;
@@ -35,14 +29,14 @@ void init_argument_constants() {
 }
 
 void init_registers() {
-	eax = make_argument_register(r_eax, "eax");
-	ebx = make_argument_register(r_ebx, "ebx");
-	ecx = make_argument_register(r_ecx, "ecx");
-	edx = make_argument_register(r_edx, "edx");
-	edi = make_argument_register(r_edi, "edi");
-	esi = make_argument_register(r_esi, "esi");
-	ebp = make_argument_register(r_ebp, "ebp");
-	esp = make_argument_register(r_esp, "esp");
+	eax = make_argument_register("eax");
+	ebx = make_argument_register("ebx");
+	ecx = make_argument_register("ecx");
+	edx = make_argument_register("edx");
+	edi = make_argument_register("edi");
+	esi = make_argument_register("esi");
+	ebp = make_argument_register("ebp");
+	esp = make_argument_register("esp");
 }
 
 void init_heap() {
@@ -68,22 +62,13 @@ void IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	callee_start();
-	callee_save();
-
-	local_variable_allocation(program->symboltable);
-	init_heap();
-
-	caller_save();
+	function_prolog(1, program->symboltable);
 
 	IR_builder_statement_list(program->statement_list);
 
-	callee_restore();
-	caller_restore();
-	callee_end();
-
 	append_element(ir_lines, make_instruction_movl(zero, eax));
-		// return signal zero: all good
+	// return signal zero: all good
+	function_epilog();
 
 	program->symboltable->localVars = 0; // resetting local variables counter
 	append_element(ir_lines, make_instruction_ret());
@@ -94,7 +79,6 @@ void IR_build( BODY *program ) {
 }
 
 void IR_builder_function(FUNC *func) {
-	//NEW_SCOPE;
 	funcStackPush(function_stack, func);
 	// we can now refer to the current function
 
@@ -122,11 +106,7 @@ void IR_builder_head(HEAD *head) {
 }
 
 void IR_builder_body (BODY *body) {
-	callee_start(); // shift in stackframe
-	callee_save();
-	local_variable_allocation(body->symboltable);
-	caller_save();
-
+	function_prolog(0, body->symboltable);
 	IR_builder_statement_list(body->statement_list);
 }
 
@@ -220,8 +200,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_RETURN:	
 			IR_builder_expression(st->value.statement_return.exp);
 			append_element(ir_lines, make_instruction_popl(eax));
-			callee_restore();
-			callee_end();
+			function_epilog();
 			append_element(ir_lines, make_instruction_ret());
 			break;
 
@@ -1170,6 +1149,23 @@ void callee_restore(){
 	append_element(ir_lines, make_instruction_popl(esi));
 	append_element(ir_lines, make_instruction_popl(ebx));
 
+}
+
+void function_prolog(int isMain, SYMBOL_TABLE *currentScope) {
+	callee_start();
+	callee_save();
+	if ( isMain ) {
+		init_heap();
+	}
+	local_variable_allocation(currentScope);
+	caller_save();
+
+}
+
+void function_epilog() {
+	callee_restore();
+	caller_restore();
+	callee_end();
 }
 
 void add_to_stack_pointer(int i){
