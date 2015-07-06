@@ -90,6 +90,7 @@ void out_of_bounds_runtime_check( int, ARGUMENT* variable, ARGUMENT *index );
 void halt_for_error(char *, int, int);
 void exit_assembler(int);
 void add_to_stack_pointer(int i);
+int is_already_defined(linked_list *definedList, char *labelName);
 void build_data_section();
 ARGUMENT *IR_builder_variable ( VAR *var);
 void IR_builder_expression ( EXPRES *exp);

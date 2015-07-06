@@ -487,8 +487,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			if( symbol != NULL ) {
 				offsetValue = (symbol->offset) * WORD_SIZE;
 
-				if ( symbol->symbolType->type == SYMBOL_ARRAY ||
-						symbol->symbolType->type == SYMBOL_RECORD ) {
+				if ( ( symbol->symbolType->type == SYMBOL_ARRAY ||
+						symbol->symbolType->type == SYMBOL_RECORD ) &&
+						!symbol->symbolKind == PARAMETER_SYMBOL ) {
 
 					// They're on the heap so we just use labels
 					result = make_argument_label(var->id);
@@ -1216,6 +1217,20 @@ void add_error_forms(){
 	);
 }
 
+int is_already_defined(linked_list *definedList, char *labelName) {
+
+	linked_list *iterator = definedList->next;
+
+	while (iterator != definedList) {
+
+		if( strcmp(labelName, (char*)iterator->data) == 0 ){
+			return 1;
+		}
+		iterator = iterator->next;
+	}
+	return 0;
+}
+
 // builds the data section at the end of the file
 // cannot build in top because data_lines is not filled
 void build_data_section() {
@@ -1241,6 +1256,8 @@ void build_data_section() {
 		linked_list *temp;
 		temp = data_lines->next;
 
+		linked_list *definedTypes = initialize_list();
+
 		while ( temp != data_lines ) { // making label pointers for allocated 
 										// items
 			VAR_TYPE *var_type = (VAR_TYPE *) temp->data;
@@ -1249,9 +1266,14 @@ void build_data_section() {
 			if ( symbol != NULL && (symbol->symbolType->type == SYMBOL_ARRAY
 					 || symbol->symbolType->type == SYMBOL_RECORD) ) {
 
-				append_element(ir_lines, make_instruction_space(
-						make_argument_label(var_type->id),
-						make_argument_plain_constant(WORD_SIZE)));
+				if ( !is_already_defined(definedTypes, var_type->id) ) {
+					// check if the type is already defined
+					append_element(ir_lines, make_instruction_space(
+							make_argument_label(var_type->id),
+							make_argument_plain_constant(WORD_SIZE)));
+
+					append_element(definedTypes, var_type->id);
+				}
 			}
 
 			temp = temp->next;

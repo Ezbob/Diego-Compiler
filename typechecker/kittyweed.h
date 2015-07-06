@@ -1,7 +1,7 @@
 #ifndef __KITTYWEED_H
 #define __KITTYWEED_H
 #define INDENTATION_SIZE 4 //this might be used?
-#define WEEDER_FAILURE -1 //error code when exiting
+#define WEEDER_FAILURE 1 //error code when exiting
 #include "../parserscanner/kittytree.h" // need types
 #include "funcstack.h"
 
