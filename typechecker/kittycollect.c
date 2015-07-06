@@ -169,7 +169,8 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st,
 		vtype->symbol->symbolKind = symbolKind;
 		if( !( symbolType->type == SYMBOL_RECORD ||
 		   symbolType->type == SYMBOL_ARRAY ) ||
-				symbolKind == RECORD_MEMBER_SYMBOL ) {
+				symbolKind == RECORD_MEMBER_SYMBOL ||
+				symbolKind == PARAMETER_SYMBOL ) {
 			vtype->symbol->offset = currentScopeOffset;
 			NEXT_SCOPE_OFFSET;
 		} else {
