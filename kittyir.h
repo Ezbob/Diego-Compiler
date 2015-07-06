@@ -81,6 +81,7 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
 void init_argument_constants();
 void init_registers();
+void negative_array_size_check(int, ARGUMENT *arraySize);
 void out_of_memory_runtime_check(int, ARGUMENT *);
 void null_pointer_runtime_check(int, ARGUMENT *);
 void out_of_bounds_runtime_check( int, ARGUMENT* variable, ARGUMENT *index );

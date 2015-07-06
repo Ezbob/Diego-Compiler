@@ -387,6 +387,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 												  .opt_length);
 					append_element(ir_lines, make_instruction_popl(ecx));
 
+					negative_array_size_check(st->lineno, ecx);
+
 					// move the array size to the first index
 					append_element(ir_lines, make_instruction_movl(ecx,
 								make_argument_indexing(NULL, eax, ebx)));
@@ -996,9 +998,26 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 	return NULL;
 }
 
+void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
+
+	append_element(ir_lines, make_instruction_pushl(ebx));
+
+	char *notNegativeSize = NEW_LABEL;
+	sprintf(notNegativeSize, "notNegativSize%i", GET_NEXT_LABEL_ID);
+
+	append_element(ir_lines, make_instruction_movl(arraySize, ebx));
+
+	append_element(ir_lines, make_instruction_cmp(zero, ebx));
+	append_element(ir_lines, make_instruction_JGE(notNegativeSize));
+
+	halt_for_error("$error.NEGSIZE", 1, lineno);
+
+	append_element(ir_lines, make_instruction_label(notNegativeSize));
+	append_element(ir_lines, make_instruction_popl(ebx));
+}
+
 void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 								  ARGUMENT *index ) {
-
 	append_element(ir_lines, make_instruction_pushl(ebx));
 	append_element(ir_lines, make_instruction_pushl(ecx));
 
@@ -1193,6 +1212,11 @@ void add_error_forms(){
 	append_element(ir_lines, make_instruction_directive(
 			"error.OUTBOUNDS: \n\t.string \"Error at line %i: "
 					"Index out of bounds\\n\" ")
+	);
+
+	append_element(ir_lines, make_instruction_directive(
+			"error.NEGSIZE: \n\t.string \"Error at line %i: "
+					"Cannot allocate arrays of negative size\\n\" ")
 	);
 }
 
