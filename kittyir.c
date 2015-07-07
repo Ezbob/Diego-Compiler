@@ -15,7 +15,17 @@ ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 ARGUMENT *one, *zero;
 ARGUMENT *heapAddress, *heapFreePointer;
 ARGUMENT *printFormInt, *printFormNull, *printFormTrue, *printFormFalse;
+ARGUMENT *wordSizePointer;
+ARGUMENT *printfLabel;
 
+IR_INSTRUCTION *pushEax, *pushEbx, *pushEcx, *pushEdx, *pushEdi, *pushEsi,
+		*pushEbp, *pushEsp;
+IR_INSTRUCTION *popEax, *popEbx, *popEcx, *popEdx, *popEdi, *popEsi, *popEbp,
+		*popEsp;
+
+/*
+ * Initialization of common arguments
+ */
 void init_argument_constants() {
 	init_registers();
 	one = make_argument_constant(1);
@@ -26,6 +36,28 @@ void init_argument_constants() {
 	printFormTrue = make_argument_label("$form.TRUE");
 	printFormNull = make_argument_label("$form.NULL");
 	printFormInt = make_argument_label("$form.NUM");
+	wordSizePointer = make_argument_plain_constant(WORD_SIZE);
+	printfLabel = make_argument_label("printf");
+}
+
+void init_stack_instructions() {
+	pushEax = make_instruction_pushl(eax);
+	pushEbx = make_instruction_pushl(ebx);
+	pushEcx = make_instruction_pushl(ecx);
+	pushEdx = make_instruction_pushl(edx);
+	pushEdi = make_instruction_pushl(edi);
+	pushEsi = make_instruction_pushl(esi);
+	pushEbp = make_instruction_pushl(ebp);
+	pushEsp = make_instruction_pushl(esp);
+
+	popEax = make_instruction_popl(eax);
+	popEbx = make_instruction_popl(ebx);
+	popEcx = make_instruction_popl(ecx);
+	popEdx = make_instruction_popl(edx);
+	popEdi = make_instruction_popl(edi);
+	popEsi = make_instruction_popl(esi);
+	popEbp = make_instruction_popl(ebp);
+	popEsp = make_instruction_popl(esp);
 }
 
 void init_registers() {
@@ -50,6 +82,7 @@ void IR_build( BODY *program ) {
 	data_lines = initialize_list();
 	function_stack = funcStackInit();
 	init_argument_constants();
+	init_stack_instructions();
 
 	// adding text section for completion
 	append_element(ir_lines, make_instruction_directive(".text"));
@@ -199,7 +232,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_RETURN:	
 			IR_builder_expression(st->value.statement_return.exp);
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, popEax);
 			function_epilog();
 			append_element(ir_lines, make_instruction_ret());
 			break;
@@ -207,7 +240,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_WRITE:
 			caller_save();
 			IR_builder_expression(st->value.exp);
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, popEax);
 				// result from expression
 			switch(st->value.exp->symboltype->type){
 				case SYMBOL_BOOL:
@@ -229,7 +262,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 								   make_instruction_jne(falseLabel));
 
 					// making a push to the stack with result of expression
-					append_element(ir_lines, make_instruction_pushl(eax));
+					append_element(ir_lines, pushEax);
 
 					// true case here
 					append_element(ir_lines, make_instruction_pushl(
@@ -244,7 +277,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 								   make_instruction_label(falseLabel));
 
 					// making a push to the stack with result of expression
-					append_element(ir_lines, make_instruction_pushl(eax));
+					append_element(ir_lines, pushEax);
 
 					// false case here
 					append_element(ir_lines, make_instruction_pushl(
@@ -257,7 +290,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 				case SYMBOL_INT:
 				case SYMBOL_NULL:
-					append_element(ir_lines, make_instruction_pushl(eax));
+					append_element(ir_lines, pushEax);
 
 					if (st->value.exp->value.term->kind == TERM_NULL) {
 						pushForm = make_instruction_pushl(printFormNull);
@@ -269,7 +302,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 
 				case SYMBOL_ARRAY:
-					append_element(ir_lines, make_instruction_pushl(eax));
+					append_element(ir_lines, pushEax);
 
 					append_element(ir_lines, make_instruction_pushl(
 							printFormInt));
@@ -278,8 +311,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 			}
 			// call to print
-			append_element( ir_lines, make_instruction_call(
-					make_argument_label("printf")));
+			append_element( ir_lines, make_instruction_call(printfLabel));
 
 			add_to_stack_pointer(2); // clean up
 			caller_restore();
@@ -289,7 +321,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			IR_builder_expression(st->value.statement_assign.exp);
 			variable = IR_builder_variable(st->value.statement_assign.var);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 				// expression
 			append_element(ir_lines, make_instruction_movl(ebx, variable));
 			break;
@@ -298,7 +330,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// generate code for boolean expression(s)
 			IR_builder_expression(st->value.statement_ifbranch.exp);
 
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, popEax);
 
 			elseLabel = NEW_LABEL;
 			endLabelString = NEW_LABEL;
@@ -364,7 +396,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 					IR_builder_opt_length(st->value.statement_allocate
 												  .opt_length);
-					append_element(ir_lines, make_instruction_popl(ecx));
+					append_element(ir_lines, popEcx);
 
 					negative_array_size_check(st->lineno, ecx);
 
@@ -423,7 +455,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_WHILE:
-
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			trueWhileString = NEW_LABEL;
@@ -437,7 +468,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			// evaluating expressions
 			IR_builder_expression(st->value.statement_while.exp);
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, popEax);
 
 			//Compare evaluated expression with true
 			append_element(ir_lines, make_instruction_cmp(one, eax));
@@ -508,7 +539,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					while ( definedScopeId != callScopeId) {
 						// get previous base pointer by iteration
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_address(8,eax), eax));
+								make_argument_address(8, eax), eax));
 						callScopeId--;
 					}
 
@@ -545,7 +576,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			append_element(ir_lines, make_instruction_movl(base, esi));
 				// exp
-			append_element(ir_lines, make_instruction_popl(edi));
+			append_element(ir_lines, popEdi);
 				// var
 
 			out_of_bounds_runtime_check(var->lineno, esi, edi);
@@ -597,40 +628,40 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_PLUS:
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 				// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 				// lhs
  			append_element(ir_lines, make_instruction_addl(ebx, ecx));
 
-			append_element(ir_lines, make_instruction_pushl(ecx));
+			append_element(ir_lines, pushEcx);
 			break;
 
 		case EXPRES_MINUS:
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 			// lhs
 			append_element(ir_lines, make_instruction_subl(ebx, ecx));
-			append_element(ir_lines, make_instruction_pushl(ecx));
+			append_element(ir_lines, pushEcx);
 			break;
 
 		case EXPRES_TIMES:
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 			// lhs
 			append_element(ir_lines, make_instruction_imul(ebx, ecx));
-			append_element(ir_lines, make_instruction_pushl(ecx));
+			append_element(ir_lines, pushEcx);
 			break;
 
 		case EXPRES_DIVIDE:
 			notZeroDenominator = NEW_LABEL;
 			sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, make_instruction_popl(eax));
+			append_element(ir_lines, popEax);
 			// lhs
 
 			append_element(ir_lines, make_instruction_cmp(zero, ebx));
@@ -643,7 +674,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
 
-			append_element(ir_lines, make_instruction_pushl(edx));
+			append_element(ir_lines, pushEdx);
 				// Saving edx register; contains modulo after division
 
 			append_element(ir_lines, make_instruction_xor(edx, edx));
@@ -652,10 +683,10 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_div(ebx));
 				// divide eax with eax to get result in eax
 
-			append_element(ir_lines, make_instruction_popl(edx));
+			append_element(ir_lines, popEdx);
 			// restore the saved registers
 
-			append_element(ir_lines, make_instruction_pushl(eax));
+			append_element(ir_lines, pushEax);
 				// result: "quotient" on the stack
 			break;
 
@@ -676,9 +707,9 @@ void IR_builder_expression ( EXPRES *exp ) {
 			sprintf(boolEndLabel, "boolOPend%d", tempLabelCounter);
 			IR_INSTRUCTION *endLabel = make_instruction_label(boolEndLabel);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 				// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 				// lhs
 
 			append_element(ir_lines, make_instruction_cmp( ebx, ecx ));
@@ -740,9 +771,9 @@ void IR_builder_expression ( EXPRES *exp ) {
 			truth = one;
 			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 			// lhs
 
 			append_element(ir_lines, make_instruction_cmp(truth, ecx));
@@ -773,12 +804,12 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
 
-			append_element(ir_lines, make_instruction_popl(ebx));
+			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 			// lhs
 
-			append_element(ir_lines, make_instruction_popl(ecx));
+			append_element(ir_lines, popEcx);
 
 			append_element(ir_lines, make_instruction_cmp(truth, ecx));
 			append_element(ir_lines, jumpToTrue);
@@ -868,10 +899,10 @@ void IR_builder_term ( TERM *term) {
 					callScopeId--;
 				}
 
-				append_element(ir_lines,make_instruction_pushl(eax));
+				append_element(ir_lines, pushEax);
 			} else if ( callScopeId == definedScopeId ) {
 				// top level, we just push the base pointer on the stack
-				append_element(ir_lines, make_instruction_pushl(ebp));
+				append_element(ir_lines, pushEbp);
 			}
 
 			append_element(ir_lines, make_instruction_call(
@@ -881,24 +912,24 @@ void IR_builder_term ( TERM *term) {
 			// static link
 			add_to_stack_pointer(symbol->noParameters + 1);
 
-			append_element(ir_lines, make_instruction_pushl(eax));
+			append_element(ir_lines, pushEax);
 			break;
 
 		case TERM_NOT:
 
-			append_element(ir_lines,make_instruction_popl(ebx));
+			append_element(ir_lines,popEbx);
 
 			append_element(ir_lines,make_instruction_xor(one, ebx));
 			// xor the term expression with true (1) to get the negated value
 
-			append_element(ir_lines,make_instruction_pushl(ebx));
+			append_element(ir_lines,pushEbx);
 			break;
 
 		case TERM_ABS:
 			IR_builder_expression(term->value.exp);
 
 			if ( term->value.exp->symboltype->type == SYMBOL_INT ) {
-				append_element(ir_lines, make_instruction_popl(ebx));
+				append_element(ir_lines, popEbx);
 
 				positiveNumberLabel = NEW_LABEL;
 				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
@@ -911,16 +942,16 @@ void IR_builder_term ( TERM *term) {
 				append_element(ir_lines, make_instruction_negl(ebx));
 				// false negates the argument as two's complement
 
-				append_element(ir_lines, make_instruction_pushl(ebx));
+				append_element(ir_lines, pushEbx);
 
 				append_element(ir_lines,
 							   make_instruction_label(positiveNumberLabel));
 
-				append_element(ir_lines, make_instruction_pushl(ebx));
+				append_element(ir_lines, pushEbx);
 
 			} else if ( term->value.exp->symboltype->type == SYMBOL_ARRAY ) {
 
-				append_element(ir_lines, make_instruction_popl(eax));
+				append_element(ir_lines, popEax);
 				// may be variable
 				append_element( ir_lines, make_instruction_xor(ecx, ecx));
 
@@ -980,7 +1011,7 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 
 void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
 
-	append_element(ir_lines, make_instruction_pushl(ebx));
+	append_element(ir_lines, pushEbx);
 
 	char *notNegativeSize = NEW_LABEL;
 	sprintf(notNegativeSize, "notNegativSize%i", GET_NEXT_LABEL_ID);
@@ -990,16 +1021,16 @@ void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
 	append_element(ir_lines, make_instruction_cmp(zero, ebx));
 	append_element(ir_lines, make_instruction_JGE(notNegativeSize));
 
-	halt_for_error("$error.NEGSIZE", 1, lineno);
+	halt_for_error("$error.NEGSIZE", RUNTIME_ERROR_SIGNAL, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNegativeSize));
-	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, popEbx);
 }
 
 void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 								  ARGUMENT *index ) {
-	append_element(ir_lines, make_instruction_pushl(ebx));
-	append_element(ir_lines, make_instruction_pushl(ecx));
+	append_element(ir_lines, pushEbx);
+	append_element(ir_lines, pushEcx);
 
 	char *notOutOfBoundsLabel = NEW_LABEL;
 	char *outOfBoundsLabel = NEW_LABEL;
@@ -1025,16 +1056,16 @@ void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 
 	append_element(ir_lines, make_instruction_label(outOfBoundsLabel));
 
-	halt_for_error("$error.OUTBOUNDS", 1, lineno);
+	halt_for_error("$error.OUTBOUNDS", RUNTIME_ERROR_SIGNAL, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfBoundsLabel));
-	append_element(ir_lines, make_instruction_popl(ecx));
-	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, popEcx);
+	append_element(ir_lines, popEbx);
 }
 
 void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
-	append_element(ir_lines, make_instruction_pushl(eax));
-	append_element(ir_lines, make_instruction_pushl(edx));
+	append_element(ir_lines, pushEax);
+	append_element(ir_lines, pushEdx);
 
 	char *notOutOfMemoryLabel = NEW_LABEL;
 	sprintf(notOutOfMemoryLabel,"notOutOfMem%i", GET_NEXT_LABEL_ID);
@@ -1051,16 +1082,16 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 
 	append_element(ir_lines, make_instruction_jg(notOutOfMemoryLabel));
 
-	halt_for_error("$error.OUTMEM", 1, lineno);
+	halt_for_error("$error.OUTMEM", RUNTIME_ERROR_SIGNAL, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
-	append_element(ir_lines, make_instruction_popl(edx));
-	append_element(ir_lines, make_instruction_popl(eax));
+	append_element(ir_lines, popEdx);
+	append_element(ir_lines, popEax);
 }
 
 void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
-	append_element(ir_lines, make_instruction_pushl(ebx));
-	append_element(ir_lines, make_instruction_pushl(eax));
+	append_element(ir_lines, pushEbx);
+	append_element(ir_lines, pushEax);
 
 	char *notNullLabel = NEW_LABEL;
 	sprintf(notNullLabel,"notNull%i", GET_NEXT_LABEL_ID);
@@ -1070,12 +1101,12 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 	append_element(ir_lines, make_instruction_cmp(zero, eax));
 	append_element(ir_lines, make_instruction_jne(notNullLabel));
 
-	halt_for_error("$error.NULL", 1, lineno);
+	halt_for_error("$error.NULL", RUNTIME_ERROR_SIGNAL, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNullLabel));
 
-	append_element(ir_lines, make_instruction_popl(eax));
-	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, popEax);
+	append_element(ir_lines, popEbx);
 }
 
 /*
@@ -1090,8 +1121,7 @@ void halt_for_error(char *errorMessageCode, int signalCode, int lineno) {
 	append_element(ir_lines,make_instruction_pushl(
 			make_argument_label(errorMessageCode)));
 
-	append_element(ir_lines,make_instruction_call(
-			make_argument_label("printf")));
+	append_element(ir_lines, make_instruction_call(printfLabel));
 	add_to_stack_pointer(2);
 
 	exit_assembler(signalCode);
@@ -1111,21 +1141,21 @@ void exit_assembler(int signalCode) {
 
 void caller_save(){
 
-	append_element(ir_lines, make_instruction_pushl(ecx));
-	append_element(ir_lines, make_instruction_pushl(edx));
+	append_element(ir_lines, pushEcx);
+	append_element(ir_lines, pushEdx);
 
 }
 
 void caller_restore(){
 
-	append_element(ir_lines, make_instruction_popl(edx));
-	append_element(ir_lines, make_instruction_popl(ecx));
+	append_element(ir_lines, popEdx);
+	append_element(ir_lines, popEcx);
 
 }
 
 void callee_start(){
 
-	append_element(ir_lines, make_instruction_pushl(ebp));
+	append_element(ir_lines, pushEbp);
 	append_element(ir_lines, make_instruction_movl(esp, ebp));
 
 }
@@ -1133,22 +1163,22 @@ void callee_start(){
 void callee_end(){
 
 	append_element(ir_lines, make_instruction_movl(ebp, esp));
-	append_element(ir_lines, make_instruction_popl(ebp));
+	append_element(ir_lines, popEbp);
 
 }
 
 void callee_save(){
 
-	append_element(ir_lines, make_instruction_pushl(ebx));
-	append_element(ir_lines, make_instruction_pushl(esi));
-	append_element(ir_lines, make_instruction_pushl(edi));
+	append_element(ir_lines, pushEbx);
+	append_element(ir_lines, pushEsi);
+	append_element(ir_lines, pushEdi);
 }
 
 void callee_restore(){
 
-	append_element(ir_lines, make_instruction_popl(edi));
-	append_element(ir_lines, make_instruction_popl(esi));
-	append_element(ir_lines, make_instruction_popl(ebx));
+	append_element(ir_lines, popEdi);
+	append_element(ir_lines, popEsi);
+	append_element(ir_lines, popEbx);
 
 }
 
@@ -1248,7 +1278,7 @@ void build_data_section() {
 			make_argument_plain_constant(MAX_HEAP_SIZE)));
 
 	append_element(ir_lines, make_instruction_space(
-			heapFreePointer, make_argument_plain_constant(WORD_SIZE)));
+			heapFreePointer, wordSizePointer));
 
 	if ( get_length(data_lines) > 0 ) {
 		// make pointers to records / arrays in heap
@@ -1270,7 +1300,7 @@ void build_data_section() {
 					// check if the type is already defined
 					append_element(ir_lines, make_instruction_space(
 							make_argument_label(var_type->id),
-							make_argument_plain_constant(WORD_SIZE)));
+							wordSizePointer));
 
 					append_element(definedTypes, var_type->id);
 				}

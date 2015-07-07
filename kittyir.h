@@ -5,6 +5,7 @@
 
 #define MAX_LABEL_SIZE 20
 #define WORD_SIZE 4
+#define RUNTIME_ERROR_SIGNAL 1
 #define MAX_HEAP_SIZE 4194304
 #define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char)))
 // standardization of the building of function labels for calls
@@ -82,6 +83,7 @@ void function_prolog(int, SYMBOL_TABLE*);
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
 void init_argument_constants();
+void init_stack_instructions();
 void init_registers();
 void negative_array_size_check(int, ARGUMENT *arraySize);
 void out_of_memory_runtime_check(int, ARGUMENT *);
