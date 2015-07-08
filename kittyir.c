@@ -648,15 +648,15 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_DIVIDE:
-			IR_builder_expression(exp->value.sides.left);
 			IR_builder_expression(exp->value.sides.right);
-
 			append_element(ir_lines, popEbx);
 			// rhs
-			append_element(ir_lines, popEax);
-			// lhs
 
 			division_by_zero_runtime_check(exp->lineno, ebx);
+
+			IR_builder_expression(exp->value.sides.left);
+			append_element(ir_lines, popEax);
+			// lhs
 
 			append_element(ir_lines, pushEdx);
 				// Saving edx register; contains modulo after division
@@ -747,8 +747,6 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_AND:
-			IR_builder_expression(exp->value.sides.left);
-			IR_builder_expression(exp->value.sides.right);
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *andFalseLabel = NEW_LABEL;
@@ -757,18 +755,21 @@ void IR_builder_expression ( EXPRES *exp ) {
 			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
 
 			truth = one;
+
 			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
 
+			// lazy evaluation on the false case
+			IR_builder_expression(exp->value.sides.right);
 			append_element(ir_lines, popEbx);
-			// rhs
-			append_element(ir_lines, popEcx);
-			// lhs
-
-			append_element(ir_lines, make_instruction_cmp(truth, ecx));
-			append_element(ir_lines, jumpToFalse);
 			append_element(ir_lines, make_instruction_cmp(truth, ebx));
 			append_element(ir_lines, jumpToFalse);
-				// check if both arguments evaluates to true
+			// rhs
+
+			IR_builder_expression(exp->value.sides.left);
+			append_element(ir_lines, popEbx);
+			append_element(ir_lines, make_instruction_cmp(truth, ebx));
+			append_element(ir_lines, jumpToFalse);
+			// lhs
 
 			append_element(ir_lines,make_instruction_pushl(truth));
 			append_element(ir_lines, make_instruction_jmp(andEndLabel));
