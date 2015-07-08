@@ -530,6 +530,8 @@ void check_term ( TERM *term ) {
 			if (term->value.term->symboltype->type != SYMBOL_INT){
 				check_error_report("Expected integer term", term->lineno);
 			}
+			term->symboltype = term->value.term->symboltype;
+			break;
 
 		case TERM_PARENTESES:
 			check_expression(term->value.exp);

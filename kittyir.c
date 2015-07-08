@@ -4,6 +4,7 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 #include "typechecker/funcstack.h"
+#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
 
@@ -917,7 +918,7 @@ void IR_builder_term ( TERM *term ) {
 			break;
 
 		case TERM_NOT:
-
+			IR_builder_term(term->value.term);
 			append_element(ir_lines,popEbx);
 
 			append_element(ir_lines,make_instruction_xor(one, ebx));
@@ -927,6 +928,7 @@ void IR_builder_term ( TERM *term ) {
 			break;
 
 		case TERM_UMINUS:
+			IR_builder_term(term->value.term);
 			append_element(ir_lines,popEbx);
 
 			append_element(ir_lines, make_instruction_negl(ebx));

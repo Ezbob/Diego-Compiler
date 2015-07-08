@@ -254,7 +254,7 @@ TERM *make_TERM_UMINUS(TERM *term){
 	new_term->kind = TERM_UMINUS;
 	new_term->value.term = term;
 
-	return term;
+	return new_term;
 }
 
 TERM *make_TERM_PARENTESES(EXPRES *expres){
