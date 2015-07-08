@@ -715,7 +715,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 TERM *weed_term ( TERM *term) {
 
-	//TERM *between;// = NEW(TERM);
+	TERM *tempTerm;
 
 	switch(term->kind){
 
@@ -743,6 +743,13 @@ TERM *weed_term ( TERM *term) {
 
 		case TERM_UMINUS:
 			term->value.term = weed_term(term->value.term);
+			if ( term->value.term->kind == TERM_NUM ) {
+				tempTerm = term->value.term;
+				term->value.term = NULL;
+				free(term);
+				term = tempTerm;
+				term->value.intconst = -term->value.intconst;
+			}
 			break;
 
 		case TERM_PARENTESES:
