@@ -615,13 +615,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 void IR_builder_expression ( EXPRES *exp ) {
 
 	int tempLabelCounter = 0;
-	char *notZeroDenominator;
 	ARGUMENT *truth;
-
-	if ( exp->kind != EXPRES_TERM ) {
-		IR_builder_expression(exp->value.sides.left);
-		IR_builder_expression(exp->value.sides.right);
-	}
 
 	switch(exp->kind){
 		case EXPRES_TERM: 
@@ -629,52 +623,40 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_PLUS:
+		case EXPRES_MINUS:
+		case EXPRES_TIMES:
+			IR_builder_expression(exp->value.sides.left);
+			IR_builder_expression(exp->value.sides.right);
 			append_element(ir_lines, popEbx);
 				// rhs
 			append_element(ir_lines, popEcx);
 				// lhs
- 			append_element(ir_lines, make_instruction_addl(ebx, ecx));
-
-			append_element(ir_lines, pushEcx);
-			break;
-
-		case EXPRES_MINUS:
-			append_element(ir_lines, popEbx);
-			// rhs
-			append_element(ir_lines, popEcx);
-			// lhs
-			append_element(ir_lines, make_instruction_subl(ebx, ecx));
-			append_element(ir_lines, pushEcx);
-			break;
-
-		case EXPRES_TIMES:
-			append_element(ir_lines, popEbx);
-			// rhs
-			append_element(ir_lines, popEcx);
-			// lhs
-			append_element(ir_lines, make_instruction_imul(ebx, ecx));
+			switch (exp->kind) {
+				case EXPRES_PLUS:
+					append_element(ir_lines, make_instruction_addl(ebx, ecx));
+					break;
+				case EXPRES_MINUS:
+					append_element(ir_lines, make_instruction_subl(ebx, ecx));
+					break;
+				case EXPRES_TIMES:
+					append_element(ir_lines, make_instruction_imul(ebx, ecx));
+					break;
+				default:
+					break;
+			}
 			append_element(ir_lines, pushEcx);
 			break;
 
 		case EXPRES_DIVIDE:
-			notZeroDenominator = NEW_LABEL;
-			sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
+			IR_builder_expression(exp->value.sides.left);
+			IR_builder_expression(exp->value.sides.right);
 
 			append_element(ir_lines, popEbx);
 			// rhs
 			append_element(ir_lines, popEax);
 			// lhs
 
-			append_element(ir_lines, make_instruction_cmp(zero, ebx));
-			append_element(ir_lines, make_instruction_jne(
-					notZeroDenominator));
-				// denominator has to be check if zero
-
-			halt_for_error("$error.DIVZERO", RUNTIME_ERROR_DIVZERO,
-						   exp->lineno);
-
-			append_element(ir_lines, make_instruction_label(
-					notZeroDenominator));
+			division_by_zero_runtime_check(exp->lineno, ebx);
 
 			append_element(ir_lines, pushEdx);
 				// Saving edx register; contains modulo after division
@@ -698,6 +680,8 @@ void IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_LESS:
 		case EXPRES_LEQ:
 		case EXPRES_GEQ:
+			IR_builder_expression(exp->value.sides.left);
+			IR_builder_expression(exp->value.sides.right);
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *boolTrueLabel = NEW_LABEL;
@@ -763,6 +747,8 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_AND:
+			IR_builder_expression(exp->value.sides.left);
+			IR_builder_expression(exp->value.sides.right);
 			tempLabelCounter = GET_NEXT_LABEL_ID;
 
 			char *andFalseLabel = NEW_LABEL;
@@ -806,19 +792,18 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
 
+			// Note: using lazy evaluation here
+			IR_builder_expression(exp->value.sides.left);
 			append_element(ir_lines, popEbx);
-			// rhs
-			append_element(ir_lines, popEcx);
-			// lhs
-
-			append_element(ir_lines, popEcx);
-
-			append_element(ir_lines, make_instruction_cmp(truth, ecx));
+			append_element(ir_lines, make_instruction_cmp(truth, ebx));
 			append_element(ir_lines, jumpToTrue);
+			// LHS
+
+			IR_builder_expression(exp->value.sides.right);
+			append_element(ir_lines, popEbx);
 			append_element(ir_lines,make_instruction_cmp(truth, ebx));
 			append_element(ir_lines, jumpToTrue);
-				// like in "and" we compare both arguments but jumps to true
-				// case instead of false case
+			// RHS
 
 			append_element(ir_lines, make_instruction_pushl(zero));
 				// false case
@@ -1119,6 +1104,21 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 
 	append_element(ir_lines, popEax);
 	append_element(ir_lines, popEbx);
+}
+
+void division_by_zero_runtime_check( int lineno, ARGUMENT *denominator ) {
+	char *notZeroDenominator = NEW_LABEL;
+	sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
+
+	append_element(ir_lines, make_instruction_cmp(zero, denominator));
+	append_element(ir_lines, make_instruction_jne(
+			notZeroDenominator));
+	// denominator has to be check if zero
+
+	halt_for_error("$error.DIVZERO", RUNTIME_ERROR_DIVZERO, lineno);
+
+	append_element(ir_lines, make_instruction_label(
+			notZeroDenominator));
 }
 
 /*

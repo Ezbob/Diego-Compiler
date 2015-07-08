@@ -3,7 +3,7 @@
 	#include <stdio.h>
 	#include <string.h>
 	#include "kittytree.h"
-#include "memory.h"
+	#include "memory.h"
 	int yylex ( void );
 	void yyerror( char * );
 	extern struct BODY *_main_;
