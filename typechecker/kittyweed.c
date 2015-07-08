@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kittyweed.h"
- 
+#include "../parserscanner/kittytree.h"
+
 stackT *the_stack;
 
 void weed_error_report(const char* errorMsg, int lineno){
@@ -740,19 +741,13 @@ TERM *weed_term ( TERM *term) {
 			
 			break;
 
+		case TERM_UMINUS:
+			term->value.term = weed_term(term->value.term);
+			break;
+
 		case TERM_PARENTESES:
 			term->value.exp = weed_expression(term->value.exp);
-			/*if (term->value.exp->kind == EXPRES_TERM){
-				between = term->value.exp->value.term;
-				if (between->kind == TERM_VAR || between->kind == TERM_NUM
-				   || between->kind == TERM_TRUE || between->kind == 
-     				TERM_FALSE || between->kind == TERM_NULL) {
-
-					term->kind = between->kind;
-					term->value = between->value;
-				}
-			}*/
-			break; 
+			break;
 
 		case TERM_ABS:
 			term->value.exp = weed_expression(term->value.exp);

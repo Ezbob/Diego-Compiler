@@ -162,6 +162,7 @@ term			: var { $$ = make_TERM_VAR($1); }
 				| ID '(' act_list ')' { $$ = make_TERM_ACT_LIST($1,$3); }
 				| '(' exp ')' { $$ = make_TERM_PARENTESES($2); }
 				| '!' term { $$ = make_TERM_NOT($2); }
+				| '-' term %prec "unary_minus" {$$ = make_TERM_UMINUS($2); }
 				| '|' exp '|' {$$ = make_TERM_ABS($2); }
 				| NUM { $$ = make_TERM_NUM($1); }
 				| NULL_TOK { $$ = make_TERM_NULL(); }

@@ -520,10 +520,16 @@ void check_term ( TERM *term ) {
 		case TERM_NOT:
 			check_term(term->value.term);
 			if(term->value.term->symboltype->type != SYMBOL_BOOL){
-				check_error_report("Expected term bool", term->lineno);
+				check_error_report("Expected boolean term", term->lineno);
 			}
 			term->symboltype = term->value.term->symboltype;
 			break;
+
+		case TERM_UMINUS:
+			check_term(term->value.term);
+			if (term->value.term->symboltype->type != SYMBOL_INT){
+				check_error_report("Expected integer term", term->lineno);
+			}
 
 		case TERM_PARENTESES:
 			check_expression(term->value.exp);

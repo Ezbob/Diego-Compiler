@@ -247,6 +247,16 @@ TERM *make_TERM_NOT(TERM *term){
 
 }
 
+TERM *make_TERM_UMINUS(TERM *term){
+
+	TERM *new_term = NEW(TERM);
+	new_term->lineno = lineno;
+	new_term->kind = TERM_UMINUS;
+	new_term->value.term = term;
+
+	return term;
+}
+
 TERM *make_TERM_PARENTESES(EXPRES *expres){
 	TERM *parentese = NEW(TERM);
 	parentese->lineno = lineno;

@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <stdarg.h> 
 #include "kittyprinter.h"
- 
+#include "kittytree.h"
+
 static int indentation = -1;
 static int tabSize = 4;
 
@@ -356,6 +357,10 @@ void printer_term ( TERM *term){
 			printf("!");
 			printer_term(term->value.term);
 			break;
+		case TERM_UMINUS:
+			printf("-(");
+			printer_term(term->value.term);
+			printf(")");
 		case TERM_PARENTESES:
 			printf("(");
 			printer_expression(term->value.exp);

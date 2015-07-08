@@ -1,4 +1,6 @@
 #include "kittycollect.h"
+#include "../parserscanner/kittytree.h"
+
 #define FIRST_TABLE_ID 0
 #define RESET_SCOPE_OFFSET (currentScopeOffset = 1)
 #define NEXT_SCOPE_OFFSET (currentScopeOffset++)
@@ -373,6 +375,10 @@ void collect_term ( TERM *term, SYMBOL_TABLE *st ) {
 			break;
 
 		case TERM_NOT:
+			collect_term(term->value.term, st);
+			break;
+
+		case TERM_UMINUS:
 			collect_term(term->value.term, st);
 			break;
 

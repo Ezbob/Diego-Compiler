@@ -833,7 +833,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 }
 
-void IR_builder_term ( TERM *term) {
+void IR_builder_term ( TERM *term ) {
 
 	SYMBOL *symbol;
 	ARGUMENT *variable;
@@ -924,6 +924,15 @@ void IR_builder_term ( TERM *term) {
 			// xor the term expression with true (1) to get the negated value
 
 			append_element(ir_lines,pushEbx);
+			break;
+
+		case TERM_UMINUS:
+			append_element(ir_lines,popEbx);
+
+			append_element(ir_lines, make_instruction_negl(ebx));
+			// two's complement negation
+
+			append_element(ir_lines, pushEbx);
 			break;
 
 		case TERM_ABS:

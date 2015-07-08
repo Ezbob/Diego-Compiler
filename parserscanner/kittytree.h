@@ -39,6 +39,7 @@ typedef struct TERM {
 		TERM_VAR,
 		TERM_ACT_LIST,
 		TERM_PARENTESES,
+		TERM_UMINUS,
 		TERM_ABS,
 		TERM_NOT,
 		TERM_NUM,
@@ -372,6 +373,7 @@ EXPRES *make_EXPRES_OR(EXPRES *,EXPRES *);
 
 /*TERM constructor */
 TERM *make_TERM_VAR(VAR *);
+TERM *make_TERM_UMINUS(TERM *);
 TERM *make_TERM_ACT_LIST(char *,ACT_LIST *);
 TERM *make_TERM_NOT(TERM *);
 TERM *make_TERM_PARENTESES(EXPRES *);
