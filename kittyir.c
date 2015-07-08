@@ -669,7 +669,8 @@ void IR_builder_expression ( EXPRES *exp ) {
 					notZeroDenominator));
 				// denominator has to be check if zero
 
-			halt_for_error("$error.DIVZERO", 1, exp->lineno);
+			halt_for_error("$error.DIVZERO", RUNTIME_ERROR_DIVZERO,
+						   exp->lineno);
 
 			append_element(ir_lines, make_instruction_label(
 					notZeroDenominator));
@@ -1021,7 +1022,7 @@ void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
 	append_element(ir_lines, make_instruction_cmp(zero, ebx));
 	append_element(ir_lines, make_instruction_JGE(notNegativeSize));
 
-	halt_for_error("$error.NEGSIZE", RUNTIME_ERROR_SIGNAL, lineno);
+	halt_for_error("$error.NEGSIZE", RUNTIME_ERROR_NEGSIZE, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNegativeSize));
 	append_element(ir_lines, popEbx);
@@ -1056,7 +1057,7 @@ void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 
 	append_element(ir_lines, make_instruction_label(outOfBoundsLabel));
 
-	halt_for_error("$error.OUTBOUNDS", RUNTIME_ERROR_SIGNAL, lineno);
+	halt_for_error("$error.OUTBOUNDS", RUNTIME_ERROR_OUTBBOUNDS, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfBoundsLabel));
 	append_element(ir_lines, popEcx);
@@ -1082,7 +1083,7 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 
 	append_element(ir_lines, make_instruction_jg(notOutOfMemoryLabel));
 
-	halt_for_error("$error.OUTMEM", RUNTIME_ERROR_SIGNAL, lineno);
+	halt_for_error("$error.OUTMEM", RUNTIME_ERROR_OUTMEM, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
 	append_element(ir_lines, popEdx);
@@ -1101,7 +1102,7 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 	append_element(ir_lines, make_instruction_cmp(zero, eax));
 	append_element(ir_lines, make_instruction_jne(notNullLabel));
 
-	halt_for_error("$error.NULL", RUNTIME_ERROR_SIGNAL, lineno);
+	halt_for_error("$error.NULL", RUNTIME_ERROR_NULL, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNullLabel));
 

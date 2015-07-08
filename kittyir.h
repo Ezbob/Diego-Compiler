@@ -5,7 +5,11 @@
 
 #define MAX_LABEL_SIZE 20
 #define WORD_SIZE 4
-#define RUNTIME_ERROR_SIGNAL 1
+#define RUNTIME_ERROR_OUTBBOUNDS 2
+#define RUNTIME_ERROR_DIVZERO 3
+#define RUNTIME_ERROR_NEGSIZE 4
+#define RUNTIME_ERROR_NULL 5
+#define RUNTIME_ERROR_OUTMEM 6
 #define MAX_HEAP_SIZE 4194304
 #define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char)))
 // standardization of the building of function labels for calls
