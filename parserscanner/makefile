@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c99 -Wall -Wextra -pedantic
+CFLAGS = -std=c99 -Wall -Wextra -pedantic -g
 DEPS = memory.h kittytree.h y.tab.h 
 OBJS = lex.yy.o kittytree.o kittyprinter.o y.tab.o memory.o
 SCAN = kittyscanner.l

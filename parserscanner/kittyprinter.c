@@ -361,6 +361,7 @@ void printer_term ( TERM *term){
 			printf("-(");
 			printer_term(term->value.term);
 			printf(")");
+			break;
 		case TERM_PARENTESES:
 			printf("(");
 			printer_expression(term->value.exp);
