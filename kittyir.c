@@ -496,15 +496,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_BREAK:
-
-			fprintf(stderr, "%s\n", st->value.statement_while.end_label);
 			append_element(ir_lines, make_instruction_jmp(
-				st->value.statement_while.end_label));
+				st->next->value.statement_while.end_label));
 			break;
 
 		case STATEMENT_CONTINUE:
 			append_element(ir_lines, make_instruction_jmp(
-				st->value.statement_while.end_label));
+				st->next->value.statement_while.end_label));
 			break;
 
 		default:

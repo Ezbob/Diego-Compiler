@@ -613,19 +613,18 @@ STATEMENT *make_STATEMENT_WHILE(EXPRES *expres, STATEMENT *stmt){
 	stwhile->value.statement_while.exp = expres;
 	stwhile->value.statement_while.statement = stmt;
 	stwhile->value.statement_while.start_label =
-		calloc(20+1,sizeof(char));
+		calloc(50+1,sizeof(char));
 	stwhile->value.statement_while.end_label =
-		calloc(20+1,sizeof(char));
+		calloc(50+1,sizeof(char));
 
 	return stwhile;
 
 }
 
 STATEMENT *make_STATEMENT_BREAK(){
-
 	STATEMENT *stbreak = NEW(STATEMENT);
 	stbreak->lineno = lineno;
-	stbreak->kind = STATEMENT_CONTINUE;
+	stbreak->kind = STATEMENT_BREAK;
 
 	return stbreak;
 
@@ -635,7 +634,7 @@ STATEMENT *make_STATEMENT_CONTINUE(){
 
 	STATEMENT *stcontinue = NEW(STATEMENT);
 	stcontinue->lineno = lineno;
-	stcontinue->kind = STATEMENT_BREAK;
+	stcontinue->kind = STATEMENT_CONTINUE;
 
 	return stcontinue;
 

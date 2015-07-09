@@ -412,6 +412,7 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 				st->next = loopStack->top->function;
 			}
 			break;
+			
 		default:
 			break;
 
