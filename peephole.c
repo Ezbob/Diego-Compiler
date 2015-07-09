@@ -12,7 +12,7 @@ int patternIsGood = 0;
 int lineCount = 1;
 
 void begin_peephole() {
-    fprintf(stderr, "Initializing peephold optimization phase \n ");
+    fprintf(stderr, "Initializing peephole optimization phase \n");
     list_run();
 
 }
@@ -21,14 +21,16 @@ void list_run() {
 
     for (int i = 0; i < 3; i++) {
         patternIsGood = 0;
+        lineCount = 0;
         iterator = ir_lines->next;
         while (iterator != ir_lines) {
             /* add templates here */
 
+
             useless_push_pop(iterator);
-            // useless_constant_push(iterator);
-            //useless_move_of_constant_to_reg(iterator);
             useless_move_between_push_pop(iterator);
+            useless_transient_move(iterator);
+            //useless_arithmetic_register_moves(iterator);
 
             lineCount++;
             iterator = iterator->next;
@@ -56,7 +58,8 @@ void useless_push_pop(linked_list *currentLine) {
                 nextInstruction->op_code == popl ) {
         if ( (currentInstruction->arg1->kind == register_arg ||
                 currentInstruction->arg1->kind == constant_arg ||
-                currentInstruction->arg1->kind == address_arg) &&
+                currentInstruction->arg1->kind == address_arg ||
+                currentInstruction->arg1->kind == indexing_arg) &&
                 nextInstruction->arg1->kind == register_arg ) {
 
             new_list_element = NEW(linked_list);
@@ -81,25 +84,39 @@ void useless_push_pop(linked_list *currentLine) {
  * to:
  * movl $1, %eax
  */
-void useless_move_of_constant_to_reg(linked_list *currentLine){
+void useless_transient_move(linked_list *currentLine){
     IR_INSTRUCTION *currentInstruction =
             (IR_INSTRUCTION *) currentLine->data;
     IR_INSTRUCTION *nextInstruction =
             (IR_INSTRUCTION *) currentLine->next->data;
+    linked_list *new_list_element;
 
-    if(currentInstruction->op_code == movl
-       && nextInstruction->op_code == movl){
+    linked_list *nextLine = currentLine->next;
+
+    if( currentInstruction->op_code == movl
+       && nextInstruction->op_code == movl ){
         ARGUMENT *currentArg1 = currentInstruction->arg1;
         ARGUMENT *currentArg2 = currentInstruction->arg2;
 
         ARGUMENT *nextArg1 = nextInstruction->arg1;
         ARGUMENT *nextArg2 = nextInstruction->arg2;
 
-        if( (currentArg1->kind == constant_arg &&
-                currentArg2->kind == register_arg) &&
-                (nextArg1->kind == register_arg &&
-                        nextArg2->kind == register_arg) &&
-                strcmp(currentArg2->charConst, nextArg1->charConst) == 0){
+        if( currentArg1->kind == register_arg
+            && currentArg2->kind == register_arg
+             && nextArg1->kind == register_arg
+             && strcmp(currentArg2->charConst, nextArg1->charConst) == 0){
+
+            new_list_element = NEW(linked_list);
+
+            new_list_element->next = currentLine->next->next;
+            new_list_element->previous = currentLine->previous;
+            currentLine->next->next->previous = new_list_element;
+            currentLine->previous->next = new_list_element;
+
+            new_list_element->data = make_instruction_movl(
+                    currentArg1, nextArg2);
+
+            //fprintf(stderr,"at %i\n",lineCount);
             //patternIsGood++;
         }
     }
@@ -142,7 +159,65 @@ void useless_move_between_push_pop(linked_list *currentLine){
             new_list_element->previous = currentLine->previous;
 
             //fprintf(stderr,"at line %i\n", lineCount);
-            patternIsGood++;
+            //patternIsGood++;
         }
     }
+}
+
+void useless_arithmetic_register_moves(linked_list *currentLine){
+    IR_INSTRUCTION *currentInstruction =
+            (IR_INSTRUCTION *) currentLine->data;
+    IR_INSTRUCTION *nextInstruction =
+            (IR_INSTRUCTION *) currentLine->next->data;
+    IR_INSTRUCTION *thirdInstruction =
+            (IR_INSTRUCTION *) currentLine->next->next->data;
+    IR_INSTRUCTION *fourthInstruction =
+            (IR_INSTRUCTION *) currentLine->next->next->next->data;
+
+    linked_list *newInstruction1;
+    linked_list *newInstruction2;
+
+    if(currentInstruction->op_code == movl &&
+            nextInstruction->op_code == movl) {
+
+        if (currentInstruction->arg1->kind == register_arg &&
+            currentInstruction->arg2->kind == register_arg &&
+            nextInstruction->arg2->kind == register_arg &&
+            fourthInstruction->op_code == pushl) {
+
+            if (thirdInstruction->op_code == addl ||
+                thirdInstruction->op_code == imul ||
+                thirdInstruction->op_code == subl) {
+                newInstruction1 = NEW(linked_list);
+                newInstruction2 = NEW(linked_list);
+
+                if (thirdInstruction->op_code == addl) {
+                    newInstruction1->data =
+                            make_instruction_addl(nextInstruction->arg1,
+                                                  currentInstruction->arg1);
+                } else if (thirdInstruction->op_code == imul) {
+                    newInstruction1->data =
+                            make_instruction_imul(nextInstruction->arg1,
+                                                  currentInstruction->arg1);
+
+                } else if (thirdInstruction->op_code == subl) {
+                    newInstruction1->data =
+                            make_instruction_subl(nextInstruction->arg1,
+                                                  currentInstruction->arg1);
+                }
+                newInstruction2->data =
+                        make_instruction_pushl(currentInstruction->arg1);
+
+                newInstruction1->previous = currentLine->previous;
+                currentLine->previous->next = newInstruction1;
+                newInstruction1->next = newInstruction2;
+
+                newInstruction2->previous = newInstruction1;
+                newInstruction2->next = currentLine->next->next->next->next;
+                currentLine->next->next->next->next->previous = newInstruction2;
+                patternIsGood++;
+            }
+        }
+    }
+
 }
