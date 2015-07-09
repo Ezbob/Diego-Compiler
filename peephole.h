@@ -3,10 +3,13 @@
 
 #include "kittyir.h"
 
-#define PUSH_POP 1
+#define NUMBER_OF_TEMPLATES 3
+
+#define PUSH_POP 0
+#define TRANSIENT_MOVE 1
 #define MOVE_BETWEEN_PUSH_POP 2
 
-void begin_peephole();
+void begin_peephole(int showHistogram);
 
 void show_peephole_statistics();
 void list_run();

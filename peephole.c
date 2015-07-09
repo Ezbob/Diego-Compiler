@@ -1,31 +1,37 @@
 #include <string.h>
+#include <stdlib.h>
 #include "peephole.h"
-#include "dlinkedlist.h"
-#include "kittyir.h"
 #include "irInstructions.h"
 
 extern linked_list *ir_lines;
 static linked_list *iterator;
 
-int *historGramValues;
-int patternIsGood = 0;
+int *histogramValues = NULL;
+static int useHistogram;
+int frequencySum = 0;
 int lineCount = 1;
 
-void begin_peephole() {
+void begin_peephole(int showHistogram) {
     fprintf(stderr, "Initializing peephole optimization phase \n");
-    list_run();
+    useHistogram = showHistogram;
 
+    if ( showHistogram ) {
+        histogramValues = calloc(NUMBER_OF_TEMPLATES,sizeof(int));
+    }
+    list_run();
+    if ( showHistogram ) {
+        show_peephole_statistics();
+        free(histogramValues);
+    }
 }
 
 void list_run() {
-
-    for (int i = 0; i < 3; i++) {
-        patternIsGood = 0;
+    do {
+        frequencySum = 0;
         lineCount = 0;
         iterator = ir_lines->next;
         while (iterator != ir_lines) {
             /* add templates here */
-
 
             useless_push_pop(iterator);
             useless_move_between_push_pop(iterator);
@@ -35,8 +41,7 @@ void list_run() {
             lineCount++;
             iterator = iterator->next;
         }
-        fprintf(stderr,"pattern found: %i \n", patternIsGood);
-    }
+    } while ( frequencySum > 0 );
 }
 
 /* Example:
@@ -72,7 +77,10 @@ void useless_push_pop(linked_list *currentLine) {
             new_list_element->data = make_instruction_movl(
                     currentInstruction->arg1, nextInstruction->arg1);
 
-            //patternIsGood++;
+            if ( useHistogram ) {
+                histogramValues[PUSH_POP]++;
+            }
+            frequencySum++;
         }
     }
 }
@@ -116,8 +124,10 @@ void useless_transient_move(linked_list *currentLine){
             new_list_element->data = make_instruction_movl(
                     currentArg1, nextArg2);
 
-            //fprintf(stderr,"at %i\n",lineCount);
-            //patternIsGood++;
+            if ( useHistogram ) {
+                histogramValues[TRANSIENT_MOVE]++;
+            }
+            frequencySum++;
         }
     }
 }
@@ -158,8 +168,10 @@ void useless_move_between_push_pop(linked_list *currentLine){
             new_list_element->next = nextLine;
             new_list_element->previous = currentLine->previous;
 
-            //fprintf(stderr,"at line %i\n", lineCount);
-            //patternIsGood++;
+            if ( useHistogram ) {
+                histogramValues[MOVE_BETWEEN_PUSH_POP]++;
+            }
+            frequencySum++;
         }
     }
 }
@@ -214,10 +226,42 @@ void useless_arithmetic_register_moves(linked_list *currentLine){
 
                 newInstruction2->previous = newInstruction1;
                 newInstruction2->next = currentLine->next->next->next->next;
-                currentLine->next->next->next->next->previous = newInstruction2;
-                patternIsGood++;
+                currentLine->next->next->next->next->previous
+                        = newInstruction2;
+                frequencySum++;
             }
         }
     }
-
 }
+
+void get_template_name(int index) {
+
+    fprintf(stderr, "useless_");
+    switch (index){
+        case PUSH_POP:
+            fprintf(stderr, "push_pop");
+            break;
+
+        case TRANSIENT_MOVE:
+            fprintf(stderr, "transient_move");
+            break;
+
+        case MOVE_BETWEEN_PUSH_POP:
+            fprintf(stderr, "move_between_push_pop");
+            break;
+
+        default:
+            break;
+    }
+}
+
+
+void show_peephole_statistics(){
+
+    fprintf(stderr,"---Peephole histogram---\n");
+    for(int i = 0; i < NUMBER_OF_TEMPLATES; i ++) {
+        get_template_name(i);
+        fprintf(stderr,": %i\n", histogramValues[i]);
+    }
+}
+
