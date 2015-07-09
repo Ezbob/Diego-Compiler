@@ -6,6 +6,14 @@
 #include "typechecker/funcstack.h"
 
 static int current_label = 0;
+static int has_errors = 0;
+static int has_prints = 0;
+static int heap_is_initialized = 0;
+
+static int *error_vector;
+    // which, if any, error forms should appear in data section
+static int *print_vector;
+    // which, if any, forms should appear in data section
 
 extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates, we use variables
@@ -95,7 +103,7 @@ void IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	function_prolog(1, program->symboltable);
+	function_prolog(program->symboltable);
 
 	IR_builder_statement_list(program->statement_list);
 
@@ -139,7 +147,7 @@ void IR_builder_head(HEAD *head) {
 }
 
 void IR_builder_body (BODY *body) {
-	function_prolog(0, body->symboltable);
+	function_prolog(body->symboltable);
 	IR_builder_statement_list(body->statement_list);
 }
 
@@ -171,7 +179,7 @@ void IR_builder_var_type ( VAR_TYPE * vtype ) {
 			}
 			break;
 		default:
-			append_element(data_lines, vtype);
+            append_element(data_lines, vtype);
 			break;
 	}
  }
@@ -215,11 +223,10 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 }
 
 void IR_builder_statement ( STATEMENT *st ) {
-	int tempLabelCounter = 0;
+	int labelIdCounter = 0;
 	int numberOfRecordMembers;
 
-	char *trueWhileString;
-	char *endLabelString;
+	char *endLabel;
 	char *elseLabel;
 	char *printLabel;
 	char *falseLabel;
@@ -238,21 +245,21 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_WRITE:
+            has_prints = 1; // write statements adds print forms
 			caller_save();
 			IR_builder_expression(st->value.exp);
 			append_element(ir_lines, popEax);
 				// result from expression
 			switch(st->value.exp->symboltype->type){
 				case SYMBOL_BOOL:
-					tempLabelCounter = GET_NEXT_LABEL_ID;
+					labelIdCounter = GET_NEXT_LABEL_ID;
 
-					falseLabel = NEW_LABEL;
-					trueLabel = NEW_LABEL;
-					printLabel = NEW_LABEL;
-
-					sprintf(falseLabel,"bfalse%d", tempLabelCounter);
-					sprintf(trueLabel, "btrue%d", tempLabelCounter);
-					sprintf(printLabel,"printbool%d", tempLabelCounter);
+                    GET_FLOW_CONTROL_LABEL(falseLabel, "formFalse",
+                                           labelIdCounter);
+                    GET_FLOW_CONTROL_LABEL(trueLabel, "formTrue",
+                                           labelIdCounter);
+                    GET_FLOW_CONTROL_LABEL(printLabel,"printBool",
+                                           labelIdCounter);
 
 					// compare boolean value to true
 					append_element(ir_lines, make_instruction_cmp(one, eax));
@@ -332,13 +339,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			append_element(ir_lines, popEax);
 
-			elseLabel = NEW_LABEL;
-			endLabelString = NEW_LABEL;
+			labelIdCounter = GET_NEXT_LABEL_ID;
 
-			int labelNo = GET_NEXT_LABEL_ID;
-
-			sprintf(elseLabel, "else%d", labelNo);
-			sprintf(endLabelString, "endIf%d", labelNo);
+            GET_FLOW_CONTROL_LABEL(elseLabel, "else", labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(endLabel, "endIf", labelIdCounter);
 
 			//Comparison with "true" boolean value
 			append_element(ir_lines, make_instruction_cmp(one, eax));
@@ -349,7 +353,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			} else {
 				// if not equal goto end-of-if
 				append_element(ir_lines,
-							   make_instruction_jne(endLabelString));
+							   make_instruction_jne(endLabel));
 			}
 
 			IR_builder_statement(st->value.statement_ifbranch.statement);
@@ -360,7 +364,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				// we have to jump over
 				//else when if-case is true
 				append_element(ir_lines,
-							   make_instruction_jmp(endLabelString));
+							   make_instruction_jmp(endLabel));
 
 				// make else-label
 				append_element(ir_lines, make_instruction_label(elseLabel));
@@ -370,11 +374,17 @@ void IR_builder_statement ( STATEMENT *st ) {
 			}
 
 			// end-of-if label
-			append_element(ir_lines, make_instruction_label(endLabelString));
+			append_element(ir_lines, make_instruction_label(endLabel));
 			break;
 
 		case STATEMENT_ALLOCATE:
-
+            if ( !heap_is_initialized ) {
+                // first time allocation
+                append_element(ir_lines,
+                               make_instruction_movl(heapAddress,
+                                                     heapFreePointer));
+                heap_is_initialized = 1;
+            }
 			switch(st->value.statement_allocate.var->symboltype->type){
 
 				case SYMBOL_ARRAY:
@@ -455,16 +465,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_WHILE:
-			tempLabelCounter = GET_NEXT_LABEL_ID;
+			labelIdCounter = GET_NEXT_LABEL_ID;
 
-			trueWhileString = NEW_LABEL;
-			endLabelString = NEW_LABEL;
-
-			sprintf(trueWhileString, "whileStart%d", current_label);
-			sprintf(endLabelString, "whileEnd%d", current_label);
+            GET_FLOW_CONTROL_LABEL(trueLabel, "whileStart", labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(endLabel, "whileEnd", labelIdCounter);
 
 			// while-start label insert
-			append_element(ir_lines, make_instruction_label(trueWhileString));
+			append_element(ir_lines, make_instruction_label(trueLabel));
 
 			// evaluating expressions
 			IR_builder_expression(st->value.statement_while.exp);
@@ -474,16 +481,16 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_cmp(one, eax));
 
 			// jump to end if while condition is false
-			append_element(ir_lines, make_instruction_jne(endLabelString));
+			append_element(ir_lines, make_instruction_jne(endLabel));
 
 			// generate code for statements
 			IR_builder_statement(st->value.statement_while.statement);
 
 			// repeating statement jump
-			append_element(ir_lines, make_instruction_jmp(trueWhileString));
+			append_element(ir_lines, make_instruction_jmp(trueLabel));
 
 			// insertion of while-end
-			append_element(ir_lines, make_instruction_label(endLabelString));
+			append_element(ir_lines, make_instruction_label(endLabel));
 			break;
 
 		case STATEMENT_LISTS:
@@ -613,7 +620,10 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 void IR_builder_expression ( EXPRES *exp ) {
 
-	int tempLabelCounter = 0;
+    char *trueLabel;
+    char *falseLabel;
+    char *endLabel;
+	int labelIdCounter = 0;
 	ARGUMENT *truth;
 
 	switch(exp->kind){
@@ -681,16 +691,10 @@ void IR_builder_expression ( EXPRES *exp ) {
 		case EXPRES_GEQ:
 			IR_builder_expression(exp->value.sides.left);
 			IR_builder_expression(exp->value.sides.right);
-			tempLabelCounter = GET_NEXT_LABEL_ID;
+			labelIdCounter = GET_NEXT_LABEL_ID;
 
-			char *boolTrueLabel = NEW_LABEL;
-			char *boolEndLabel = NEW_LABEL;
-
-			sprintf(boolTrueLabel, "booOPtrue%d", tempLabelCounter);
-			IR_INSTRUCTION *trueLabel = make_instruction_label(boolTrueLabel);
-
-			sprintf(boolEndLabel, "boolOPend%d", tempLabelCounter);
-			IR_INSTRUCTION *endLabel = make_instruction_label(boolEndLabel);
+            GET_FLOW_CONTROL_LABEL(trueLabel, "boolOPtrue", labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(endLabel, "boolOPend", labelIdCounter);
 
 			append_element(ir_lines, popEbx);
 				// rhs
@@ -704,27 +708,27 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			switch(exp->kind){
 				case EXPRES_EQ:
-					trueJump = make_instruction_je(boolTrueLabel);
+					trueJump = make_instruction_je(trueLabel);
 					break;
 
 				case EXPRES_NEQ:
-					trueJump = make_instruction_jne(boolTrueLabel);
+					trueJump = make_instruction_jne(trueLabel);
 					break;
 
 				case EXPRES_GREATER:
-					trueJump = make_instruction_jg(boolTrueLabel);
+					trueJump = make_instruction_jg(trueLabel);
 					break;
 
 				case EXPRES_LESS:
-					trueJump = make_instruction_jl(boolTrueLabel);
+					trueJump = make_instruction_jl(trueLabel);
 					break;
 
 				case EXPRES_LEQ:
-					trueJump = make_instruction_JLE(boolTrueLabel);
+					trueJump = make_instruction_JLE(trueLabel);
 					break;
 
 				case EXPRES_GEQ:
-					trueJump = make_instruction_JGE(boolTrueLabel);
+					trueJump = make_instruction_JGE(trueLabel);
 					break;
 				default:
 					break;
@@ -735,27 +739,25 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			append_element(ir_lines, make_instruction_pushl(zero));
 				// the false case
-			append_element(ir_lines, make_instruction_jmp(boolEndLabel));
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 
-			append_element(ir_lines, trueLabel);
+			append_element(ir_lines, make_instruction_label(trueLabel));
 
 			append_element(ir_lines, make_instruction_pushl(one));
 				// the true case
 
-			append_element(ir_lines, endLabel);
+			append_element(ir_lines, make_instruction_label(endLabel));
 			break;
 
 		case EXPRES_AND:
-			tempLabelCounter = GET_NEXT_LABEL_ID;
+			labelIdCounter = GET_NEXT_LABEL_ID;
 
-			char *andFalseLabel = NEW_LABEL;
-			char *andEndLabel = NEW_LABEL;
-			sprintf(andFalseLabel, "ANDfalse%d", tempLabelCounter);
-			sprintf(andEndLabel, "ANDend%d", tempLabelCounter);
+            GET_FLOW_CONTROL_LABEL(falseLabel,"ANDfalse",labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(endLabel,"ANDend",labelIdCounter);
 
 			truth = one;
 
-			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(andFalseLabel);
+			IR_INSTRUCTION *jumpToFalse = make_instruction_jne(falseLabel);
 
 			// lazy evaluation on the false case
 			IR_builder_expression(exp->value.sides.right);
@@ -771,26 +773,24 @@ void IR_builder_expression ( EXPRES *exp ) {
 			// lhs
 
 			append_element(ir_lines,make_instruction_pushl(truth));
-			append_element(ir_lines, make_instruction_jmp(andEndLabel));
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 				// in case both arguments are true
 
-			append_element(ir_lines, make_instruction_label(andFalseLabel));
+			append_element(ir_lines, make_instruction_label(falseLabel));
 			append_element(ir_lines, make_instruction_pushl(zero));
 				// in case one of the arguments are false
 
-			append_element(ir_lines, make_instruction_label(andEndLabel));
+			append_element(ir_lines, make_instruction_label(endLabel));
 			break;
 		case EXPRES_OR:
-			tempLabelCounter = GET_NEXT_LABEL_ID;
+			labelIdCounter = GET_NEXT_LABEL_ID;
 
-			char *orTrueLabel = NEW_LABEL;
-			char *orEndLabel = NEW_LABEL;
-			sprintf(orTrueLabel, "ORtrue%d", tempLabelCounter);
-			sprintf(orEndLabel, "ORend%d", tempLabelCounter);
+            GET_FLOW_CONTROL_LABEL(trueLabel, "ORtrue", labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(endLabel, "ORend", labelIdCounter);
 
 			truth = one;
 
-			IR_INSTRUCTION *jumpToTrue = make_instruction_je(orTrueLabel);
+			IR_INSTRUCTION *jumpToTrue = make_instruction_je(trueLabel);
 
 			// Note: using lazy evaluation here
 			IR_builder_expression(exp->value.sides.left);
@@ -807,13 +807,13 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			append_element(ir_lines, make_instruction_pushl(zero));
 				// false case
-			append_element(ir_lines, make_instruction_jmp(orEndLabel));
+			append_element(ir_lines, make_instruction_jmp(endLabel));
 
-			append_element(ir_lines, make_instruction_label(orTrueLabel));
+			append_element(ir_lines, make_instruction_label(trueLabel));
 			append_element(ir_lines, make_instruction_pushl(truth));
 				// true case
 
-			append_element(ir_lines, make_instruction_label(orEndLabel));
+			append_element(ir_lines, make_instruction_label(endLabel));
 			break;
 	}
 
@@ -928,8 +928,8 @@ void IR_builder_term ( TERM *term ) {
 			if ( term->value.exp->symboltype->type == SYMBOL_INT ) {
 				append_element(ir_lines, popEbx);
 
-				positiveNumberLabel = NEW_LABEL;
-				sprintf(positiveNumberLabel, "posNum%i", GET_NEXT_LABEL_ID);
+                GET_FLOW_CONTROL_LABEL(positiveNumberLabel, "posNum",
+                                       GET_NEXT_LABEL_ID);
 
 				append_element(ir_lines,make_instruction_cmp(zero, ebx));
 				append_element(ir_lines,make_instruction_JGE(
@@ -1010,8 +1010,8 @@ void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
 
 	append_element(ir_lines, pushEbx);
 
-	char *notNegativeSize = NEW_LABEL;
-	sprintf(notNegativeSize, "notNegativSize%i", GET_NEXT_LABEL_ID);
+    char *notNegativeSize;
+    GET_FLOW_CONTROL_LABEL(notNegativeSize, "notNegSize", GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_movl(arraySize, ebx));
 
@@ -1029,10 +1029,12 @@ void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 	append_element(ir_lines, pushEbx);
 	append_element(ir_lines, pushEcx);
 
-	char *notOutOfBoundsLabel = NEW_LABEL;
-	char *outOfBoundsLabel = NEW_LABEL;
-	sprintf(notOutOfBoundsLabel,"notOutOfBounds%i", GET_NEXT_LABEL_ID);
-	sprintf(outOfBoundsLabel,"outOfBounds%i", GET_NEXT_LABEL_ID);
+    int sharedId = GET_NEXT_LABEL_ID;
+
+	char *notOutOfBoundsLabel;
+	char *outOfBoundsLabel;
+    GET_FLOW_CONTROL_LABEL(notOutOfBoundsLabel,"notOutBounds", sharedId);
+    GET_FLOW_CONTROL_LABEL(outOfBoundsLabel,"outBounds", sharedId);
 
 	// index < 0
 	append_element(ir_lines, make_instruction_cmp(zero, index));
@@ -1064,8 +1066,9 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 	append_element(ir_lines, pushEax);
 	append_element(ir_lines, pushEdx);
 
-	char *notOutOfMemoryLabel = NEW_LABEL;
-	sprintf(notOutOfMemoryLabel,"notOutOfMem%i", GET_NEXT_LABEL_ID);
+	char *notOutOfMemoryLabel;
+    GET_FLOW_CONTROL_LABEL(notOutOfMemoryLabel,"notOutMem",
+                           GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_movl(heapAddress, edx));
 	append_element(ir_lines, make_instruction_addl(
@@ -1090,8 +1093,8 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 	append_element(ir_lines, pushEbx);
 	append_element(ir_lines, pushEax);
 
-	char *notNullLabel = NEW_LABEL;
-	sprintf(notNullLabel,"notNull%i", GET_NEXT_LABEL_ID);
+	char *notNullLabel;
+    GET_FLOW_CONTROL_LABEL(notNullLabel, "notNull", GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_movl(variable, eax));
 
@@ -1107,8 +1110,10 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 }
 
 void division_by_zero_runtime_check( int lineno, ARGUMENT *denominator ) {
-	char *notZeroDenominator = NEW_LABEL;
-	sprintf(notZeroDenominator, "NotZeroDen%d", GET_NEXT_LABEL_ID);
+
+	char *notZeroDenominator;
+    GET_FLOW_CONTROL_LABEL(notZeroDenominator, "notZeroDiv",
+                           GET_NEXT_LABEL_ID);
 
 	append_element(ir_lines, make_instruction_cmp(zero, denominator));
 	append_element(ir_lines, make_instruction_jne(
@@ -1126,6 +1131,8 @@ void division_by_zero_runtime_check( int lineno, ARGUMENT *denominator ) {
  * errorMessage should match a error label in the data section
  */
 void halt_for_error(char *errorMessageCode, int signalCode, int lineno) {
+
+    has_errors = 1; // all error messages use this function
 
 	append_element(ir_lines,make_instruction_pushl(
 			make_argument_constant(lineno)));
@@ -1194,12 +1201,9 @@ void callee_restore(){
 
 }
 
-void function_prolog(int isMain, SYMBOL_TABLE *currentScope) {
+void function_prolog(SYMBOL_TABLE *currentScope) {
 	callee_start();
 	callee_save();
-	if ( isMain ) {
-		init_heap();
-	}
 	local_variable_allocation(currentScope);
 	caller_save();
 
@@ -1277,22 +1281,30 @@ int is_already_defined(linked_list *definedList, char *labelName) {
 // cannot build in top because data_lines is not filled
 void build_data_section() {
 
-	append_element(ir_lines, make_instruction_directive(".data"));
+    int total_heap_data = get_length(data_lines);
 
-	add_print_forms();
+    if (total_heap_data > 0 || has_errors || has_prints ) {
+        append_element(ir_lines, make_instruction_directive(".data"));
+    }
 
-	add_error_forms();
+    if ( has_prints ) {
+        add_print_forms();
+    }
 
-	if ( get_length(data_lines) > 0 ) {
+    if ( has_errors ) {
+        add_error_forms();
+    }
 
-		// if there is allocation to the heap or a function is declared
-		// (need heap for the static link)
-		append_element(ir_lines, make_instruction_space(
-				make_argument_label("heap."),
-				make_argument_plain_constant(MAX_HEAP_SIZE)));
+	if ( total_heap_data > 0 ) {
 
-		append_element(ir_lines, make_instruction_space(
-				heapFreePointer, wordSizePointer));
+        // if there is allocation to the heap or a function is declared
+        // (need heap for the static link)
+        append_element(ir_lines, make_instruction_space(
+                make_argument_label("heap."),
+                make_argument_plain_constant(MAX_HEAP_SIZE)));
+
+        append_element(ir_lines, make_instruction_space(
+                heapFreePointer, wordSizePointer));
 
 		// make pointers to records / arrays in heap
 		linked_list *temp;
