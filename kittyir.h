@@ -49,18 +49,6 @@ typedef struct ARGUMENT {
 	char *charConst;
 } ARGUMENT;
 
-typedef struct SECTION {
-	char *sectionName;
-	int temps;
-	struct SYMBOL_TABLE *symboltable;
-	struct SECTION *nextSection;
-	struct SECTION *prevSection;
-	struct IR_INSTRUCTION *first;
-	struct IR_INSTRUCTION *last;
-	struct LIVENESS *root;
-	struct LIVENESS *tail;
-} SECTION;
-
 /*
  * stores all IR code in a linked_list
  */

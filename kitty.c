@@ -9,6 +9,7 @@
 #include "typechecker/kittycheck.h"
 #include "kittyir.h"
 #include "kittyemit.h"
+#include "peephole.h"
 
 #ifndef SUCCESS_AND_FAILURE
 #define SUCCESS_AND_FAILURE
@@ -47,6 +48,7 @@ int main ( int argc, char *argv[] ) {
 				printer_body(_main_);
 			} else {
 				IR_build(_main_);
+				begin_peephole();
 				IR_printer(ir_lines);
 			}
 			break;
