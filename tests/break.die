@@ -1,0 +1,17 @@
+
+var a : int;
+var b : int;
+var c : int;
+
+a = 42;
+b = 40;
+c = 100;
+
+while c > a do {
+
+	if(a == b) then break;
+
+	a = a - 1;
+}
+
+write a;
