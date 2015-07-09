@@ -4,7 +4,6 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 #include "typechecker/funcstack.h"
-#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
 
@@ -1284,18 +1283,18 @@ void build_data_section() {
 
 	add_error_forms();
 
-	// if there is allocation to the heap or a function is declared
-	// (need heap for the static link)
-	append_element(ir_lines, make_instruction_space(
-			make_argument_label("heap."),
-			make_argument_plain_constant(MAX_HEAP_SIZE)));
-
-	append_element(ir_lines, make_instruction_space(
-			heapFreePointer, wordSizePointer));
-
 	if ( get_length(data_lines) > 0 ) {
-		// make pointers to records / arrays in heap
 
+		// if there is allocation to the heap or a function is declared
+		// (need heap for the static link)
+		append_element(ir_lines, make_instruction_space(
+				make_argument_label("heap."),
+				make_argument_plain_constant(MAX_HEAP_SIZE)));
+
+		append_element(ir_lines, make_instruction_space(
+				heapFreePointer, wordSizePointer));
+
+		// make pointers to records / arrays in heap
 		linked_list *temp;
 		temp = data_lines->next;
 
