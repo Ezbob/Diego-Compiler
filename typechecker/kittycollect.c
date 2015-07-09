@@ -294,6 +294,12 @@ void collect_statement ( STATEMENT *stm, SYMBOL_TABLE *st ) {
 		case STATEMENT_LISTS:
 			collect_statement_list(stm->value.statement_list, st);
 			break;
+
+		case STATEMENT_BREAK:
+			break;
+
+		case STATEMENT_CONTINUE:
+			break;
 	}
 }
 

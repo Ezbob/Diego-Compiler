@@ -4,6 +4,7 @@
 #define WEEDER_FAILURE 1 //error code when exiting
 #include "../parserscanner/kittytree.h" // need types
 #include "funcstack.h"
+#include "loopstack.h"
 
 /*
  Special function we should call when 

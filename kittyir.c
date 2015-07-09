@@ -464,6 +464,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 			sprintf(trueWhileString, "whileStart%d", current_label);
 			sprintf(endLabelString, "whileEnd%d", current_label);
 
+			sprintf(st->value.statement_while.start_label, "whileStart%d", current_label);
+			sprintf(st->value.statement_while.end_label, "whileEnd%d", current_label);
+
+
 			// while-start label insert
 			append_element(ir_lines, make_instruction_label(trueWhileString));
 
@@ -490,6 +494,19 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_LISTS:
 			IR_builder_statement_list(st->value.statement_list);
 			break;
+
+		case STATEMENT_BREAK:
+
+			fprintf(stderr, "%s\n", st->value.statement_while.end_label);
+			append_element(ir_lines, make_instruction_jmp(
+				st->value.statement_while.end_label));
+			break;
+
+		case STATEMENT_CONTINUE:
+			append_element(ir_lines, make_instruction_jmp(
+				st->value.statement_while.end_label));
+			break;
+
 		default:
 			break;
 	}

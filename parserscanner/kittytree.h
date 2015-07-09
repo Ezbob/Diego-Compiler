@@ -209,7 +209,7 @@ typedef struct STATEMENT {
 	int lineno;
 	SYMBOL_TABLE *symboltable;
 	int foundReturn;
-	struct STATEMENT *next; //??
+	struct STATEMENT *next; //Wrong name but used with break/continue
 	enum { 
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,
@@ -217,7 +217,9 @@ typedef struct STATEMENT {
 		STATEMENT_ASSIGN,
 		STATEMENT_IFBRANCH,
 		STATEMENT_WHILE,
-		STATEMENT_LISTS
+		STATEMENT_LISTS,
+		STATEMENT_BREAK,
+		STATEMENT_CONTINUE
 	} kind;
 	union { 
 		struct EXPRES *exp;
@@ -245,7 +247,9 @@ typedef struct STATEMENT {
 
 		struct {
 			struct EXPRES *exp;
-			struct STATEMENT *statement; 
+			struct STATEMENT *statement;
+			char *start_label;
+			char *end_label; 
 		} statement_while;
 	} value;
 } STATEMENT;
@@ -342,6 +346,8 @@ STATEMENT *make_STATEMENT_ASSIGN(VAR *,EXPRES *);
 STATEMENT *make_STATEMENT_IFBRANCH(EXPRES *, STATEMENT *,OPT_ELSE *);
 STATEMENT *make_STATEMENT_WHILE(EXPRES *, STATEMENT *);
 STATEMENT *make_STATEMENT_LIST(STATEMENT_LIST *);
+STATEMENT *make_STATEMENT_BREAK();
+STATEMENT *make_STATEMENT_CONTINUE();
 
 /* Optional length allocation constructors */
 OPT_LENGTH *make_OPT_LENGTH_EXPRES(EXPRES *);

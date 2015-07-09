@@ -44,6 +44,8 @@ WHITESPACE [\ \t]*
 "then"	{ return THEN_TOK; }
 "else"	{ return ELSE_TOK; }
 "while"	{ return WHILE_TOK; }
+"break" { return BREAK_TOK; }
+"continue" { return CONTINUE_TOK; }
 "do"	{ return DO_TOK; }
 "write"	{ return WRITE_TOK; }
 "null"	{ return NULL_TOK; }

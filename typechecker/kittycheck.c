@@ -262,6 +262,12 @@ void check_statement ( STATEMENT *statement){
 		case STATEMENT_LISTS:
 			check_statement_list(statement->value.statement_list);
 			break;
+
+		case STATEMENT_BREAK: //Check is done in weeder
+			break;
+
+		case STATEMENT_CONTINUE: //Check is done in weeder
+			break;
 	}
 }
 

@@ -61,6 +61,8 @@
 %token OF_LENGTH_TOK 
 %token ARRAY_OF_TOK 
 %token RECORD_OF_TOK 
+%token BREAK_TOK
+%token CONTINUE_TOK
 
 %type <func> func
 %type <head> head
@@ -205,6 +207,8 @@ stm 			: RETURN_TOK exp ';' { $$ = make_STATEMENT_RETURN($2); }
 				| IF_TOK exp THEN_TOK stm opt_else 
 						{$$ = make_STATEMENT_IFBRANCH($2,$4,$5);}
 				| WHILE_TOK exp DO_TOK stm {$$ = make_STATEMENT_WHILE($2,$4);}
+				| BREAK_TOK ';' {$$ = make_STATEMENT_BREAK();}
+				| CONTINUE_TOK ';' {$$ = make_STATEMENT_CONTINUE();}
 				| '{' stm_list '}' {$$ = make_STATEMENT_LIST($2);}
 				;
 

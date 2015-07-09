@@ -4,7 +4,9 @@
 #include "kittyweed.h"
 #include "../parserscanner/kittytree.h"
 
-stackT *the_stack;
+stackT *the_stack; //Stack for functions
+stackL *loopStack; //Stack for keeping track of loops 
+				   //used with break/continue
 
 void weed_error_report(const char* errorMsg, int lineno){
 	if (lineno < 0){
@@ -25,6 +27,7 @@ BODY *begin_weed(BODY *body){
 	 * sure the return type is correct
 	 */
 	the_stack = funcStackInit(HASH_SIZE);
+	loopStack = loopStackInit();
 
 	body = weed_body(body);
 
@@ -386,10 +389,29 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			break;
 
 		case STATEMENT_WHILE:
+			loopStackPush(loopStack, st);
 			st->value.statement_while.exp = 
 				weed_expression(st->value.statement_while.exp);
 			st->value.statement_while.statement = 
 				weed_statement(st->value.statement_while.statement);
+			loopStackPop(loopStack);
+			break;
+
+		case STATEMENT_BREAK:
+			if(loopStack->top == NULL){
+				weed_error_report("Break outside loop", st->lineno);
+			} else {
+				st->next = loopStack->top->function;
+			}
+			break;
+
+		case STATEMENT_CONTINUE:
+			if(loopStack->top == NULL){
+				weed_error_report("Continue outside loop", st->lineno);
+			} else {
+				st->next = loopStack->top->function;
+			}
+			break;
 		default:
 			break;
 

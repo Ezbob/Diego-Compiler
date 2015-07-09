@@ -204,7 +204,14 @@ void printer_statement ( STATEMENT *st){
 			printf("{\n");
 			printer_statement_list(st->value.statement_list);
 			printf("}");
-			break; 
+			break;
+
+		case STATEMENT_BREAK:
+			printf("%s\n", "break;");
+			break;
+
+		case STATEMENT_CONTINUE:
+			printf("%s\n", "continue;"); 
 	}
 } 
 
