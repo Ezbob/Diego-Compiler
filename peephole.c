@@ -116,9 +116,9 @@ void useless_transient_move(linked_list *currentLine){
 
             new_list_element = NEW(linked_list);
 
-            new_list_element->next = currentLine->next->next;
+            new_list_element->next = nextLine->next;
             new_list_element->previous = currentLine->previous;
-            currentLine->next->next->previous = new_list_element;
+            nextLine->next->previous = new_list_element;
             currentLine->previous->next = new_list_element;
 
             new_list_element->data = make_instruction_movl(

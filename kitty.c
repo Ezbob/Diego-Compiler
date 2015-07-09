@@ -23,6 +23,7 @@
 #define NO_ARGUMENTS 0
 #define PEEPHOLE_STATISTICS 1
 #define PRETTY_PRINTER 2
+#define NO_OPTIMIZATION 3
 #endif
 
 #ifndef PARSE_MSGS
@@ -40,6 +41,9 @@ int main_argument_decider(int argc, char **argStrings) {
 		} else if (strcmp(argStrings[1], "--histogram") == 0 ||
 				   strcmp(argStrings[1], "-h") == 0) {
 			return PEEPHOLE_STATISTICS;
+		} else if (strcmp(argStrings[1], "--nooptimization") == 0 ||
+				strcmp(argStrings[1],"-n") == 0){
+			return NO_OPTIMIZATION;
 		}
 	} else if ( argc == 1 ) {
 		return NO_ARGUMENTS;
@@ -58,7 +62,7 @@ int main ( int argc, char *argv[] ) {
 				"\nCorrect usage:\n\t./kitty \"flag\" "
 				"< \"input_file\" > \"output_file\" \n\nValid "
 				"flags are: \"--print\",\"-p\" OR \"--histogram\""
-				",\"-h\" \n");
+				",\"-h\" OR \"--nooptimization\",\"-n\" \n");
 		exit(1);
 	}
 
@@ -82,6 +86,10 @@ int main ( int argc, char *argv[] ) {
 				case PEEPHOLE_STATISTICS:
 					IR_build(_main_);
 					begin_peephole( 1 );
+					IR_printer(ir_lines);
+					break;
+				case NO_OPTIMIZATION:
+					IR_build(_main_);
 					IR_printer(ir_lines);
 					break;
 				case NO_ARGUMENTS:
