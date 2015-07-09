@@ -26,13 +26,6 @@
 // shorthand/explaining macro for creating unique label identifiers
 #define GET_NEXT_LABEL_ID (current_label++)
 
-// prints/error statistics constants
-#define DIVZERO_ERRORS 0
-#define NEGSIZE_ERRORS 1
-#define NULL_ERRORS 2
-#define OUTMEM_ERRORS 3
-
-
 typedef enum OP_CODES {
 	directive, label, movl, call, pushl, popl, addl,
 	subl, ret, xor, divl, imul, cmp, jne, jmp, je,

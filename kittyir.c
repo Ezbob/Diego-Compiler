@@ -8,12 +8,6 @@
 static int current_label = 0;
 static int has_errors = 0;
 static int has_prints = 0;
-static int heap_is_initialized = 0;
-
-static int *error_vector;
-    // which, if any, error forms should appear in data section
-static int *print_vector;
-    // which, if any, forms should appear in data section
 
 extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates, we use variables
@@ -80,8 +74,10 @@ void init_registers() {
 }
 
 void init_heap() {
-	 append_element(ir_lines, make_instruction_movl(heapAddress,
-													heapFreePointer));
+    if ( get_length(data_lines) > 0 ) {
+        append_element(ir_lines, make_instruction_movl(heapAddress,
+                                                       heapFreePointer));
+    }
 }
 
 void IR_build( BODY *program ) {
@@ -104,6 +100,8 @@ void IR_build( BODY *program ) {
 	append_element(ir_lines, make_instruction_label("main"));
 
 	function_prolog(program->symboltable);
+
+    init_heap();
 
 	IR_builder_statement_list(program->statement_list);
 
@@ -245,7 +243,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_WRITE:
-            has_prints = 1; // write statements adds print forms
+            has_prints = 1;
 			caller_save();
 			IR_builder_expression(st->value.exp);
 			append_element(ir_lines, popEax);
@@ -254,9 +252,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 				case SYMBOL_BOOL:
 					labelIdCounter = GET_NEXT_LABEL_ID;
 
-                    GET_FLOW_CONTROL_LABEL(falseLabel, "formFalse",
+                    GET_FLOW_CONTROL_LABEL(falseLabel, "printFalse",
                                            labelIdCounter);
-                    GET_FLOW_CONTROL_LABEL(trueLabel, "formTrue",
+                    GET_FLOW_CONTROL_LABEL(trueLabel, "printTrue",
                                            labelIdCounter);
                     GET_FLOW_CONTROL_LABEL(printLabel,"printBool",
                                            labelIdCounter);
@@ -378,13 +376,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_ALLOCATE:
-            if ( !heap_is_initialized ) {
-                // first time allocation
-                append_element(ir_lines,
-                               make_instruction_movl(heapAddress,
-                                                     heapFreePointer));
-                heap_is_initialized = 1;
-            }
 			switch(st->value.statement_allocate.var->symboltype->type){
 
 				case SYMBOL_ARRAY:
@@ -1132,7 +1123,8 @@ void division_by_zero_runtime_check( int lineno, ARGUMENT *denominator ) {
  */
 void halt_for_error(char *errorMessageCode, int signalCode, int lineno) {
 
-    has_errors = 1; // all error messages use this function
+    // all error messages use this function
+    has_errors = 1;
 
 	append_element(ir_lines,make_instruction_pushl(
 			make_argument_constant(lineno)));
