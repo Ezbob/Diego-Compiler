@@ -1,16 +1,16 @@
-
+(* stops when a = b = 40 *)
 var a : int;
 var b : int;
-var c : int;
 
 a = 42;
 b = 40;
-c = 100;
 
-while c > a do {
+while 0 < a do {
 
 	if(a == b) then break;
 
+	write a;
+	
 	a = a - 1;
 }
 

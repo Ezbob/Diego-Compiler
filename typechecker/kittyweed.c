@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kittyweed.h"
-#include "../parserscanner/kittytree.h"
 
-stackT *the_stack; //Stack for functions
-stackL *loopStack; //Stack for keeping track of loops 
+stackT *functionStack; //Stack for functions
+stackT *loopStack; //Stack for keeping track of loops
 				   //used with break/continue
 
 void weed_error_report(const char* errorMsg, int lineno){
@@ -26,8 +25,8 @@ BODY *begin_weed(BODY *body){
 	 * need this to attach to statements to make  
 	 * sure the return type is correct
 	 */
-	the_stack = funcStackInit(HASH_SIZE);
-	loopStack = loopStackInit();
+	functionStack = stackInit();
+	loopStack = stackInit();
 
 	body = weed_body(body);
 
@@ -39,7 +38,7 @@ FUNC *weed_function ( FUNC *function ){
 
 	FUNC *assertion;
 
-	funcStackPush(the_stack, function);
+	funcStackPush(functionStack, function);
 
 	if(strcmp(function->head->id, 
 					function->tail->id) != 0){
@@ -58,7 +57,7 @@ FUNC *weed_function ( FUNC *function ){
 						function->head->lineno);
 	}
 
-	if((assertion = funcStackPop(the_stack)) == NULL){
+	if((assertion = funcStackPop(functionStack)) == NULL){
 		weed_error_report("Cant pop function pointer from stack, empty",
 											function->head->lineno);
 	}
@@ -241,7 +240,8 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 	switch(decl->kind){
 
 		case DECLARATION_ID:
-			decl->value.declaration_id.type = weed_type(decl->value.declaration_id.type);
+			decl->value.declaration_id.type =
+					weed_type(decl->value.declaration_id.type);
 			break;
 
 		case DECLARATION_FUNC:
@@ -249,7 +249,8 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 			break;
 
 		case DECLARATION_VAR:
-			decl->value.var_decl_list = weed_var_decl_list(decl->value.var_decl_list);
+			decl->value.var_decl_list =
+					weed_var_decl_list(decl->value.var_decl_list);
 			break;
 
 		default:
@@ -303,45 +304,50 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			st->value.statement_return.exp = 
 				weed_expression(st->value.statement_return.exp);
 
-			if(the_stack->top == NULL){
+			if(functionStack->top == NULL){
 				weed_error_report("Return not associated with function",
 																st->lineno);
 			}
 
-			st->value.statement_return.function = the_stack->top->function;
+			st->value.statement_return.function =
+					funcStackPeek(functionStack);
 			st->foundReturn = 1;
 			return st;
 
 
 		case STATEMENT_IFBRANCH:
-			st->value.statement_ifbranch.exp = 
-							weed_expression(st->value.statement_ifbranch.exp);
+			st->value.statement_ifbranch.exp = weed_expression(st->
+									value.statement_ifbranch.exp);
 
-			st->value.statement_ifbranch.statement = 
-							weed_statement(st->value.statement_ifbranch.statement);
+			st->value.statement_ifbranch.statement = weed_statement(st->value.
+							statement_ifbranch.statement);
 			
-			st->value.statement_ifbranch.opt_else = 
-							weed_opt_else(st->value.statement_ifbranch.opt_else);
+			st->value.statement_ifbranch.opt_else = weed_opt_else(st->value.
+							statement_ifbranch.opt_else);
 			
 
-			if(st->value.statement_ifbranch.opt_else->kind == OPT_ELSE_EMPTY &&
-			   st->value.statement_ifbranch.statement == NULL){
+			if(st->value.statement_ifbranch.opt_else->kind ==
+			   		OPT_ELSE_EMPTY && st->value.statement_ifbranch.statement
+										 == NULL){
 					break;
 			}
 
 			// Case where there exists a return in both if and else, 
 			// can ignore everything after the if/else
 			if(st->value.statement_ifbranch.statement->foundReturn == 1 
-			   && st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY 
+			   && st->value.statement_ifbranch.opt_else->kind !=
+										 OPT_ELSE_EMPTY
 			   && st->value.statement_ifbranch.opt_else->statement->
-			   	foundReturn == 1 && st->value.statement_ifbranch.statement != NULL) {
+			   	foundReturn == 1 && st->value.statement_ifbranch.
+					statement != NULL) {
 			  
 			   st->foundReturn = 1;
 
 			}
 			if (st->value.statement_ifbranch.exp->kind == EXPRES_TERM){
 				// a term
-				ifTerm = weed_term(st->value.statement_ifbranch.exp->value.term);
+				ifTerm = weed_term(st->value.statement_ifbranch.exp->
+						value.term);
 				if(ifTerm->kind == TERM_NUM){
 					weed_error_report("Invalid expression", st->lineno - 1);
 					break;
@@ -398,18 +404,18 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			break;
 
 		case STATEMENT_BREAK:
-			if(loopStack->top == NULL){
+			if( stackIsEmpty(loopStack) ) {
 				weed_error_report("Break outside loop", st->lineno);
 			} else {
-				st->next = loopStack->top->function;
+				st->next = loopStackPeek(loopStack);
 			}
 			break;
 
 		case STATEMENT_CONTINUE:
-			if(loopStack->top == NULL){
+			if( stackIsEmpty(loopStack) ) {
 				weed_error_report("Continue outside loop", st->lineno);
 			} else {
-				st->next = loopStack->top->function;
+				st->next = loopStackPeek(loopStack);
 			}
 			break;
 			
@@ -502,7 +508,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 			break;
 
 		case EXPRES_PLUS:
-			if( left_exp->kind == EXPRES_TERM && right_exp->kind == EXPRES_TERM ){
+			if( left_exp->kind == EXPRES_TERM &&
+					right_exp->kind == EXPRES_TERM ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 				if(left_term->kind != TERM_NUM || 

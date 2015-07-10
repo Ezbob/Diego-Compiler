@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
-#include "typechecker/funcstack.h"
 #include "parserscanner/kittytree.h"
+#include "typechecker/stack.h"
 
 static int current_label = 0;
 
@@ -81,7 +81,7 @@ void IR_build( BODY *program ) {
 	fprintf(stderr, "Initializing intermediate code generation phase\n");
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
-	function_stack = funcStackInit();
+	function_stack = stackInit();
 	init_argument_constants();
 	init_stack_instructions();
 
@@ -109,7 +109,7 @@ void IR_build( BODY *program ) {
 
 	build_data_section();
 
-	funcStackDestroy(function_stack);
+	stackDestroy(function_stack);
 }
 
 void IR_builder_function(FUNC *func) {
@@ -464,8 +464,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 			sprintf(trueWhileString, "whileStart%d", current_label);
 			sprintf(endLabelString, "whileEnd%d", current_label);
 
-			sprintf(st->value.statement_while.start_label, "whileStart%d", current_label);
-			sprintf(st->value.statement_while.end_label, "whileEnd%d", current_label);
+			sprintf(st->value.statement_while.start_label,
+					"whileStart%d", current_label);
+			sprintf(st->value.statement_while.end_label,
+					"whileEnd%d", current_label);
 
 
 			// while-start label insert
@@ -502,9 +504,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_CONTINUE:
 			append_element(ir_lines, make_instruction_jmp(
-				st->next->value.statement_while.end_label));
+				st->next->value.statement_while.start_label));
 			break;
-
 		default:
 			break;
 	}
@@ -879,8 +880,8 @@ void IR_builder_term ( TERM *term ) {
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			if ( !StackIsEmpty(function_stack) &&
-					strcmp(funcStackPeep(function_stack)->head->id,
+			if ( !stackIsEmpty(function_stack) &&
+					strcmp(funcStackPeek(function_stack)->head->id,
 						   term->value.term_act_list.id) == 0 ) {
 				// recursion here just have to push the same base
 				// pointer again

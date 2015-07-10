@@ -1,0 +1,17 @@
+(* skips 10 and stops at a = 0 *)
+var a : int;
+var b : int;
+
+a = 12;
+b = 10;
+
+write a;
+
+while 0 < a do {
+	a = a - 1;
+
+	if(a == b) then continue;
+
+	write a;
+}
+

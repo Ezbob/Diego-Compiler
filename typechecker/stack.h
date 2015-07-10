@@ -9,7 +9,7 @@
 #include "../symbol/symbol.h"
 
 typedef struct stackElement {
-	 FUNC *function;
+	 void *data;
 	 struct stackElement *next;
 } stackElement;
 
@@ -18,19 +18,22 @@ typedef struct stackT {
   struct stackElement *top;
 } stackT;
 
+int stackIsEmpty(stackT *stackP);
+void stackDestroy(stackT *stackP);
+stackT *stackInit();
 
-stackT *funcStackInit();
 
-FUNC *funcStackPeep(stackT *stackP);
+// functions
 
-void funcStackDestroy(stackT *stackP);
-
+FUNC *funcStackPeek(stackT *stackP);
 void funcStackPush(stackT *stackP, FUNC *element);
 FUNC *funcStackPop(stackT *stackP);
 
+// loop statements
 
-int StackIsEmpty(stackT *stackP);
-int StackIsFull(stackT *stackP);
+STATEMENT *loopStackPeek(stackT *stackP);
+void loopStackPush(stackT *stackP, STATEMENT *element);
+STATEMENT *loopStackPop(stackT *stackP);
 
 #endif  /* not defined _stack_H */
 
