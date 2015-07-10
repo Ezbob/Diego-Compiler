@@ -399,6 +399,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 												  .opt_length);
 					append_element(ir_lines, popEcx);
 
+					// edi and esi is free here
 					negative_array_size_check(st->lineno, ecx);
 
 					// move the array size to the first index
@@ -413,6 +414,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ecx));
 
+					// eax is free, ebx is free
 					out_of_memory_runtime_check(st->lineno, ecx);
 
 					// update the heap free pointer
@@ -438,15 +440,16 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// we need number of members in record
 					append_element(ir_lines, make_instruction_movl(
 							make_argument_constant(numberOfRecordMembers)
-							, ebx));
+							, ecx));
 
 					append_element(ir_lines, make_instruction_imul(
-							make_argument_constant(WORD_SIZE), ebx));
+							make_argument_constant(WORD_SIZE), ecx));
 
-					out_of_memory_runtime_check(st->lineno, ebx);
+					// eax and ebx is free
+					out_of_memory_runtime_check(st->lineno, ecx);
 
 					// add to the next pointer
-					append_element(ir_lines, make_instruction_addl(ebx,
+					append_element(ir_lines, make_instruction_addl(ecx,
 							heapFreePointer));
 
 					break;
@@ -574,9 +577,9 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 			append_element(ir_lines, make_instruction_movl(base, esi));
 				// exp
+
 			append_element(ir_lines, popEdi);
 				// var
-
 			out_of_bounds_runtime_check(var->lineno, esi, edi);
 
 			append_element(ir_lines, make_instruction_incl(edi));
@@ -648,18 +651,16 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_DIVIDE:
+			IR_builder_expression(exp->value.sides.left);
 			IR_builder_expression(exp->value.sides.right);
 			append_element(ir_lines, popEbx);
 			// rhs
-
-			division_by_zero_runtime_check(exp->lineno, ebx);
-
-			IR_builder_expression(exp->value.sides.left);
 			append_element(ir_lines, popEax);
 			// lhs
 
-			append_element(ir_lines, pushEdx);
-				// Saving edx register; contains modulo after division
+			division_by_zero_runtime_check(exp->lineno, ebx);
+
+			append_element(ir_lines, make_instruction_pushl(edx));
 
 			append_element(ir_lines, make_instruction_xor(edx, edx));
 				// Clear edx for modulo
@@ -667,8 +668,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, make_instruction_div(ebx));
 				// divide eax with eax to get result in eax
 
-			append_element(ir_lines, popEdx);
-			// restore the saved registers
+			append_element(ir_lines, make_instruction_popl(edx));
 
 			append_element(ir_lines, pushEax);
 				// result: "quotient" on the stack
@@ -999,27 +999,20 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 
 void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
 
-	append_element(ir_lines, pushEbx);
-
     char *notNegativeSize;
     GET_FLOW_CONTROL_LABEL(notNegativeSize, "notNegSize", GET_NEXT_LABEL_ID);
 
-	append_element(ir_lines, make_instruction_movl(arraySize, ebx));
-
-	append_element(ir_lines, make_instruction_cmp(zero, ebx));
+	// assume that arraySize is in register
+	append_element(ir_lines, make_instruction_cmp(zero, arraySize));
 	append_element(ir_lines, make_instruction_JGE(notNegativeSize));
 
 	halt_for_error("$error.NEGSIZE", RUNTIME_ERROR_NEGSIZE, lineno);
 
 	append_element(ir_lines, make_instruction_label(notNegativeSize));
-	append_element(ir_lines, popEbx);
 }
 
 void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 								  ARGUMENT *index ) {
-	append_element(ir_lines, pushEbx);
-	append_element(ir_lines, pushEcx);
-
     int sharedId = GET_NEXT_LABEL_ID;
 
 	char *notOutOfBoundsLabel;
@@ -1031,11 +1024,10 @@ void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 	append_element(ir_lines, make_instruction_cmp(zero, index));
 	append_element(ir_lines, make_instruction_jl(outOfBoundsLabel));
 
-	append_element(ir_lines, make_instruction_movl(variable, ebx));
 	// get length of the array
 	append_element(ir_lines, make_instruction_xor(ecx, ecx));
 	append_element(ir_lines, make_instruction_movl(
-			make_argument_indexing(NULL, ebx, ecx), ecx));
+			make_argument_indexing(NULL, variable, ecx), ecx));
 
 	// index >= length of array
 	append_element(ir_lines, make_instruction_cmp(ecx, index));
@@ -1049,13 +1041,9 @@ void out_of_bounds_runtime_check( int lineno, ARGUMENT* variable,
 	halt_for_error("$error.OUTBOUNDS", RUNTIME_ERROR_OUTBBOUNDS, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfBoundsLabel));
-	append_element(ir_lines, popEcx);
-	append_element(ir_lines, popEbx);
 }
 
 void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
-	append_element(ir_lines, pushEax);
-	append_element(ir_lines, pushEdx);
 
 	char *notOutOfMemoryLabel;
     GET_FLOW_CONTROL_LABEL(notOutOfMemoryLabel,"notOutMem",
@@ -1076,13 +1064,9 @@ void out_of_memory_runtime_check( int lineno, ARGUMENT *increase ) {
 	halt_for_error("$error.OUTMEM", RUNTIME_ERROR_OUTMEM, lineno);
 
 	append_element(ir_lines, make_instruction_label(notOutOfMemoryLabel));
-	append_element(ir_lines, popEdx);
-	append_element(ir_lines, popEax);
 }
 
 void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
-	append_element(ir_lines, pushEbx);
-	append_element(ir_lines, pushEax);
 
 	char *notNullLabel;
     GET_FLOW_CONTROL_LABEL(notNullLabel, "notNull", GET_NEXT_LABEL_ID);
@@ -1096,8 +1080,6 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 
 	append_element(ir_lines, make_instruction_label(notNullLabel));
 
-	append_element(ir_lines, popEax);
-	append_element(ir_lines, popEbx);
 }
 
 void division_by_zero_runtime_check( int lineno, ARGUMENT *denominator ) {
