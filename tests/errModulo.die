@@ -1,0 +1,5 @@
+var a : bool;
+
+a = true;
+
+write a % 3;

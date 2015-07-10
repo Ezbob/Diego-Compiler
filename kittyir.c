@@ -684,9 +684,10 @@ void IR_builder_expression ( EXPRES *exp ) {
 				// divide eax with eax to get result in eax
             if ( exp->kind == EXPRES_DIVIDE ) {
                 append_element(ir_lines, pushEax);
-                // result: "quotient" on the stack
+                // result: quotient on the stack
             } else {
                 append_element(ir_lines, pushEdx);
+                // else: remainder on stack
             }
 			break;
 

@@ -1,0 +1,9 @@
+var a : int, b : int;
+
+a = 10;
+b = 5;
+
+write a % 4;
+write 6 % 1;
+write 8 % a - b;
+write (b - a) % 2;
