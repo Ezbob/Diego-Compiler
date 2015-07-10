@@ -115,8 +115,9 @@ EXPRES *make_EXPRES_DIVIDE(EXPRES *left ,EXPRES *right){
 }
 
 EXPRES *make_EXPRES_MODULO(EXPRES *left, EXPRES *right){
+
 	EXPRES *new_expression = NEW(EXPRES);
-	new_expression->lineno;
+	new_expression->lineno = lineno;
 	new_expression->kind = EXPRES_MODULO;
 	new_expression->value.sides.left = left;
 	new_expression->value.sides.right = right;

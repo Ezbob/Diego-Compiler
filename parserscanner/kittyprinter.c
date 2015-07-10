@@ -290,6 +290,13 @@ void printer_expression ( EXPRES *exp){
 			printer_expression(exp->value.sides.right);
 			printf(")");
 			break;
+		case EXPRES_MODULO:
+			printf("(");
+			printer_expression(exp->value.sides.left);
+			printf(" %% ");
+			printer_expression(exp->value.sides.right);
+			printf(")");
+			break;
 		case EXPRES_EQ:
 			printf("(");
 			printer_expression(exp->value.sides.left);
