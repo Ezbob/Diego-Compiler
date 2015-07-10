@@ -407,7 +407,7 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			if( stackIsEmpty(loopStack) ) {
 				weed_error_report("Break outside loop", st->lineno);
 			} else {
-				st->next = loopStackPeek(loopStack);
+				st->currentLoop = loopStackPeek(loopStack);
 			}
 			break;
 
@@ -415,7 +415,7 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			if( stackIsEmpty(loopStack) ) {
 				weed_error_report("Continue outside loop", st->lineno);
 			} else {
-				st->next = loopStackPeek(loopStack);
+				st->currentLoop = loopStackPeek(loopStack);
 			}
 			break;
 			

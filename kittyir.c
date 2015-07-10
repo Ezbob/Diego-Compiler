@@ -500,12 +500,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_BREAK:
 			append_element(ir_lines, make_instruction_jmp(
-				st->next->value.statement_while.end_label));
+				st->currentLoop->value.statement_while.end_label));
 			break;
 
 		case STATEMENT_CONTINUE:
 			append_element(ir_lines, make_instruction_jmp(
-				st->next->value.statement_while.start_label));
+				st->currentLoop->value.statement_while.start_label));
 			break;
 		default:
 			break;

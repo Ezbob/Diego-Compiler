@@ -209,7 +209,7 @@ typedef struct STATEMENT {
 	int lineno;
 	SYMBOL_TABLE *symboltable;
 	int foundReturn;
-	struct STATEMENT *next; //Wrong name but used with break/continue
+	struct STATEMENT *currentLoop;
 	enum { 
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,

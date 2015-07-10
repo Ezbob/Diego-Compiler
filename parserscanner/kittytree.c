@@ -536,7 +536,7 @@ STATEMENT_LIST *make_STATEMENT_LIST_LIST(STATEMENT_LIST *stmtlst,
 
 	STATEMENT_LIST *stmlst = NEW(STATEMENT_LIST);
 	stmlst->lineno = lineno;
-	stmt->next = NULL;
+	stmt->currentLoop = NULL;
 	stmlst->kind = STATEMENT_LIST_LIST;
 	stmlst->statement = stmt;
 	stmlst->statement_list = stmtlst;
