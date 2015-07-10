@@ -364,7 +364,6 @@ void collect_expression ( EXPRES *exp, SYMBOL_TABLE *st ) {
 			collect_expression(exp->value.sides.right, st);
 			break;
 	}
-
 }
 
 void collect_term ( TERM *term, SYMBOL_TABLE *st ) {

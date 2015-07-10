@@ -71,6 +71,7 @@ WHITESPACE [\ \t]*
 "[" { return '['; }
 "]" { return ']'; }
 "|" { return '|'; }
+"%" { return '%'; }
 
 "*"	{ return '*'; } 
 "+"	{ return '+'; }

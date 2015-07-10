@@ -667,6 +667,7 @@ void IR_builder_expression ( EXPRES *exp ) {
 			break;
 
 		case EXPRES_DIVIDE:
+        case EXPRES_MODULO:
 			IR_builder_expression(exp->value.sides.left);
 			IR_builder_expression(exp->value.sides.right);
 			append_element(ir_lines, popEbx);
@@ -681,9 +682,12 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			append_element(ir_lines, make_instruction_div(ebx));
 				// divide eax with eax to get result in eax
-            
-			append_element(ir_lines, pushEax);
-				// result: "quotient" on the stack
+            if ( exp->kind == EXPRES_DIVIDE ) {
+                append_element(ir_lines, pushEax);
+                // result: "quotient" on the stack
+            } else {
+                append_element(ir_lines, pushEdx);
+            }
 			break;
 
 		case EXPRES_EQ:

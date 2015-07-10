@@ -36,8 +36,6 @@ BODY *begin_weed(BODY *body){
 
 FUNC *weed_function ( FUNC *function ){
 
-	FUNC *assertion;
-
 	funcStackPush(functionStack, function);
 
 	if(strcmp(function->head->id, 
@@ -49,7 +47,6 @@ FUNC *weed_function ( FUNC *function ){
 	weed_head(function->head);
 	weed_body(function->body);
 
-
 	if( function->body->statement_list->statement->foundReturn == 0 
 		|| function->body->statement_list == NULL ){
 
@@ -57,7 +54,7 @@ FUNC *weed_function ( FUNC *function ){
 						function->head->lineno);
 	}
 
-	if((assertion = funcStackPop(functionStack)) == NULL){
+	if(funcStackPop(functionStack) == NULL){
 		weed_error_report("Cant pop function pointer from stack, empty",
 											function->head->lineno);
 	}

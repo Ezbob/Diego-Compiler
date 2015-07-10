@@ -89,7 +89,7 @@
 %left BOOL_NOT_EQUAL_TOK BOOL_EQUAL_TOK
 %left BOOL_GREATER_EQ_TOK BOOL_LESS_EQ_TOK '<' '>'
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left "unary_minus"
 
 %nonassoc "no_else" // no binds weaker than else case
@@ -180,6 +180,7 @@ exp				: exp '+' exp {$$ = make_EXPRES_PLUS($1,$3);}
 				| exp '-' exp {$$ = make_EXPRES_MINUS($1,$3);}
 				| exp '*' exp {$$ = make_EXPRES_TIMES($1,$3);}
 				| exp '/' exp {$$ = make_EXPRES_DIVIDE($1,$3);}
+				| exp '%' exp {$$ = make_EXPRES_MODULO($1,$3);}
 				| exp '<' exp {$$ = make_EXPRES_LESS($1,$3); }
 				| exp '>' exp {$$ = make_EXPRES_GREATER($1,$3);}
 				| exp BOOL_AND_TOK exp {$$ = make_EXPRES_AND($1,$3);}

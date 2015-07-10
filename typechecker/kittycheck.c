@@ -374,10 +374,8 @@ void check_expression ( EXPRES *exp){
 		check_expression(exp->value.sides.right);
 		check_expression(exp->value.sides.left);
 
-		rightHand = //get_base_array_type(
-			exp->value.sides.right->symboltype; //);
-		leftHand = //get_base_array_type(
-			exp->value.sides.left->symboltype; //);
+		rightHand = exp->value.sides.right->symboltype;
+		leftHand = exp->value.sides.left->symboltype;
 	}
 
 	switch(exp->kind){
@@ -390,6 +388,7 @@ void check_expression ( EXPRES *exp){
 		case EXPRES_MINUS:
 		case EXPRES_DIVIDE:
 		case EXPRES_TIMES:
+		case EXPRES_MODULO:
 			if( !(rightHand->type == SYMBOL_INT &&
 			   leftHand->type == SYMBOL_INT) ) {
 				check_error_report("Expected integer expression", 
