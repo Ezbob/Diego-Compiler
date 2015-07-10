@@ -208,8 +208,6 @@ void useless_arithmetic_register_moves(linked_list *currentLine) {
                 thirdInstruction->op_code == imul ||
                 thirdInstruction->op_code == subl) {
 
-                fprintf(stderr,"found: %i\n", lineCount);
-
                 newInstruction1 = NEW(linked_list);
                 newInstruction2 = NEW(linked_list);
 
