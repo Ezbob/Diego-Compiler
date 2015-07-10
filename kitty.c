@@ -17,6 +17,15 @@
 #define COMPILATION_FAILURE 1
 #endif
 
+#ifndef MAIN_ARGUMENTS
+#define MAIN_ARGUMENTS
+#define INVALID_ARGUMENTS -1
+#define NO_ARGUMENTS 0
+#define PEEPHOLE_STATISTICS 1
+#define PRETTY_PRINTER 2
+#define NO_OPTIMIZATION 3
+#endif
+
 #ifndef PARSE_MSGS
 #define PARSE_MSGS
 #define PARSE_SUCCESS 0
@@ -24,11 +33,38 @@
 #define PARSE_OUT_OF_MEM 2
 #endif
 
+int main_argument_decider(int argc, char **argStrings) {
+	if ( argc == 2 ) {
+		if (strcmp(argStrings[1], "--print") == 0 ||
+			strcmp(argStrings[1], "-p") == 0) {
+			return PRETTY_PRINTER;
+		} else if (strcmp(argStrings[1], "--histogram") == 0 ||
+				   strcmp(argStrings[1], "-h") == 0) {
+			return PEEPHOLE_STATISTICS;
+		} else if (strcmp(argStrings[1], "--nooptimization") == 0 ||
+				strcmp(argStrings[1],"-n") == 0){
+			return NO_OPTIMIZATION;
+		}
+	} else if ( argc == 1 ) {
+		return NO_ARGUMENTS;
+	}
+	return INVALID_ARGUMENTS;
+}
+
 int lineno = 1;
 BODY *_main_; // root of the AST
 linked_list *ir_lines; // list of the IR lines of code
 
 int main ( int argc, char *argv[] ) {
+
+	if ( argc > 2 ) {
+		fprintf(stderr, "Too many flags parsed to compiler.\n"
+				"\nCorrect usage:\n\t./kitty \"flag\" "
+				"< \"input_file\" > \"output_file\" \n\nValid "
+				"flags are: \"--print\",\"-p\" OR \"--histogram\""
+				",\"-h\" OR \"--nooptimization\",\"-n\" \n");
+		exit(1);
+	}
 
 	fprintf(stderr, "%s\n", "Initializing parsing phase");
 	switch ( yyparse() ){
@@ -43,13 +79,26 @@ int main ( int argc, char *argv[] ) {
 			begin_collect(_main_);
 			begin_multi_collect(_main_);
 			begin_check(_main_);
-			if( argc > 1 && ( strcmp(argv[1],"--print") 
-				|| strcmp(argv[1],"-p") ) ) {
-				printer_body(_main_);
-			} else {
-				IR_build(_main_);
-				begin_peephole();
-				IR_printer(ir_lines);
+			switch ( main_argument_decider(argc, argv) ) {
+				case PRETTY_PRINTER:
+					printer_body(_main_);
+					break;
+				case PEEPHOLE_STATISTICS:
+					IR_build(_main_);
+					begin_peephole( 1 );
+					IR_printer(ir_lines);
+					break;
+				case NO_OPTIMIZATION:
+					IR_build(_main_);
+					IR_printer(ir_lines);
+					break;
+				case NO_ARGUMENTS:
+					IR_build(_main_);
+					begin_peephole( 0 );
+					IR_printer(ir_lines);
+					break;
+				default:
+					break;
 			}
 			break;
 		default:

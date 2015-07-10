@@ -3,19 +3,27 @@
 #include "dlinkedlist.h"
 #include "parserscanner/kittytree.h"
 
-#define MAX_LABEL_SIZE 20
+// Size constants
+#define MAX_LABEL_SIZE 24
 #define WORD_SIZE 4
+#define MAX_HEAP_SIZE 4194304
+
+// Error codes
 #define RUNTIME_ERROR_OUTBBOUNDS 2
 #define RUNTIME_ERROR_DIVZERO 3
 #define RUNTIME_ERROR_NEGSIZE 4
 #define RUNTIME_ERROR_NULL 5
 #define RUNTIME_ERROR_OUTMEM 6
-#define MAX_HEAP_SIZE 4194304
+
+// shorthand for allocating a new string label
 #define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char)))
 // standardization of the building of function labels for calls
 #define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
 	NEW_LABEL; sprintf(functionLabel,"f_%s.%d", name, offset)
-
+// shorthand/standardization for creation of control flow labels
+#define GET_FLOW_CONTROL_LABEL(flowControlLabel, name, id) flowControlLabel =\
+	NEW_LABEL; sprintf(flowControlLabel,"j_%s.%d", name, id)
+// shorthand/explaining macro for creating unique label identifiers
 #define GET_NEXT_LABEL_ID (current_label++)
 
 typedef enum OP_CODES {
@@ -71,7 +79,7 @@ void callee_restore();
 void callee_start();
 void callee_end();
 void function_epilog();
-void function_prolog(int, SYMBOL_TABLE*);
+void function_prolog(SYMBOL_TABLE*);
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
 void init_heap();
 void init_argument_constants();

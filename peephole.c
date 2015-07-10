@@ -1,42 +1,50 @@
 #include <string.h>
+#include <stdlib.h>
 #include "peephole.h"
-#include "dlinkedlist.h"
-#include "kittyir.h"
 #include "irInstructions.h"
 
 extern linked_list *ir_lines;
 static linked_list *iterator;
 
-int *historGramValues;
-int patternIsGood = 0;
+int *histogramValues = NULL;
+static int useHistogram;
+int frequencySum = 0;
+int numberOfPasses = 0;
 int lineCount = 1;
 
-void begin_peephole() {
+void begin_peephole(int showHistogram) {
     fprintf(stderr, "Initializing peephole optimization phase \n");
-    list_run();
+    useHistogram = showHistogram;
 
+    if ( showHistogram ) {
+        histogramValues = calloc(NUMBER_OF_TEMPLATES,sizeof(int));
+    }
+    list_run();
+    if ( showHistogram ) {
+        show_peephole_statistics();
+        free(histogramValues);
+    }
 }
 
 void list_run() {
-
-    for (int i = 0; i < 3; i++) {
-        patternIsGood = 0;
+    do {
+        frequencySum = 0;
         lineCount = 0;
         iterator = ir_lines->next;
         while (iterator != ir_lines) {
             /* add templates here */
 
-
+            useless_arithmetic_register_moves(iterator);
             useless_push_pop(iterator);
             useless_move_between_push_pop(iterator);
             useless_transient_move(iterator);
-            //useless_arithmetic_register_moves(iterator);
+            useless_move_of_same_register(iterator);
 
             lineCount++;
             iterator = iterator->next;
         }
-        fprintf(stderr,"pattern found: %i \n", patternIsGood);
-    }
+        numberOfPasses++;
+    } while ( frequencySum > 0 );
 }
 
 /* Example:
@@ -72,7 +80,8 @@ void useless_push_pop(linked_list *currentLine) {
             new_list_element->data = make_instruction_movl(
                     currentInstruction->arg1, nextInstruction->arg1);
 
-            //patternIsGood++;
+            COUNT_IN_HISTOGRAM(PUSH_POP);
+            frequencySum++;
         }
     }
 }
@@ -80,11 +89,16 @@ void useless_push_pop(linked_list *currentLine) {
 /*
  * example for template:
  * movl $1, %ebx
- * movl %ebx, %eax
+ * movl %ebx, -4(%eax)
  * to:
- * movl $1, %eax
+ * movl $1, -4(%eax)
+ * OR
+ * movl %ecx, %ebx
+ * movl %ebx, %edx
+ * to:
+ * movl %ecx, %edx
  */
-void useless_transient_move(linked_list *currentLine){
+void useless_transient_move(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction =
             (IR_INSTRUCTION *) currentLine->data;
     IR_INSTRUCTION *nextInstruction =
@@ -101,28 +115,30 @@ void useless_transient_move(linked_list *currentLine){
         ARGUMENT *nextArg1 = nextInstruction->arg1;
         ARGUMENT *nextArg2 = nextInstruction->arg2;
 
-        if( currentArg1->kind == register_arg
+        if( (currentArg1->kind == register_arg ||
+                currentArg1->kind == constant_arg )
             && currentArg2->kind == register_arg
              && nextArg1->kind == register_arg
              && strcmp(currentArg2->charConst, nextArg1->charConst) == 0){
 
+
             new_list_element = NEW(linked_list);
 
-            new_list_element->next = currentLine->next->next;
+            new_list_element->next = nextLine->next;
             new_list_element->previous = currentLine->previous;
-            currentLine->next->next->previous = new_list_element;
+            nextLine->next->previous = new_list_element;
             currentLine->previous->next = new_list_element;
 
             new_list_element->data = make_instruction_movl(
                     currentArg1, nextArg2);
 
-            //fprintf(stderr,"at %i\n",lineCount);
-            //patternIsGood++;
+            COUNT_IN_HISTOGRAM(TRANSIENT_MOVE);
+            frequencySum++;
         }
     }
 }
 
-void useless_move_between_push_pop(linked_list *currentLine){
+void useless_move_between_push_pop(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction =
             (IR_INSTRUCTION *) currentLine->data;
     IR_INSTRUCTION *nextInstruction =
@@ -158,13 +174,16 @@ void useless_move_between_push_pop(linked_list *currentLine){
             new_list_element->next = nextLine;
             new_list_element->previous = currentLine->previous;
 
-            //fprintf(stderr,"at line %i\n", lineCount);
-            //patternIsGood++;
+            COUNT_IN_HISTOGRAM(MOVE_BETWEEN_PUSH_POP);
+            frequencySum++;
         }
     }
 }
 
-void useless_arithmetic_register_moves(linked_list *currentLine){
+/*
+ *
+ */
+void useless_arithmetic_register_moves(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction =
             (IR_INSTRUCTION *) currentLine->data;
     IR_INSTRUCTION *nextInstruction =
@@ -177,17 +196,18 @@ void useless_arithmetic_register_moves(linked_list *currentLine){
     linked_list *newInstruction1;
     linked_list *newInstruction2;
 
-    if(currentInstruction->op_code == movl &&
-            nextInstruction->op_code == movl) {
+    if (currentInstruction->op_code == movl &&
+        nextInstruction->op_code == movl) {
 
         if (currentInstruction->arg1->kind == register_arg &&
             currentInstruction->arg2->kind == register_arg &&
             nextInstruction->arg2->kind == register_arg &&
-            fourthInstruction->op_code == pushl) {
+                fourthInstruction->op_code == pushl) {
 
             if (thirdInstruction->op_code == addl ||
                 thirdInstruction->op_code == imul ||
                 thirdInstruction->op_code == subl) {
+
                 newInstruction1 = NEW(linked_list);
                 newInstruction2 = NEW(linked_list);
 
@@ -214,10 +234,63 @@ void useless_arithmetic_register_moves(linked_list *currentLine){
 
                 newInstruction2->previous = newInstruction1;
                 newInstruction2->next = currentLine->next->next->next->next;
-                currentLine->next->next->next->next->previous = newInstruction2;
-                patternIsGood++;
+                currentLine->next->next->next->next->previous
+                        = newInstruction2;
+                COUNT_IN_HISTOGRAM(ARITHMETIC_REGISTER_MOVE);
+                frequencySum++;
             }
         }
     }
-
 }
+
+void useless_move_of_same_register(linked_list *currentLine) {
+    IR_INSTRUCTION *currentInstruction = (IR_INSTRUCTION *) currentLine->data;
+
+    if ( currentInstruction->op_code == movl
+         && currentInstruction->arg1->kind == register_arg
+            && currentInstruction->arg2->kind == register_arg ) {
+        if ( strcmp(currentInstruction->arg1->charConst,
+                    currentInstruction->arg2->charConst) == 0) {
+
+            currentLine->previous->next = currentLine->next;
+            currentLine->next->previous = currentLine->previous;
+            COUNT_IN_HISTOGRAM(MOVE_SAME_REGISTER);
+            frequencySum++;
+        }
+    }
+}
+
+void get_template_name(int index) {
+
+    fprintf(stderr, "useless_");
+    switch (index){
+        case PUSH_POP:
+            fprintf(stderr, "push_pop");
+            break;
+        case TRANSIENT_MOVE:
+            fprintf(stderr, "transient_move");
+            break;
+        case MOVE_BETWEEN_PUSH_POP:
+            fprintf(stderr, "move_between_push_pop");
+            break;
+        case MOVE_SAME_REGISTER:
+            fprintf(stderr, "move_of_same_register");
+            break;
+        case ARITHMETIC_REGISTER_MOVE:
+            fprintf(stderr, "arithmetic_register_move");
+        default:
+            break;
+    }
+}
+
+
+void show_peephole_statistics(){
+
+    fprintf(stderr,"---peephole usage---\n");
+    for(int i = 0; i < NUMBER_OF_TEMPLATES; i ++) {
+        get_template_name(i);
+        fprintf(stderr,": %i\n", histogramValues[i]);
+    }
+    fprintf(stderr,"number of peephole passes: %i \n", numberOfPasses);
+}
+
