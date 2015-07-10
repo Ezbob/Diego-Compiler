@@ -276,6 +276,11 @@ void collect_statement ( STATEMENT *stm, SYMBOL_TABLE *st ) {
 			break;
 
 		case STATEMENT_ASSIGN:
+		case STATEMENT_ADDASSIGN:
+		case STATEMENT_SUBASSIGN:
+		case STATEMENT_MULASSIGN:
+		case STATEMENT_DIVASSIGN:
+		case STATEMENT_MODASSIGN:
 			collect_variable(stm->value.statement_assign.var, st);
 			collect_expression(stm->value.statement_assign.exp, st);
 			break;

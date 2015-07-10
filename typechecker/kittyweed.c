@@ -374,6 +374,11 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			break;
 
 		case STATEMENT_ASSIGN:
+		case STATEMENT_ADDASSIGN:
+		case STATEMENT_SUBASSIGN:
+		case STATEMENT_MULASSIGN:
+		case STATEMENT_DIVASSIGN:
+		case STATEMENT_MODASSIGN:
 			st->value.statement_assign.var = 
 				weed_variable(st->value.statement_assign.var);
 			st->value.statement_assign.exp = 

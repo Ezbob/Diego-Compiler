@@ -603,6 +603,66 @@ STATEMENT *make_STATEMENT_ASSIGN(VAR *var,EXPRES *expres){
 
 }
 
+STATEMENT *make_STATEMENT_ADDASSIGN(VAR *var,EXPRES *expres){
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_ADDASSIGN;
+	new_statement->value.statement_assign.var = var;
+	new_statement->value.statement_assign.exp = expres;
+
+	return new_statement;
+
+}
+
+STATEMENT *make_STATEMENT_SUBASSIGN(VAR *var,EXPRES *expres){
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_SUBASSIGN;
+	new_statement->value.statement_assign.var = var;
+	new_statement->value.statement_assign.exp = expres;
+
+	return new_statement;
+
+}
+
+STATEMENT *make_STATEMENT_MULASSIGN(VAR *var,EXPRES *expres){
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_MULASSIGN;
+	new_statement->value.statement_assign.var = var;
+	new_statement->value.statement_assign.exp = expres;
+
+	return new_statement;
+
+}
+
+STATEMENT *make_STATEMENT_DIVASSIGN(VAR *var,EXPRES *expres){
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_DIVASSIGN;
+	new_statement->value.statement_assign.var = var;
+	new_statement->value.statement_assign.exp = expres;
+
+	return new_statement;
+
+}
+
+STATEMENT *make_STATEMENT_MODASSIGN(VAR *var,EXPRES *expres){
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_MODASSIGN;
+	new_statement->value.statement_assign.var = var;
+	new_statement->value.statement_assign.exp = expres;
+
+	return new_statement;
+
+}
+
 STATEMENT *make_STATEMENT_IFBRANCH(EXPRES *expres, STATEMENT *stmt ,
 			OPT_ELSE *opel){
 

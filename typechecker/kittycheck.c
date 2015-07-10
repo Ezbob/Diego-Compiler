@@ -169,6 +169,24 @@ void check_statement ( STATEMENT *statement){
 			}
 			break;
 
+		case STATEMENT_ADDASSIGN:
+		case STATEMENT_SUBASSIGN:
+		case STATEMENT_MULASSIGN:
+		case STATEMENT_DIVASSIGN:
+		case STATEMENT_MODASSIGN:
+			check_variable(statement->value.statement_assign.var);
+			check_expression(statement->value.statement_assign.exp);
+
+			leftHand = statement->value.statement_assign.var->symboltype;
+			rightHand = statement->value.statement_assign.exp->symboltype;
+
+			if ( !(leftHand->type == SYMBOL_INT &&
+					rightHand->type == SYMBOL_INT) ) {
+				check_error_report("Invalid assignment, type mismatch",
+								   statement->lineno);
+			}
+			break;
+
 		case STATEMENT_ASSIGN:
 			check_variable(statement->value.statement_assign.var);
 			check_expression(statement->value.statement_assign.exp);

@@ -323,13 +323,69 @@ void IR_builder_statement ( STATEMENT *st ) {
 			caller_restore();
 			break;
 
+        case STATEMENT_ADDASSIGN:
+        case STATEMENT_SUBASSIGN:
+        case STATEMENT_MULASSIGN:
+        case STATEMENT_DIVASSIGN:
+        case STATEMENT_MODASSIGN:
 		case STATEMENT_ASSIGN:
 			IR_builder_expression(st->value.statement_assign.exp);
 			variable = IR_builder_variable(st->value.statement_assign.var);
 
 			append_element(ir_lines, popEbx);
 				// expression
-			append_element(ir_lines, make_instruction_movl(ebx, variable));
+            switch (st->kind) {
+                case STATEMENT_ADDASSIGN:
+                    append_element(ir_lines, make_instruction_movl(variable,
+                                                                   eax));
+                    append_element(ir_lines, make_instruction_addl(ebx, eax));
+                    append_element(ir_lines, make_instruction_movl(eax,
+                                                                   variable));
+                    break;
+                case STATEMENT_SUBASSIGN:
+                    append_element(ir_lines, make_instruction_movl(variable,
+                                                                   eax));
+                    append_element(ir_lines, make_instruction_subl(ebx, eax));
+                    append_element(ir_lines, make_instruction_movl(eax,
+                                                                   variable));
+                    break;
+                case STATEMENT_MULASSIGN:
+                    append_element(ir_lines, make_instruction_movl(variable,
+                                                                   eax));
+                    append_element(ir_lines, make_instruction_imul(ebx, eax));
+                    append_element(ir_lines, make_instruction_movl(eax,
+                                                                   variable));
+                    break;
+                case STATEMENT_DIVASSIGN:
+                case STATEMENT_MODASSIGN:
+                    append_element(ir_lines, make_instruction_movl(variable,
+                                                                   eax));
+                    division_by_zero_runtime_check(st->lineno, ebx);
+
+                    append_element(ir_lines, make_instruction_xor(edx, edx));
+                    // Clear edx for modulo
+
+                    append_element(ir_lines, make_instruction_div(ebx));
+                    // divide eax with eax to get result in eax
+
+                    if ( st->kind == STATEMENT_DIVASSIGN ) {
+                        append_element(ir_lines,
+                                       make_instruction_movl(eax, variable));
+                        // result: quotient on the stack
+                    } else {
+                        append_element(ir_lines,
+                                       make_instruction_movl(edx, variable));
+                        // else: remainder on stack
+                    }
+                    break;
+                case STATEMENT_ASSIGN:
+                    append_element(ir_lines, make_instruction_movl(ebx,
+                                                                   variable));
+                    break;
+                default:
+                    break;
+            }
+
 			break;
 
 		case STATEMENT_IFBRANCH:

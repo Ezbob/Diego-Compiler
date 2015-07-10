@@ -71,13 +71,19 @@ WHITESPACE [\ \t]*
 "[" { return '['; }
 "]" { return ']'; }
 "|" { return '|'; }
-"%" { return '%'; }
 
 "*"	{ return '*'; } 
 "+"	{ return '+'; }
 "-"	{ return '-'; }
 "/"	{ return '/'; }
+"%" { return '%'; }
 "="	{ return '='; } 
+
+"+="	{ return ADD_ASSIGN_TOK; }
+"-="	{ return SUB_ASSIGN_TOK; }
+"*=" 	{ return MUL_ASSIGN_TOK; }
+"/="	{ return DIV_ASSIGN_TOK; }
+"%="	{ return MOD_ASSIGN_TOK; }
 
 "&&"	{ return BOOL_AND_TOK; } 
 "=="	{ return BOOL_EQUAL_TOK; }

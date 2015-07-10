@@ -120,7 +120,6 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 				unknownTypesCount--;
 				symbol->symbolType = symboltype;
 			}
-
 			break;
 		case DECLARATION_FUNC:
 			multi_collect_function(declaration->value.function);

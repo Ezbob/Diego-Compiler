@@ -1,0 +1,37 @@
+var a : int , b : int;
+
+a = 0;
+b = 45;
+
+a += ( 1 + 2 );
+a += 2;
+
+write a;
+
+a = 1;
+
+a *= ( 2 * b );
+a *= 4;
+
+write a;
+
+a = 1;
+
+a -= 2;
+a -= 4;
+
+write a;
+
+b = 42;
+a = 2;
+
+b /= a;
+
+write b;
+
+b = 3;
+a = 1;
+
+a %= b;
+
+write a;

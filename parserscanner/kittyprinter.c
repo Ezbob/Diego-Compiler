@@ -183,6 +183,41 @@ void printer_statement ( STATEMENT *st){
 			printer_expression(st->value.statement_assign.exp);
 			printf(";\n");
 			break;
+		case STATEMENT_ADDASSIGN:
+			lineShift();
+			printer_variable(st->value.statement_assign.var);
+			printf(" += ");
+			printer_expression(st->value.statement_assign.exp);
+			printf(";\n");
+			break;
+		case STATEMENT_SUBASSIGN:
+			lineShift();
+			printer_variable(st->value.statement_assign.var);
+			printf(" -= ");
+			printer_expression(st->value.statement_assign.exp);
+			printf(";\n");
+			break;
+		case STATEMENT_MULASSIGN:
+			lineShift();
+			printer_variable(st->value.statement_assign.var);
+			printf(" *= ");
+			printer_expression(st->value.statement_assign.exp);
+			printf(";\n");
+			break;
+		case STATEMENT_DIVASSIGN:
+			lineShift();
+			printer_variable(st->value.statement_assign.var);
+			printf(" /= ");
+			printer_expression(st->value.statement_assign.exp);
+			printf(";\n");
+			break;
+		case STATEMENT_MODASSIGN:
+			lineShift();
+			printer_variable(st->value.statement_assign.var);
+			printf(" %%= ");
+			printer_expression(st->value.statement_assign.exp);
+			printf(";\n");
+			break;
 		case STATEMENT_IFBRANCH:
 			printf("If ");
 			printer_expression(st->value.statement_ifbranch.exp);

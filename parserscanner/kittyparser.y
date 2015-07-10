@@ -63,6 +63,11 @@
 %token RECORD_OF_TOK 
 %token BREAK_TOK
 %token CONTINUE_TOK
+%token ADD_ASSIGN_TOK
+%token SUB_ASSIGN_TOK
+%token MUL_ASSIGN_TOK
+%token DIV_ASSIGN_TOK
+%token MOD_ASSIGN_TOK
 
 %type <func> func
 %type <head> head
@@ -85,6 +90,7 @@
 %type <exp_list> exp_list
 
 %nonassoc '|'
+%right ADD_ASSIGN_TOK SUB_ASSIGN_TOK MUL_ASSIGN_TOK DIV_ASSIGN_TOK MOD_ASSIGN_TOK
 %left BOOL_AND_TOK
 %left BOOL_NOT_EQUAL_TOK BOOL_EQUAL_TOK
 %left BOOL_GREATER_EQ_TOK BOOL_LESS_EQ_TOK '<' '>'
@@ -98,7 +104,6 @@
 %start program
 
 %%
-
 program			: body { _main_ = $1; }
 				;
 
@@ -205,6 +210,16 @@ stm 			: RETURN_TOK exp ';' { $$ = make_STATEMENT_RETURN($2); }
 				| ALLOCATE_TOK var opt_length ';' 
 						{$$ = make_STATEMENT_ALLOCATE($2,$3);}
 				| var '=' exp ';' {$$ = make_STATEMENT_ASSIGN($1,$3);}
+				| var ADD_ASSIGN_TOK exp ';' 
+						{$$ = make_STATEMENT_ADDASSIGN($1,$3);}
+				| var SUB_ASSIGN_TOK exp ';'
+						{$$ = make_STATEMENT_SUBASSIGN($1,$3);}
+				| var MUL_ASSIGN_TOK exp ';'
+						{$$ = make_STATEMENT_MULASSIGN($1,$3);}
+				| var DIV_ASSIGN_TOK exp ';'
+						{$$ = make_STATEMENT_DIVASSIGN($1,$3);}
+				| var MOD_ASSIGN_TOK exp ';'
+						{$$ = make_STATEMENT_MODASSIGN($1,$3);}
 				| IF_TOK exp THEN_TOK stm opt_else 
 						{$$ = make_STATEMENT_IFBRANCH($2,$4,$5);}
 				| WHILE_TOK exp DO_TOK stm {$$ = make_STATEMENT_WHILE($2,$4);}
@@ -216,7 +231,6 @@ stm 			: RETURN_TOK exp ';' { $$ = make_STATEMENT_RETURN($2); }
 stm_list		: stm { $$ = make_STATEMENT_LIST_STATEMENT($1); }
 	   			| stm_list stm { $$ = make_STATEMENT_LIST_LIST($1,$2); }
 	   			;
-
 %%
 
 /*
