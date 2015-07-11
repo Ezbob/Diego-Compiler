@@ -607,22 +607,22 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 					definedScopeId = symbol->tableId;
 
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_address(8, ebp), eax));
+							make_argument_address(8, ebp), ecx));
 					callScopeId--;
 
 					while ( definedScopeId != callScopeId) {
 						// get previous base pointer by iteration
 						append_element(ir_lines, make_instruction_movl(
-								make_argument_address(8, eax), eax));
+								make_argument_address(8, ecx), ecx));
 						callScopeId--;
 					}
 
 					if ( symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
 						result = make_argument_address( -1 * offsetValue,
-						eax );
+						ecx );
 					} else {
 						offsetValue = offsetValue + (2 * WORD_SIZE);
-						result = make_argument_address( offsetValue, eax );
+						result = make_argument_address( offsetValue, ecx );
 						// beware of the return address on the stack
 					}
 
@@ -662,8 +662,6 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case VAR_RECORD:
 			base = IR_builder_variable(var->value.var_record.var);
 
-
-
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
 
@@ -673,7 +671,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				// member index in the record as argument
 				// member index is zero indiced
 			}
-			append_element(ir_lines, make_instruction_movl(base,esi));
+			append_element(ir_lines, make_instruction_movl(base, esi));
 			null_pointer_runtime_check(var->lineno, esi);
 
 			append_element(ir_lines, make_instruction_movl(offset, edi));
@@ -704,22 +702,22 @@ void IR_builder_expression ( EXPRES *exp ) {
 			IR_builder_expression(exp->value.sides.right);
 			append_element(ir_lines, popEbx);
 				// rhs
-			append_element(ir_lines, popEcx);
+			append_element(ir_lines, popEax);
 				// lhs
 			switch (exp->kind) {
 				case EXPRES_PLUS:
-					append_element(ir_lines, make_instruction_addl(ebx, ecx));
+					append_element(ir_lines, make_instruction_addl(ebx, eax));
 					break;
 				case EXPRES_MINUS:
-					append_element(ir_lines, make_instruction_subl(ebx, ecx));
+					append_element(ir_lines, make_instruction_subl(ebx, eax));
 					break;
 				case EXPRES_TIMES:
-					append_element(ir_lines, make_instruction_imul(ebx, ecx));
+					append_element(ir_lines, make_instruction_imul(ebx, eax));
 					break;
 				default:
 					break;
 			}
-			append_element(ir_lines, pushEcx);
+			append_element(ir_lines, pushEax);
 			break;
 
 		case EXPRES_DIVIDE:
@@ -762,10 +760,10 @@ void IR_builder_expression ( EXPRES *exp ) {
 
 			append_element(ir_lines, popEbx);
 				// rhs
-			append_element(ir_lines, popEcx);
+			append_element(ir_lines, popEax);
 				// lhs
 
-			append_element(ir_lines, make_instruction_cmp( ebx, ecx ));
+			append_element(ir_lines, make_instruction_cmp( ebx, eax ));
 				// compare both sides
 	
 			IR_INSTRUCTION *trueJump;
@@ -801,16 +799,17 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, trueJump);
 				// the jump to true instruction
 
-			append_element(ir_lines, make_instruction_pushl(zero));
+			append_element(ir_lines, make_instruction_movl(zero, ebx));
 				// the false case
 			append_element(ir_lines, make_instruction_jmp(endLabel));
 
 			append_element(ir_lines, make_instruction_label(trueLabel));
 
-			append_element(ir_lines, make_instruction_pushl(one));
+			append_element(ir_lines, make_instruction_movl(one, ebx));
 				// the true case
 
 			append_element(ir_lines, make_instruction_label(endLabel));
+			append_element(ir_lines, pushEbx);
 			break;
 
 		case EXPRES_AND:
@@ -836,15 +835,16 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, jumpToFalse);
 			// lhs
 
-			append_element(ir_lines,make_instruction_pushl(truth));
+			append_element(ir_lines,make_instruction_movl(truth, ebx));
 			append_element(ir_lines, make_instruction_jmp(endLabel));
 				// in case both arguments are true
 
 			append_element(ir_lines, make_instruction_label(falseLabel));
-			append_element(ir_lines, make_instruction_pushl(zero));
+			append_element(ir_lines, make_instruction_movl(zero, ebx));
 				// in case one of the arguments are false
 
 			append_element(ir_lines, make_instruction_label(endLabel));
+			append_element(ir_lines, pushEbx);
 			break;
 		case EXPRES_OR:
 			labelIdCounter = GET_NEXT_LABEL_ID;
@@ -869,15 +869,16 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, jumpToTrue);
 			// RHS
 
-			append_element(ir_lines, make_instruction_pushl(zero));
+			append_element(ir_lines, make_instruction_movl(zero, ebx));
 				// false case
 			append_element(ir_lines, make_instruction_jmp(endLabel));
 
 			append_element(ir_lines, make_instruction_label(trueLabel));
-			append_element(ir_lines, make_instruction_pushl(truth));
+			append_element(ir_lines, make_instruction_movl(truth, ebx));
 				// true case
 
 			append_element(ir_lines, make_instruction_label(endLabel));
+			append_element(ir_lines, pushEbx);
 			break;
 	}
 
@@ -940,13 +941,13 @@ void IR_builder_term ( TERM *term ) {
 				// we have to to fetch the right base pointer e.g.: the base
 				// pointer of the scope where the function is defined
 				append_element(ir_lines, make_instruction_movl(
-						make_argument_address(8, ebp), eax));
+						make_argument_address(8, ebp), ecx));
 				callScopeId--;
 
 				while ( definedScopeId != callScopeId) {
 					// get previous base pointer by iteration
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_address(8,eax), eax));
+							make_argument_address(8, ecx), ecx));
 					callScopeId--;
 				}
 
