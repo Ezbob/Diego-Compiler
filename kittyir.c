@@ -642,11 +642,10 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 
 		case VAR_ARRAY:
 			base = IR_builder_variable(var->value.var_array.var);
-			IR_builder_expression(var->value.var_array.exp);
-
 			append_element(ir_lines, make_instruction_movl(base, esi));
 			null_pointer_runtime_check(var->lineno, esi);
 
+			IR_builder_expression(var->value.var_array.exp);
 			append_element(ir_lines, popEdi);
 				// exp
 			out_of_bounds_runtime_check(var->lineno, esi, edi);
