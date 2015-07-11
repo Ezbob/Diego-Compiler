@@ -646,12 +646,11 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 			base = IR_builder_variable(var->value.var_array.var);
 			IR_builder_expression(var->value.var_array.exp);
 
-			null_pointer_runtime_check(var->lineno, base);
-
 			append_element(ir_lines, make_instruction_movl(base, esi));
-				// exp
+			null_pointer_runtime_check(var->lineno, esi);
+
 			append_element(ir_lines, popEdi);
-				// var
+				// exp
 			out_of_bounds_runtime_check(var->lineno, esi, edi);
 
 			append_element(ir_lines, make_instruction_incl(edi));
@@ -663,7 +662,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case VAR_RECORD:
 			base = IR_builder_variable(var->value.var_record.var);
 
-			null_pointer_runtime_check(var->lineno, base);
+
 
 			childTable = var->value.var_record.var->symboltype->child;
 				// This must be the child table
@@ -675,6 +674,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				// member index is zero indiced
 			}
 			append_element(ir_lines, make_instruction_movl(base,esi));
+			null_pointer_runtime_check(var->lineno, esi);
 
 			append_element(ir_lines, make_instruction_movl(offset, edi));
 
@@ -1144,9 +1144,7 @@ void null_pointer_runtime_check( int lineno, ARGUMENT *variable ) {
 	char *notNullLabel;
     GET_FLOW_CONTROL_LABEL(notNullLabel, "notNull", GET_NEXT_LABEL_ID);
 
-	append_element(ir_lines, make_instruction_movl(variable, eax));
-
-	append_element(ir_lines, make_instruction_cmp(zero, eax));
+	append_element(ir_lines, make_instruction_cmp(zero, variable));
 	append_element(ir_lines, make_instruction_jne(notNullLabel));
 
 	halt_for_error("$error.NULL", RUNTIME_ERROR_NULL, lineno);
