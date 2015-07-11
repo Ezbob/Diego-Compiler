@@ -245,7 +245,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_WRITE:
             has_prints = 1;
-			caller_save();
 			IR_builder_expression(st->value.exp);
 			append_element(ir_lines, popEax);
 				// result from expression
@@ -320,7 +319,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( ir_lines, make_instruction_call(printfLabel));
 
 			add_to_stack_pointer(2); // clean up
-			caller_restore();
 			break;
 
         case STATEMENT_ADDASSIGN:
@@ -941,13 +939,13 @@ void IR_builder_term ( TERM *term ) {
 				// we have to to fetch the right base pointer e.g.: the base
 				// pointer of the scope where the function is defined
 				append_element(ir_lines, make_instruction_movl(
-						make_argument_address(8, ebp), ecx));
+						make_argument_address(8, ebp), eax));
 				callScopeId--;
 
 				while ( definedScopeId != callScopeId) {
 					// get previous base pointer by iteration
 					append_element(ir_lines, make_instruction_movl(
-							make_argument_address(8, ecx), ecx));
+							make_argument_address(8, eax), eax));
 					callScopeId--;
 				}
 
