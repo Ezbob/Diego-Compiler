@@ -282,8 +282,8 @@ void check_statement ( STATEMENT *statement){
 										   "boolean value",
 								   statement->lineno);
 			}
-			check_statement(statement->value.statement_for.left);
-			check_statement(statement->value.statement_for.right);
+			check_statement(statement->value.statement_for.assignment);
+			check_statement(statement->value.statement_for.update);
 			check_statement(statement->value.statement_for.statement);
 			break;
 	}

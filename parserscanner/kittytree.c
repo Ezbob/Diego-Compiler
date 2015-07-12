@@ -691,16 +691,16 @@ STATEMENT *make_STATEMENT_WHILE(EXPRES *expres, STATEMENT *stmt){
 
 }
 
-STATEMENT *make_STATEMENT_FOR(STATEMENT *left, EXPRES *condition,
-							  STATEMENT *right, STATEMENT *statement) {
+STATEMENT *make_STATEMENT_FOR(STATEMENT *assignment, EXPRES *condition,
+							  STATEMENT *update, STATEMENT *statement) {
 
 	STATEMENT *new_statement = NEW(STATEMENT);
 	new_statement->lineno = lineno;
 	new_statement->kind = STATEMENT_FOR;
 	new_statement->currentLoop = NULL;
-	new_statement->value.statement_for.left = left;
+	new_statement->value.statement_for.assignment = assignment;
 	new_statement->value.statement_for.condition = condition;
-	new_statement->value.statement_for.right = right;
+	new_statement->value.statement_for.update = update;
 	new_statement->value.statement_for.statement = statement;
 	new_statement->start_label = NULL;
 	new_statement->end_label = NULL;

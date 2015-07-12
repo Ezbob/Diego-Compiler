@@ -284,9 +284,9 @@ void collect_statement ( STATEMENT *stm, SYMBOL_TABLE *st ) {
 		case STATEMENT_CONTINUE:
 			break;
 		case STATEMENT_FOR:
-			collect_statement(stm->value.statement_for.left, st);
+			collect_statement(stm->value.statement_for.assignment, st);
 			collect_expression(stm->value.statement_for.condition, st);
-			collect_statement(stm->value.statement_for.right, st);
+			collect_statement(stm->value.statement_for.update, st);
 			collect_statement(stm->value.statement_for.statement, st);
 			break;
 	}

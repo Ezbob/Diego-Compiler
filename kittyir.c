@@ -551,7 +551,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 								   labelIdCounter);
 			GET_FLOW_CONTROL_LABEL(st->end_label, "forEnd", labelIdCounter);
 
-			IR_builder_statement(st->value.statement_for.left);
+			IR_builder_statement(st->value.statement_for.assignment);
 
 			append_element(ir_lines, make_instruction_label(st->start_label));
 
@@ -567,8 +567,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// build statements
 			IR_builder_statement(st->value.statement_for.statement);
 
-			// the increment statement
-			IR_builder_statement(st->value.statement_for.right);
+			// the update statement
+			IR_builder_statement(st->value.statement_for.update);
 
 			// go back to start
 			append_element(ir_lines, make_instruction_jmp(st->start_label));

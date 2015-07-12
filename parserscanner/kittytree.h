@@ -271,9 +271,9 @@ typedef struct STATEMENT {
 		} statement_while;
 
 		struct {
-			struct STATEMENT *left;
+			struct STATEMENT *assignment;
 			struct EXPRES *condition;
-			struct STATEMENT *right;
+			struct STATEMENT *update;
 			struct STATEMENT *statement;
 		} statement_for;
 	} value;

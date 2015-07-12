@@ -232,11 +232,11 @@ void printer_statement ( STATEMENT *st){
 			break;
 		case STATEMENT_FOR:
 			printf("for ");
-			printer_statement(st->value.statement_for.left);
+			printer_statement(st->value.statement_for.assignment);
 			printf(" ");
 			printer_expression(st->value.statement_for.condition);
 			printf(" ");
-			printer_statement(st->value.statement_for.right);
+			printer_statement(st->value.statement_for.update);
 			printf(" do \n");
 			indentation++;
 			printer_statement(st->value.statement_if_branch.statement);

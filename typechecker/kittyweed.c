@@ -426,26 +426,27 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 		case STATEMENT_FOR:
 			loopStackPush(loopStack, st);
-			assignment = weed_statement(st->value.statement_for.left);
-			increment = weed_statement(st->value.statement_for.right);
+			assignment = weed_statement(st->value.statement_for.assignment);
+			increment = weed_statement(st->value.statement_for.update);
 			st->value.statement_for.condition = weed_expression(st->value.
 					statement_for.condition);
 			st->value.statement_for.statement = weed_statement(st->value.
 					statement_for.statement);
 
-			if (assignment->kind != STATEMENT_ASSIGN) {
-				weed_error_report("Expected first statement to be a "
-										   "assignment", st->value.
-						statement_for.left->lineno);
-			}
 			if (!(increment->kind == STATEMENT_ADDASSIGN || increment->kind ==
 				STATEMENT_MULASSIGN || increment->kind == STATEMENT_SUBASSIGN
 				|| increment->kind == STATEMENT_MULASSIGN || increment->kind
 				== STATEMENT_MODASSIGN || increment->kind == STATEMENT_ASSIGN)
-					) {
-				weed_error_report("Expected second statement to be a "
-				"variable updating statement", st->value.statement_for.
-										   left->lineno);
+				|| !(assignment->kind == STATEMENT_ADDASSIGN ||
+                    assignment->kind == STATEMENT_MULASSIGN ||
+                    assignment->kind == STATEMENT_SUBASSIGN ||
+                    assignment->kind == STATEMENT_MULASSIGN ||
+                    assignment->kind == STATEMENT_MODASSIGN ||
+                    assignment->kind == STATEMENT_ASSIGN)) {
+				weed_error_report("Expected assignment and"
+                                          " updating statements to update"
+                                          " variable values",
+                                  st->lineno);
 			}
 			loopStackPop(loopStack);
 			break;
