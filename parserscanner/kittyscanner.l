@@ -58,6 +58,7 @@ WHITESPACE [\ \t]*
 "of length" { return OF_LENGTH_TOK; }
 "array of"	{ return ARRAY_OF_TOK; }
 "record of"	{ return RECORD_OF_TOK; }
+"for" { return FOR_TOK; }
 
 ";"	{ return ';'; }
 ":"	{ return ':'; }

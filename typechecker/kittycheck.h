@@ -4,6 +4,7 @@
 #include "../symbol/symbol.h"
 
 #define NUMBER_OF_TYPES_SUPPORTED 8
+#define CHECK_ERROR_SIGNAL 1
 
 void begin_check(BODY *main);
 

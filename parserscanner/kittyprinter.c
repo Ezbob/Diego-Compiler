@@ -6,10 +6,6 @@
 static int indentation = -1;
 static int tabSize = 4;
 
-#define NEXT_INDENT_LEVEL (tab_indentation++)
-#define PREV_INDENT_LEVEL (tab_indentation--)
-
-
 /*Line shift with the current indentations level */
 void lineShift(){
 
@@ -93,7 +89,6 @@ void printer_par_decl_list ( PAR_DECL_LIST *pdecl){
 void printer_var_decl_list ( VAR_DECL_LIST *vdecl){
 	switch(vdecl->kind){
 		case VAR_DECL_LIST_LIST:
-			//lineShift();
 			printer_var_decl_list(vdecl->var_decl_list);
 			printf(", ");
 			lineShift();
@@ -220,19 +215,32 @@ void printer_statement ( STATEMENT *st){
 			break;
 		case STATEMENT_IFBRANCH:
 			printf("If ");
-			printer_expression(st->value.statement_ifbranch.exp);
+			printer_expression(st->value.statement_if_branch.condition);
 			printf(" then");
 			indentation++;
-			printer_statement(st->value.statement_ifbranch.statement);
+			printer_statement(st->value.statement_if_branch.statement);
 			indentation--;
 			lineShift();
-			printer_opt_else(st->value.statement_ifbranch.opt_else);
+			printer_opt_else(st->value.statement_if_branch.opt_else);
 			printf("\n");
 			break;
 		case STATEMENT_WHILE:
-			printf("While ");
-			printer_expression(st->value.statement_while.exp);
+			printf("while ");
+			printer_expression(st->value.statement_while.condition);
 			printer_statement(st->value.statement_while.statement);
+			printf("\n");
+			break;
+		case STATEMENT_FOR:
+			printf("for ");
+			printer_statement(st->value.statement_for.left);
+			printf(" ");
+			printer_expression(st->value.statement_for.condition);
+			printf(" ");
+			printer_statement(st->value.statement_for.right);
+			printf(" do \n");
+			indentation++;
+			printer_statement(st->value.statement_if_branch.statement);
+			indentation--;
 			printf("\n");
 			break;
 		case STATEMENT_LISTS:
@@ -240,15 +248,13 @@ void printer_statement ( STATEMENT *st){
 			printer_statement_list(st->value.statement_list);
 			printf("}");
 			break;
-
 		case STATEMENT_BREAK:
-			printf("%s\n", "break;");
+			printf("break;\n");
 			break;
-
 		case STATEMENT_CONTINUE:
-			printf("%s\n", "continue;"); 
+			printf("continue;\n");
 	}
-} 
+}
 
 void printer_opt_length ( OPT_LENGTH *oplen){
 	switch(oplen->kind){

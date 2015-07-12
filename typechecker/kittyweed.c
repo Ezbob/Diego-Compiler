@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "kittyweed.h"
+#include "../parserscanner/kittytree.h"
 
 stackT *functionStack; //Stack for functions
 stackT *loopStack; //Stack for keeping track of loops
@@ -293,7 +294,9 @@ STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
 STATEMENT *weed_statement ( STATEMENT *st ){
 
 	st->foundReturn = 0;
-	TERM *ifTerm = NEW(TERM);
+	TERM *ifTerm;
+	STATEMENT *assignment;
+	STATEMENT *increment;
 
 	switch(st->kind){
 		case STATEMENT_RETURN:
@@ -313,37 +316,37 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 
 		case STATEMENT_IFBRANCH:
-			st->value.statement_ifbranch.exp = weed_expression(st->
-									value.statement_ifbranch.exp);
+			st->value.statement_if_branch.condition = weed_expression(st->
+									value.statement_if_branch.condition);
 
-			st->value.statement_ifbranch.statement = weed_statement(st->value.
-							statement_ifbranch.statement);
+			st->value.statement_if_branch.statement = weed_statement(st->value.
+					statement_if_branch.statement);
 			
-			st->value.statement_ifbranch.opt_else = weed_opt_else(st->value.
-							statement_ifbranch.opt_else);
+			st->value.statement_if_branch.opt_else = weed_opt_else(st->value.
+					statement_if_branch.opt_else);
 			
 
-			if(st->value.statement_ifbranch.opt_else->kind ==
-			   		OPT_ELSE_EMPTY && st->value.statement_ifbranch.statement
+			if(st->value.statement_if_branch.opt_else->kind ==
+			   		OPT_ELSE_EMPTY && st->value.statement_if_branch.statement
 										 == NULL){
 					break;
 			}
 
 			// Case where there exists a return in both if and else, 
 			// can ignore everything after the if/else
-			if(st->value.statement_ifbranch.statement->foundReturn == 1 
-			   && st->value.statement_ifbranch.opt_else->kind !=
+			if(st->value.statement_if_branch.statement->foundReturn == 1
+			   && st->value.statement_if_branch.opt_else->kind !=
 										 OPT_ELSE_EMPTY
-			   && st->value.statement_ifbranch.opt_else->statement->
-			   	foundReturn == 1 && st->value.statement_ifbranch.
+			   && st->value.statement_if_branch.opt_else->statement->
+			   	foundReturn == 1 && st->value.statement_if_branch.
 					statement != NULL) {
 			  
 			   st->foundReturn = 1;
 
 			}
-			if (st->value.statement_ifbranch.exp->kind == EXPRES_TERM){
+			if (st->value.statement_if_branch.condition->kind == EXPRES_TERM){
 				// a term
-				ifTerm = weed_term(st->value.statement_ifbranch.exp->
+				ifTerm = weed_term(st->value.statement_if_branch.condition->
 						value.term);
 				if(ifTerm->kind == TERM_NUM){
 					weed_error_report("Invalid expression", st->lineno - 1);
@@ -351,12 +354,12 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 				}
 
 				if (ifTerm->kind == TERM_FALSE && (st->value.
-					statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY)){
+						statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY)){
 					// if FALSE then we should only look at else
-					return st->value.statement_ifbranch.opt_else->statement;
+					return st->value.statement_if_branch.opt_else->statement;
 				}else if (ifTerm->kind == TERM_TRUE){
 					// if TRUE then we should only look at if
-					return st->value.statement_ifbranch.statement;
+					return st->value.statement_if_branch.statement;
 				}
 			}
 			break;
@@ -398,8 +401,8 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 		case STATEMENT_WHILE:
 			loopStackPush(loopStack, st);
-			st->value.statement_while.exp = 
-				weed_expression(st->value.statement_while.exp);
+			st->value.statement_while.condition =
+				weed_expression(st->value.statement_while.condition);
 			st->value.statement_while.statement = 
 				weed_statement(st->value.statement_while.statement);
 			loopStackPop(loopStack);
@@ -420,10 +423,31 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 				st->currentLoop = loopStackPeek(loopStack);
 			}
 			break;
-			
-		default:
-			break;
 
+		case STATEMENT_FOR:
+			loopStackPush(loopStack, st);
+			assignment = weed_statement(st->value.statement_for.left);
+			increment = weed_statement(st->value.statement_for.right);
+			st->value.statement_for.condition = weed_expression(st->value.
+					statement_for.condition);
+			st->value.statement_for.statement = weed_statement(st->value.
+					statement_for.statement);
+
+			if (assignment->kind != STATEMENT_ASSIGN) {
+				weed_error_report("Expected first statement to be a "
+										   "assignment", st->value.
+						statement_for.left->lineno);
+			}
+			if (!(increment->kind == STATEMENT_ADDASSIGN || increment->kind ==
+				STATEMENT_MULASSIGN || increment->kind == STATEMENT_SUBASSIGN
+				|| increment->kind == STATEMENT_MULASSIGN || increment->kind
+				== STATEMENT_MODASSIGN)) {
+				weed_error_report("Expected secound statement to be a "
+				"incrementation or decrementation", st->value.statement_for.
+										   left->lineno);
+			}
+			loopStackPop(loopStack);
+			break;
 	}
 	return st;
 

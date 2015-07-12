@@ -5,8 +5,8 @@
 
 typedef struct EXPRES {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
-	SYMBOL_TYPE *symboltype;
+	SYMBOL_TABLE *symbolTable;
+	SYMBOL_TYPE *symbolType;
 	enum {
 		EXPRES_TERM, 
 		EXPRES_PLUS, 
@@ -32,10 +32,21 @@ typedef struct EXPRES {
 	} value;
 } EXPRES;
 
+typedef struct OPT_EXPRES {
+	int lineno;
+	SYMBOL_TABLE *symbolTable;
+	SYMBOL_TYPE *symbolType;
+	enum {
+		OPT_EXPRES_EXPRES,
+		OPT_EXPRES_EMPTY
+	} kind;
+	struct EXPRES *exp;
+} OPT_EXPRES;
+
 typedef struct TERM {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
-	SYMBOL_TYPE *symboltype;
+	SYMBOL_TABLE *symbolTable;
+	SYMBOL_TYPE *symbolType;
 	enum {
 		TERM_VAR,
 		TERM_ACT_LIST,
@@ -62,7 +73,7 @@ typedef struct TERM {
 
 typedef struct ACT_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		ACT_LIST_EXPLIST, 
 		ACT_LIST_EMPTY 
@@ -72,7 +83,7 @@ typedef struct ACT_LIST {
 
 typedef struct EXP_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum {
 		EXP_LIST_EXP,
 		EXP_LIST_LIST
@@ -83,8 +94,8 @@ typedef struct EXP_LIST {
 
 typedef struct FUNC {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
-	SYMBOL_TYPE *symboltype;
+	SYMBOL_TABLE *symbolTable;
+	SYMBOL_TYPE *symbolType;
 	struct HEAD *head; 
 	struct BODY *body; 
 	struct TAIL *tail;
@@ -93,8 +104,8 @@ typedef struct FUNC {
 typedef struct HEAD {
 	int lineno;
 	int arguments;
-	SYMBOL_TABLE *symboltable;
-	SYMBOL_TYPE *symboltype;
+	SYMBOL_TABLE *symbolTable;
+	SYMBOL_TYPE *symbolType;
 	char *id; 
 	struct PAR_DECL_LIST *pdlist;
 	struct TYPE *returntype; 
@@ -102,14 +113,14 @@ typedef struct HEAD {
 
 typedef struct TAIL {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	char *id;
 } TAIL;
 
 typedef struct TYPE {
 	int lineno;
-	SYMBOL_TYPE *symboltype;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TYPE *symbolType;
+	SYMBOL_TABLE *symbolTable;
 	enum {
 		TYPE_ID,
 		TYPE_INT,
@@ -126,7 +137,7 @@ typedef struct TYPE {
 
 typedef struct PAR_DECL_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		PAR_DECL_LIST_EMPTY,
 		PAR_DECL_LIST_LIST
@@ -138,7 +149,7 @@ typedef struct PAR_DECL_LIST {
 
 typedef struct VAR_DECL_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		VAR_DECL_LIST_LIST,
 		VAR_DECL_LIST_TYPE
@@ -150,7 +161,7 @@ typedef struct VAR_DECL_LIST {
 
 typedef struct VAR_TYPE {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	SYMBOL *symbol;
 	char *id;
 	struct TYPE *type;
@@ -158,14 +169,14 @@ typedef struct VAR_TYPE {
 
 typedef struct BODY {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	struct DECL_LIST *decl_list;
 	struct STATEMENT_LIST *statement_list;
 } BODY;
 
 typedef struct DECL_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		DECL_LIST_LIST,
 		DECL_LIST_EMPTY
@@ -176,7 +187,7 @@ typedef struct DECL_LIST {
 
 typedef struct DECLARATION {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		DECLARATION_ID,
 		DECLARATION_FUNC,
@@ -195,7 +206,7 @@ typedef struct DECLARATION {
 
 typedef struct STATEMENT_LIST {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	enum { 
 		STATEMENT_LIST_LIST,
 		STATEMENT_LIST_STATEMENT
@@ -208,12 +219,13 @@ typedef struct STATEMENT_LIST {
 
 typedef struct STATEMENT {
 	int lineno;
-	SYMBOL_TABLE *symboltable;
+	SYMBOL_TABLE *symbolTable;
 	int foundReturn;
 	struct STATEMENT *currentLoop;
 	enum { 
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,
+		STATEMENT_FOR,
 		STATEMENT_ALLOCATE,
 		STATEMENT_ASSIGN,
 		STATEMENT_IFBRANCH,
@@ -246,20 +258,39 @@ typedef struct STATEMENT {
 		} statement_allocate;
 
 		struct {
-			struct EXPRES *exp; 
+			struct EXPRES *condition;
 			struct STATEMENT *statement;
 			struct OPT_ELSE *opt_else; 
-		} statement_ifbranch;
+		} statement_if_branch;
 
 		struct {
-			struct EXPRES *exp;
+			struct EXPRES *condition;
 			struct STATEMENT *statement;
 			char *start_label;
 			char *end_label; 
 		} statement_while;
 
+		struct {
+			struct STATEMENT *left;
+			struct EXPRES *condition;
+			struct STATEMENT *right;
+			struct STATEMENT *statement;
+			char *start_label;
+			char *end_label;
+		} statement_for;
+
 	} value;
 } STATEMENT;
+
+typedef struct OPT_STATEMENT {
+	int lineno;
+	SYMBOL_TABLE *symbolTable;
+	enum {
+		OPT_STATEMENT_STATEMENT,
+		OPT_STATEMENT_EMPTY
+	} kind;
+	struct STATEMENT *statement;
+} OPT_STATEMENT;
 
 typedef struct OPT_LENGTH {
 	int lineno;
@@ -352,6 +383,8 @@ STATEMENT *make_STATEMENT_ALLOCATE(VAR *, OPT_LENGTH *);
 STATEMENT *make_STATEMENT_ASSIGN(VAR *,EXPRES *);
 STATEMENT *make_STATEMENT_IFBRANCH(EXPRES *, STATEMENT *,OPT_ELSE *);
 STATEMENT *make_STATEMENT_WHILE(EXPRES *, STATEMENT *);
+STATEMENT *make_STATEMENT_FOR(STATEMENT *, EXPRES *, STATEMENT *,
+							  STATEMENT *);
 STATEMENT *make_STATEMENT_LIST(STATEMENT_LIST *);
 STATEMENT *make_STATEMENT_BREAK();
 STATEMENT *make_STATEMENT_CONTINUE();
@@ -360,6 +393,10 @@ STATEMENT *make_STATEMENT_SUBASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_MULASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_DIVASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_MODASSIGN(VAR *, EXPRES *);
+
+/* Optional statement constructors */
+OPT_STATEMENT *make_OPT_STATEMENT_STATEMENT(STATEMENT *);
+OPT_STATEMENT *make_OPT_STATEMENT_EMPTY();
 
 /* Optional length allocation constructors */
 OPT_LENGTH *make_OPT_LENGTH_EXPRES(EXPRES *);

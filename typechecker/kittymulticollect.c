@@ -37,10 +37,10 @@ void multi_collect_type ( TYPE *type ) {
 
 	switch(type->kind) {
 		case TYPE_ID:
-			if ( type->symboltype->type == SYMBOL_UNKNOWN 
-				&& (symbol = getSymbol(type->symboltable,type->value.id))
+			if ( type->symbolType->type == SYMBOL_UNKNOWN
+				&& (symbol = getSymbol(type->symbolTable,type->value.id))
 				!= NULL && symbol->symbolType->type != SYMBOL_UNKNOWN ) {
-				type->symboltype = symbol->symbolType;
+				type->symbolType = symbol->symbolType;
 			}
 			break;
 		case TYPE_RECORD:
@@ -80,10 +80,10 @@ void multi_collect_var_decl_list ( VAR_DECL_LIST *var_decl_list ) {
 
 void multi_collect_var_type ( VAR_TYPE *var_type ) {
 	multi_collect_type(var_type->type);
-	SYMBOL_TYPE *symboltype = var_type->type->symboltype;
+	SYMBOL_TYPE *symboltype = var_type->type->symbolType;
 	SYMBOL *symbol;
 
-	if ( ( symbol = getSymbol(var_type->symboltable, var_type->id) )
+	if ( ( symbol = getSymbol(var_type->symbolTable, var_type->id) )
 		!= NULL && symbol->symbolType->type == SYMBOL_UNKNOWN
 		&& symboltype->type != SYMBOL_UNKNOWN ) {
 		symbol->symbolType = symboltype;
@@ -110,9 +110,9 @@ void multi_collect_declaration ( DECLARATION *declaration ) {
 	switch(declaration->kind) {
 		case DECLARATION_ID:
 			multi_collect_type(declaration->value.declaration_id.type);
-			symboltype = declaration->value.declaration_id.type->symboltype;
+			symboltype = declaration->value.declaration_id.type->symbolType;
 
-			if( ( symbol = getSymbol(declaration->symboltable,
+			if( ( symbol = getSymbol(declaration->symbolTable,
 									declaration->value.declaration_id.id) )
 				!= NULL && symbol->symbolType->type == SYMBOL_UNKNOWN
 				&& symboltype->type != SYMBOL_UNKNOWN) {

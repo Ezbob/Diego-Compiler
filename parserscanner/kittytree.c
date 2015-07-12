@@ -222,7 +222,6 @@ EXPRES *make_EXPRES_OR(EXPRES *left ,EXPRES *right){
 
 }
 
-
 /*TERM constructor */
 
 TERM *make_TERM_VAR(VAR *var){
@@ -669,9 +668,9 @@ STATEMENT *make_STATEMENT_IFBRANCH(EXPRES *expres, STATEMENT *stmt ,
 	STATEMENT *ifbranch = NEW(STATEMENT);
 	ifbranch->lineno = lineno;
 	ifbranch->kind = STATEMENT_IFBRANCH;
-	ifbranch->value.statement_ifbranch.exp = expres;
-	ifbranch->value.statement_ifbranch.statement = stmt;
-	ifbranch->value.statement_ifbranch.opt_else = opel;
+	ifbranch->value.statement_if_branch.condition = expres;
+	ifbranch->value.statement_if_branch.statement = stmt;
+	ifbranch->value.statement_if_branch.opt_else = opel;
 
 	return ifbranch;
 
@@ -682,15 +681,31 @@ STATEMENT *make_STATEMENT_WHILE(EXPRES *expres, STATEMENT *stmt){
 	STATEMENT *stwhile = NEW(STATEMENT);
 	stwhile->lineno = lineno;
 	stwhile->kind = STATEMENT_WHILE;
-	stwhile->value.statement_while.exp = expres;
+	stwhile->currentLoop = NULL;
+	stwhile->value.statement_while.condition = expres;
 	stwhile->value.statement_while.statement = stmt;
-	stwhile->value.statement_while.start_label =
-		calloc(50+1,sizeof(char));
-	stwhile->value.statement_while.end_label =
-		calloc(50+1,sizeof(char));
+	stwhile->value.statement_while.start_label = NULL;
+	stwhile->value.statement_while.end_label = NULL;
 
 	return stwhile;
 
+}
+
+STATEMENT *make_STATEMENT_FOR(STATEMENT *left, EXPRES *condition,
+							  STATEMENT *right, STATEMENT *statement) {
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_FOR;
+	new_statement->currentLoop = NULL;
+	new_statement->value.statement_for.left = left;
+	new_statement->value.statement_for.condition = condition;
+	new_statement->value.statement_for.right = right;
+	new_statement->value.statement_for.statement = statement;
+	new_statement->value.statement_for.start_label = NULL;
+	new_statement->value.statement_for.end_label = NULL;
+
+	return  new_statement;
 }
 
 STATEMENT *make_STATEMENT_BREAK(){

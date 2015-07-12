@@ -68,6 +68,7 @@
 %token MUL_ASSIGN_TOK
 %token DIV_ASSIGN_TOK
 %token MOD_ASSIGN_TOK
+%token FOR_TOK
 
 %type <func> func
 %type <head> head
@@ -149,9 +150,7 @@ decl_list 		: decl_list decl { $$ = make_DECL_LIST_LIST($1,$2);}
 				| /* empty */ { $$ = make_DECL_LIST_EMPTY();}
 				;
 
-decl 			: TYPE_TOK ID '=' type ';' 
-
-					{ $$ = make_DECLARATION_ID($2,$4);}
+decl 			: TYPE_TOK ID '=' type ';' { $$ = make_DECLARATION_ID($2,$4);}
 				| func {$$ = make_DECLARATION_FUNC($1);}
 				| VAR_TOK var_decl_list ';' {$$ = make_DECLARATION_VAR($2);}
 				;
@@ -186,7 +185,7 @@ exp				: exp '+' exp {$$ = make_EXPRES_PLUS($1,$3);}
 				| exp '*' exp {$$ = make_EXPRES_TIMES($1,$3);}
 				| exp '/' exp {$$ = make_EXPRES_DIVIDE($1,$3);}
 				| exp '%' exp {$$ = make_EXPRES_MODULO($1,$3);}
-				| exp '<' exp {$$ = make_EXPRES_LESS($1,$3); }
+				| exp '<' exp {$$ = make_EXPRES_LESS($1,$3);}
 				| exp '>' exp {$$ = make_EXPRES_GREATER($1,$3);}
 				| exp BOOL_AND_TOK exp {$$ = make_EXPRES_AND($1,$3);}
 				| exp '|''|' exp {$$ = make_EXPRES_OR($1,$4);}
@@ -226,6 +225,8 @@ stm 			: RETURN_TOK exp ';' { $$ = make_STATEMENT_RETURN($2); }
 				| BREAK_TOK ';' {$$ = make_STATEMENT_BREAK();}
 				| CONTINUE_TOK ';' {$$ = make_STATEMENT_CONTINUE();}
 				| '{' stm_list '}' {$$ = make_STATEMENT_LIST($2);}
+				| FOR_TOK stm exp ';' stm DO_TOK stm {$$ =
+                					make_STATEMENT_FOR($2,$3,$5,$7);}
 				;
 
 stm_list		: stm { $$ = make_STATEMENT_LIST_STATEMENT($1); }

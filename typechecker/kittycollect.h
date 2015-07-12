@@ -6,6 +6,8 @@
 #include "../symbol/symbol.h"
 #include "../parserscanner/kittytree.h"
 
+#define COLLECT_ERROR_SIGNAL 1
+
 #define DEBUG_TYPE(symboltype) printf("BOOL>>> %i\n",symboltype->type \
 			 == SYMBOL_BOOL); printf("INT>>> %i\n",symboltype->type \
 				== SYMBOL_INT); \

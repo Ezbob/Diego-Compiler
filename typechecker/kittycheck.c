@@ -6,10 +6,10 @@
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
 		fprintf(stderr, "Error: %s \n",errorMsg);
-		exit(1);
+		exit(CHECK_ERROR_SIGNAL);
 	}
 	fprintf(stderr, "Error at line %i: %s \n",lineno,errorMsg);
-	exit(1);
+	exit(CHECK_ERROR_SIGNAL);
 }
 
 void begin_check ( BODY *main ) {
@@ -85,7 +85,6 @@ void check_decl_list ( DECL_LIST *decl_list){
 	}
 }
 
-
 void check_declaration ( DECLARATION *declaration ) {
 	switch(declaration->kind){
 		case DECLARATION_ID:
@@ -122,12 +121,10 @@ void check_statement ( STATEMENT *statement){
 	switch(statement->kind) {
 		case STATEMENT_RETURN:
 			check_expression(statement->value.statement_return.exp);
-
 			// Note: return type set in weeder
-			leftHand = statement->value.statement_return.exp->symboltype;
-			returnType = statement->value.statement_return.
-							function->symboltype->return_type;
-
+			leftHand = statement->value.statement_return.exp->symbolType;
+			returnType = statement->value.statement_return.function->
+					symbolType->return_type;
 			if (leftHand->type != returnType->type
 				&& ((returnType->type == SYMBOL_RECORD || returnType->type ==
 														  SYMBOL_ARRAY) &&
@@ -137,17 +134,14 @@ void check_statement ( STATEMENT *statement){
 						statement->lineno);
 			}
 			break;
-
 		case STATEMENT_WRITE:
 			check_expression(statement->value.exp);
-
-			if (statement->value.exp->symboltype->type == SYMBOL_ARRAY &&
+			if (statement->value.exp->symbolType->type == SYMBOL_ARRAY &&
 				statement->value.exp->value.term->kind != TERM_ABS) {
 				check_error_report("Only length of arrays can be written",
 								   statement->lineno);
 			}
 			break;
-
 		case STATEMENT_ALLOCATE:
 			check_variable(statement->value.statement_allocate.var);
 			check_opt_length(statement->value.statement_allocate.opt_length);
@@ -168,7 +162,6 @@ void check_statement ( STATEMENT *statement){
 						statement->lineno);
 			}
 			break;
-
 		case STATEMENT_ADDASSIGN:
 		case STATEMENT_SUBASSIGN:
 		case STATEMENT_MULASSIGN:
@@ -178,7 +171,7 @@ void check_statement ( STATEMENT *statement){
 			check_expression(statement->value.statement_assign.exp);
 
 			leftHand = statement->value.statement_assign.var->symboltype;
-			rightHand = statement->value.statement_assign.exp->symboltype;
+			rightHand = statement->value.statement_assign.exp->symbolType;
 
 			if ( !(leftHand->type == SYMBOL_INT &&
 					rightHand->type == SYMBOL_INT) ) {
@@ -186,13 +179,12 @@ void check_statement ( STATEMENT *statement){
 								   statement->lineno);
 			}
 			break;
-
 		case STATEMENT_ASSIGN:
 			check_variable(statement->value.statement_assign.var);
 			check_expression(statement->value.statement_assign.exp);
 
 			leftHand = statement->value.statement_assign.var->symboltype;
-			rightHand = statement->value.statement_assign.exp->symboltype;
+			rightHand = statement->value.statement_assign.exp->symbolType;
 
 			if (leftHand->type == SYMBOL_RECORD && rightHand->type ==
 												   SYMBOL_RECORD) {
@@ -252,39 +244,47 @@ void check_statement ( STATEMENT *statement){
 				} 
 			}
 			break;
-
 		case STATEMENT_IFBRANCH:
-			check_expression(statement->value.statement_ifbranch.exp);
-			check_statement(statement->value.statement_ifbranch.statement);
-			check_opt_else(statement->value.statement_ifbranch.opt_else);
+			check_expression(statement->value.statement_if_branch.condition);
+			check_statement(statement->value.statement_if_branch.statement);
+			check_opt_else(statement->value.statement_if_branch.opt_else);
 
-			if(statement->value.statement_ifbranch.exp->
-			   symboltype->type != SYMBOL_BOOL) {
+			if(statement->value.statement_if_branch.condition->
+					symbolType->type != SYMBOL_BOOL) {
 				check_error_report("Expected condition to evaluate"
 					" to a boolean value",
 				statement->lineno);
 			}
 			break;
-
 		case STATEMENT_WHILE:
-			check_expression(statement->value.statement_while.exp);
+			check_expression(statement->value.statement_while.condition);
 			check_statement(statement->value.statement_while.statement);
-			if(statement->value.statement_while.exp->symboltype->type
+			if(statement->value.statement_while.condition->symbolType->type
 				!= SYMBOL_BOOL) {
 				check_error_report("Expected condition to"
 					" evaluate to a boolean value",
 				statement->lineno);
 			}
 			break;
-
 		case STATEMENT_LISTS:
 			check_statement_list(statement->value.statement_list);
 			break;
-
 		case STATEMENT_BREAK: //Check is done in weeder
 			break;
-
 		case STATEMENT_CONTINUE: //Check is done in weeder
+			break;
+		case STATEMENT_FOR:
+			check_expression(statement->value.statement_for.condition);
+
+			if (statement->value.statement_for.condition->symbolType->type !=
+					SYMBOL_BOOL ){
+				check_error_report("Expected condition to evaluate to a "
+										   "boolean value",
+								   statement->lineno);
+			}
+			check_statement(statement->value.statement_for.left);
+			check_statement(statement->value.statement_for.right);
+			check_statement(statement->value.statement_for.statement);
 			break;
 	}
 }
@@ -294,7 +294,7 @@ void check_opt_length ( OPT_LENGTH *oplen){
 	switch(oplen->kind){
 		case OPT_LENGTH_EXPRES:
 			check_expression(oplen->exp);
-			if(oplen->exp->symboltype->type != SYMBOL_INT){
+			if(oplen->exp->symbolType->type != SYMBOL_INT){
 				check_error_report("Expected length to evaluate to a"
 					" integer value", oplen->lineno);
 			}
@@ -337,7 +337,7 @@ int check_variable ( VAR *var){
 			check_expression(var->value.var_array.exp);
 
 			//Expression must be evaluated to a integer
-			if(var->value.var_array.exp->symboltype->type != SYMBOL_INT) {
+			if(var->value.var_array.exp->symbolType->type != SYMBOL_INT) {
 				check_error_report("Expression must evaluate to int", 
 					var->lineno);
 			}
@@ -392,14 +392,14 @@ void check_expression ( EXPRES *exp){
 		check_expression(exp->value.sides.right);
 		check_expression(exp->value.sides.left);
 
-		rightHand = exp->value.sides.right->symboltype;
-		leftHand = exp->value.sides.left->symboltype;
+		rightHand = exp->value.sides.right->symbolType;
+		leftHand = exp->value.sides.left->symbolType;
 	}
 
 	switch(exp->kind){
 		case EXPRES_TERM:
 			check_term(exp->value.term);
-			exp->symboltype = exp->value.term->symboltype;
+			exp->symbolType = exp->value.term->symbolType;
 			break;
 
 		case EXPRES_PLUS:
@@ -412,7 +412,7 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
+				exp->symbolType = make_SYMBOL_TYPE(SYMBOL_INT);
 			}
 			break;
 
@@ -434,7 +434,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL ||
 			   		leftHand->type == SYMBOL_NULL) ) {
 
-				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+				exp->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -444,7 +444,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL || 
 			   		leftHand->type == SYMBOL_ARRAY ) ) { 
 
-                exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+                exp->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -455,7 +455,7 @@ void check_expression ( EXPRES *exp){
 			   	(rightHand->type == SYMBOL_NULL || 
 			   		leftHand->type == SYMBOL_RECORD ) ) {
 
-                exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+                exp->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 				break;
 			}
 
@@ -472,7 +472,7 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected integer expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+				exp->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			}
 			
 			break;
@@ -484,7 +484,7 @@ void check_expression ( EXPRES *exp){
 				check_error_report("Expected boolean expression", 
 						exp->lineno);
 			} else {
-				exp->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+				exp->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			}
 			break;
 	}
@@ -499,14 +499,14 @@ void check_term ( TERM *term ) {
 	switch(term->kind){
 		case TERM_VAR:	
 			check_variable(term->value.var);
-			term->symboltype = term->value.var->symboltype;
+			term->symbolType = term->value.var->symboltype;
 			break;
 
 		case TERM_ACT_LIST:
 			
 			actualParameterCount = check_act_list(term->value.
 							term_act_list.actlist);
-			symbol = getSymbol(term->symboltable, 
+			symbol = getSymbol(term->symbolTable,
 						term->value.term_act_list.id);
 
 			if(symbol == NULL || symbol->symbolType->type
@@ -537,55 +537,55 @@ void check_term ( TERM *term ) {
 			function_parameter_compare(callParameters, functionParameters);
 
 			symbolT = symbol->symbolType->return_type;
-			term->symboltype = symbolT;
+			term->symbolType = symbolT;
 			break;
 
 		case TERM_NOT:
 			check_term(term->value.term);
-			if(term->value.term->symboltype->type != SYMBOL_BOOL) {
+			if(term->value.term->symbolType->type != SYMBOL_BOOL) {
 				check_error_report("Expected boolean term", term->lineno);
 			}
-			term->symboltype = term->value.term->symboltype;
+			term->symbolType = term->value.term->symbolType;
 			break;
 
 		case TERM_UMINUS:
 			check_term(term->value.term);
-			if (term->value.term->symboltype->type != SYMBOL_INT) {
+			if (term->value.term->symbolType->type != SYMBOL_INT) {
 				check_error_report("Expected integer term", term->lineno);
 			}
-			term->symboltype = term->value.term->symboltype;
+			term->symbolType = term->value.term->symbolType;
 			break;
 
 		case TERM_PARENTESES:
 			check_expression(term->value.exp);
-			term->symboltype = term->value.exp->symboltype;
+			term->symbolType = term->value.exp->symbolType;
 			break;
 
 		case TERM_ABS:
 			check_expression(term->value.exp);
-			if(!(term->value.exp->symboltype->type == SYMBOL_INT ||
-				term->value.exp->symboltype->type == SYMBOL_ARRAY) ) {
+			if(!(term->value.exp->symbolType->type == SYMBOL_INT ||
+				term->value.exp->symbolType->type == SYMBOL_ARRAY) ) {
 				check_error_report("Expected integer or array", 
 					term->lineno);
 			}
-			if ( term->value.exp->symboltype->type == SYMBOL_ARRAY ) {
-				term->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
+			if ( term->value.exp->symbolType->type == SYMBOL_ARRAY ) {
+				term->symbolType = make_SYMBOL_TYPE(SYMBOL_INT);
 			} else {
-				term->symboltype = term->value.exp->symboltype;
+				term->symbolType = term->value.exp->symbolType;
 			}
 			break;
 
 		case TERM_NULL:
-			term->symboltype = make_SYMBOL_TYPE(SYMBOL_NULL);
+			term->symbolType = make_SYMBOL_TYPE(SYMBOL_NULL);
 			break;
 
 		case TERM_TRUE:
 		case TERM_FALSE:
-			term->symboltype = make_SYMBOL_TYPE(SYMBOL_BOOL);
+			term->symbolType = make_SYMBOL_TYPE(SYMBOL_BOOL);
 			break;
 
 		case TERM_NUM:
-			term->symboltype = make_SYMBOL_TYPE(SYMBOL_INT);
+			term->symbolType = make_SYMBOL_TYPE(SYMBOL_INT);
 			break;
 
 		default:
@@ -678,8 +678,8 @@ int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 		return result;
 	} else if ( leftHand->arguments == 1 ) {
 		// only member in both records 
-		result = leftRecordMembers->var_type->type->symboltype->type ==
-					rightRecordMembers->var_type->type->symboltype->type;
+		result = leftRecordMembers->var_type->type->symbolType->type ==
+					rightRecordMembers->var_type->type->symbolType->type;
 		return result;
 	}
 
@@ -698,10 +698,10 @@ int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 		for ( int i = 0; i < 2; i++ ) {
 			if ( i == 0 ) {
 				currentSymbolType = leftRecordMembers->
-						var_type->type->symboltype;
+						var_type->type->symbolType;
 			} else {
 				currentSymbolType = rightRecordMembers->
-						var_type->type->symboltype;
+						var_type->type->symbolType;
 			}
 			switch ( currentSymbolType->type ) {
 				case SYMBOL_FUNCTION:
@@ -740,10 +740,10 @@ int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 	for ( int i = 0; i < 2; i++ ) {
 		if ( i == 0 ) {
 			currentSymbolType = leftRecordMembers->
-					var_type->type->symboltype;
+					var_type->type->symbolType;
 		} else {
 			currentSymbolType = rightRecordMembers->
-					var_type->type->symboltype;
+					var_type->type->symbolType;
 		}
 		switch ( currentSymbolType->type ) {
 			case SYMBOL_FUNCTION:
@@ -792,7 +792,7 @@ void function_parameter_compare(EXP_LIST *callParameters,
 		if( callParameters->kind == EXP_LIST_LIST &&
 		   functionParameters->kind == VAR_DECL_LIST_LIST) {
 
-			if( callParameters->exp->symboltype->type !=
+			if( callParameters->exp->symbolType->type !=
 			   functionParameters->var_type->symbol
 			   			->symbolType->type ) {
 				check_error_report("Wrong parameter type", 
@@ -802,7 +802,7 @@ void function_parameter_compare(EXP_LIST *callParameters,
 		} else if( callParameters->kind == EXP_LIST_EXP &&
 			      functionParameters->kind == VAR_DECL_LIST_TYPE ) {
 			
-			if( callParameters->exp->symboltype->type !=
+			if( callParameters->exp->symbolType->type !=
 			   functionParameters->var_type->symbol
 			   			->symbolType->type){
 				check_error_report("Wrong parameter type", 

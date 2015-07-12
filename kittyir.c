@@ -100,7 +100,7 @@ void IR_build( BODY *program ) {
 	// make "main:" label line
 	append_element(ir_lines, make_instruction_label("main"));
 
-	function_prolog(program->symboltable);
+	function_prolog(program->symbolTable);
 
     init_heap();
 
@@ -110,7 +110,7 @@ void IR_build( BODY *program ) {
 	// return signal zero: all good
 	function_epilog();
 
-	program->symboltable->localVars = 0; // resetting local variables counter
+	program->symbolTable->localVars = 0; // resetting local variables counter
 	append_element(ir_lines, make_instruction_ret());
 
 	build_data_section();
@@ -131,7 +131,7 @@ void IR_builder_function(FUNC *func) {
 
 	IR_builder_body(func->body);
 
-	func->symboltable->localVars = 0; // reset local variables in scope
+	func->symbolTable->localVars = 0; // reset local variables in scope
 
 	funcStackPop(function_stack);
 		// leaving the function
@@ -139,14 +139,14 @@ void IR_builder_function(FUNC *func) {
 
 void IR_builder_head(HEAD *head) {
 	char *functionStartLabel;
-	SYMBOL *symbol = getSymbol(head->symboltable, head->id);
+	SYMBOL *symbol = getSymbol(head->symbolTable, head->id);
 	GET_FUNCTION_LABEL(functionStartLabel, symbol->name, symbol->offset);
 
 	append_element(ir_lines, make_instruction_label(functionStartLabel));
 }
 
 void IR_builder_body (BODY *body) {
-	function_prolog(body->symboltable);
+	function_prolog(body->symbolTable);
 	IR_builder_statement_list(body->statement_list);
 }
 
@@ -169,12 +169,12 @@ void IR_builder_var_type ( VAR_TYPE * vtype ) {
 	switch (vtype->type->kind) {
 		case TYPE_INT:
 			if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-				vtype->symboltable->localVars += WORD_SIZE;
+				vtype->symbolTable->localVars += WORD_SIZE;
 			}
 			break;
 		case TYPE_BOOL:
 			if ( vtype->symbol->symbolKind == LOCAL_VARIABLE_SYMBOL ) {
-				vtype->symboltable->localVars += WORD_SIZE;
+				vtype->symbolTable->localVars += WORD_SIZE;
 			}
 			break;
 		default:
@@ -248,7 +248,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			IR_builder_expression(st->value.exp);
 			append_element(ir_lines, popEax);
 				// result from expression
-			switch(st->value.exp->symboltype->type){
+			switch(st->value.exp->symbolType->type){
 				case SYMBOL_BOOL:
 					labelIdCounter = GET_NEXT_LABEL_ID;
 
@@ -388,7 +388,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_IFBRANCH:
 			// generate code for boolean expression(s)
-			IR_builder_expression(st->value.statement_ifbranch.exp);
+			IR_builder_expression(st->value.statement_if_branch.condition);
 
 			append_element(ir_lines, popEax);
 
@@ -400,7 +400,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			//Comparison with "true" boolean value
 			append_element(ir_lines, make_instruction_cmp(one, eax));
 
-			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
+			if(st->value.statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY){
 				// if not equal goto else part
 				append_element(ir_lines, make_instruction_jne(elseLabel));
 			} else {
@@ -409,10 +409,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 							   make_instruction_jne(endLabel));
 			}
 
-			IR_builder_statement(st->value.statement_ifbranch.statement);
+			IR_builder_statement(st->value.statement_if_branch.statement);
 				// build statements in if-case
 
-			if(st->value.statement_ifbranch.opt_else->kind != OPT_ELSE_EMPTY){
+			if(st->value.statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY){
 
 				// we have to jump over
 				//else when if-case is true
@@ -423,7 +423,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 				append_element(ir_lines, make_instruction_label(elseLabel));
 
 				IR_builder_statement( // build else statements
-					st->value.statement_ifbranch.opt_else->statement);
+					st->value.statement_if_branch.opt_else->statement);
 			}
 
 			// end-of-if label
@@ -526,7 +526,7 @@ void IR_builder_statement ( STATEMENT *st ) {
                     st->value.statement_while.start_label));
 
 			// evaluating expressions
-			IR_builder_expression(st->value.statement_while.exp);
+			IR_builder_expression(st->value.statement_while.condition);
 			append_element(ir_lines, popEax);
 
 			//Compare evaluated expression with true
@@ -548,6 +548,43 @@ void IR_builder_statement ( STATEMENT *st ) {
                     st->value.statement_while.end_label));
 			break;
 
+		case STATEMENT_FOR:
+			labelIdCounter = GET_NEXT_LABEL_ID;
+			GET_FLOW_CONTROL_LABEL(st->value.statement_for.start_label,
+								   "forStart", labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(st->value.statement_for.end_label,
+								   "forEnd", labelIdCounter);
+
+			IR_builder_statement(st->value.statement_for.left);
+
+			append_element(ir_lines, make_instruction_label(st->value.
+					statement_while.start_label));
+
+			IR_builder_expression(st->value.statement_for.condition);
+			append_element(ir_lines, popEax);
+
+			//Compare evaluated expression with true
+			append_element(ir_lines, make_instruction_cmp(one, eax));
+
+			// jump to end if while condition is false
+			append_element(ir_lines, make_instruction_jne(st->value.
+					statement_while.end_label));
+
+			// build statements
+			IR_builder_statement(st->value.statement_for.statement);
+
+			// the increment statement
+			IR_builder_statement(st->value.statement_for.right);
+
+			// go back to start
+			append_element(ir_lines, make_instruction_jmp(st->value.
+					statement_while.start_label));
+
+			// end of for-loop
+			append_element(ir_lines, make_argument_label(st->value.
+					statement_for.end_label));
+			break;
+
 		case STATEMENT_LISTS:
 			IR_builder_statement_list(st->value.statement_list);
 			break;
@@ -560,8 +597,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_CONTINUE:
 			append_element(ir_lines, make_instruction_jmp(
 				st->currentLoop->value.statement_while.start_label));
-			break;
-		default:
 			break;
 	}
 } 
@@ -915,11 +950,11 @@ void IR_builder_term ( TERM *term ) {
 			break;
 
 		case TERM_ACT_LIST:
-			symbol = getSymbol(term->symboltable, term->value.term_act_list
+			symbol = getSymbol(term->symbolTable, term->value.term_act_list
 					.id);
 			GET_FUNCTION_LABEL(functionLabel,symbol->name,symbol->offset);
 
-			callScopeId = term->symboltable->id;
+			callScopeId = term->symbolTable->id;
 			definedScopeId = symbol->tableId;
 
 			// push functionParameters on stack recursively
@@ -987,7 +1022,7 @@ void IR_builder_term ( TERM *term ) {
 		case TERM_ABS:
 			IR_builder_expression(term->value.exp);
 
-			if ( term->value.exp->symboltype->type == SYMBOL_INT ) {
+			if ( term->value.exp->symbolType->type == SYMBOL_INT ) {
 				append_element(ir_lines, popEbx);
 
                 GET_FLOW_CONTROL_LABEL(positiveNumberLabel, "posNum",
@@ -1008,7 +1043,7 @@ void IR_builder_term ( TERM *term ) {
 
 				append_element(ir_lines, pushEbx);
 
-			} else if ( term->value.exp->symboltype->type == SYMBOL_ARRAY ) {
+			} else if ( term->value.exp->symbolType->type == SYMBOL_ARRAY ) {
 
 				append_element(ir_lines, popEax);
 				// may be variable
@@ -1358,7 +1393,7 @@ void build_data_section() {
 		while ( temp != data_lines ) { // making label pointers for allocated 
 										// items
 			VAR_TYPE *var_type = (VAR_TYPE *) temp->data;
-			SYMBOL *symbol = getSymbol(var_type->symboltable, var_type->id);
+			SYMBOL *symbol = getSymbol(var_type->symbolTable, var_type->id);
 
 			if ( symbol != NULL && (symbol->symbolType->type == SYMBOL_ARRAY
 					 || symbol->symbolType->type == SYMBOL_RECORD) ) {
