@@ -1,0 +1,6 @@
+var a : int;
+
+for a = 0; a < 10; write a; do {
+	write a;
+	a += 1;
+}

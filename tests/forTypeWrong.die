@@ -1,0 +1,7 @@
+var i : int, b : int;
+
+b = 2;
+
+for i = 1; b + i; i *= 2; do {
+	write i;
+}

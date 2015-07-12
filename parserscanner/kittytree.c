@@ -684,8 +684,8 @@ STATEMENT *make_STATEMENT_WHILE(EXPRES *expres, STATEMENT *stmt){
 	stwhile->currentLoop = NULL;
 	stwhile->value.statement_while.condition = expres;
 	stwhile->value.statement_while.statement = stmt;
-	stwhile->value.statement_while.start_label = NULL;
-	stwhile->value.statement_while.end_label = NULL;
+	stwhile->start_label = NULL;
+	stwhile->end_label = NULL;
 
 	return stwhile;
 
@@ -702,8 +702,8 @@ STATEMENT *make_STATEMENT_FOR(STATEMENT *left, EXPRES *condition,
 	new_statement->value.statement_for.condition = condition;
 	new_statement->value.statement_for.right = right;
 	new_statement->value.statement_for.statement = statement;
-	new_statement->value.statement_for.start_label = NULL;
-	new_statement->value.statement_for.end_label = NULL;
+	new_statement->start_label = NULL;
+	new_statement->end_label = NULL;
 
 	return  new_statement;
 }

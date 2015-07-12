@@ -516,14 +516,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 		case STATEMENT_WHILE:
 			labelIdCounter = GET_NEXT_LABEL_ID;
 
-            GET_FLOW_CONTROL_LABEL(st->value.statement_while.start_label, 
-                                   "whileStart", labelIdCounter);
-            GET_FLOW_CONTROL_LABEL(st->value.statement_while.end_label,
-                                   "whileEnd", labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(st->start_label, "whileStart",
+								   labelIdCounter);
+            GET_FLOW_CONTROL_LABEL(st->end_label, "whileEnd", labelIdCounter);
             
 			// while-start label insert
-			append_element(ir_lines, make_instruction_label(
-                    st->value.statement_while.start_label));
+			append_element(ir_lines, make_instruction_label(st->start_label));
 
 			// evaluating expressions
 			IR_builder_expression(st->value.statement_while.condition);
@@ -533,32 +531,29 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_cmp(one, eax));
 
 			// jump to end if while condition is false
-			append_element(ir_lines, make_instruction_jne(st->value.
-                    statement_while.end_label));
+			append_element(ir_lines, make_instruction_jne(st->end_label));
 
 			// generate code for statements
 			IR_builder_statement(st->value.statement_while.statement);
 
 			// repeating statement jump
 			append_element(ir_lines, make_instruction_jmp(
-                    st->value.statement_while.start_label));
+                    st->start_label));
 
 			// insertion of while-end
 			append_element(ir_lines, make_instruction_label(
-                    st->value.statement_while.end_label));
+                    st->end_label));
 			break;
 
 		case STATEMENT_FOR:
 			labelIdCounter = GET_NEXT_LABEL_ID;
-			GET_FLOW_CONTROL_LABEL(st->value.statement_for.start_label,
-								   "forStart", labelIdCounter);
-			GET_FLOW_CONTROL_LABEL(st->value.statement_for.end_label,
-								   "forEnd", labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(st->start_label, "forStart",
+								   labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(st->end_label, "forEnd", labelIdCounter);
 
 			IR_builder_statement(st->value.statement_for.left);
 
-			append_element(ir_lines, make_instruction_label(st->value.
-					statement_while.start_label));
+			append_element(ir_lines, make_instruction_label(st->start_label));
 
 			IR_builder_expression(st->value.statement_for.condition);
 			append_element(ir_lines, popEax);
@@ -567,8 +562,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element(ir_lines, make_instruction_cmp(one, eax));
 
 			// jump to end if while condition is false
-			append_element(ir_lines, make_instruction_jne(st->value.
-					statement_while.end_label));
+			append_element(ir_lines, make_instruction_jne(st->end_label));
 
 			// build statements
 			IR_builder_statement(st->value.statement_for.statement);
@@ -577,12 +571,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 			IR_builder_statement(st->value.statement_for.right);
 
 			// go back to start
-			append_element(ir_lines, make_instruction_jmp(st->value.
-					statement_while.start_label));
+			append_element(ir_lines, make_instruction_jmp(st->start_label));
 
 			// end of for-loop
-			append_element(ir_lines, make_argument_label(st->value.
-					statement_for.end_label));
+			append_element(ir_lines, make_instruction_label(st->end_label));
 			break;
 
 		case STATEMENT_LISTS:
@@ -591,12 +583,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_BREAK:
 			append_element(ir_lines, make_instruction_jmp(
-				st->currentLoop->value.statement_while.end_label));
+				st->currentLoop->end_label));
 			break;
 
 		case STATEMENT_CONTINUE:
 			append_element(ir_lines, make_instruction_jmp(
-				st->currentLoop->value.statement_while.start_label));
+				st->currentLoop->start_label));
 			break;
 	}
 } 

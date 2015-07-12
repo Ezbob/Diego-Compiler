@@ -441,9 +441,10 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			if (!(increment->kind == STATEMENT_ADDASSIGN || increment->kind ==
 				STATEMENT_MULASSIGN || increment->kind == STATEMENT_SUBASSIGN
 				|| increment->kind == STATEMENT_MULASSIGN || increment->kind
-				== STATEMENT_MODASSIGN)) {
-				weed_error_report("Expected secound statement to be a "
-				"incrementation or decrementation", st->value.statement_for.
+				== STATEMENT_MODASSIGN || increment->kind == STATEMENT_ASSIGN)
+					) {
+				weed_error_report("Expected second statement to be a "
+				"variable updating statement", st->value.statement_for.
 										   left->lineno);
 			}
 			loopStackPop(loopStack);

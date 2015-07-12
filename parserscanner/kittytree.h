@@ -221,7 +221,9 @@ typedef struct STATEMENT {
 	int lineno;
 	SYMBOL_TABLE *symbolTable;
 	int foundReturn;
-	struct STATEMENT *currentLoop;
+	struct STATEMENT *currentLoop; // loop stuff
+	char *start_label; // loop stuff
+	char *end_label; // loop stuff
 	enum { 
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,
@@ -266,8 +268,6 @@ typedef struct STATEMENT {
 		struct {
 			struct EXPRES *condition;
 			struct STATEMENT *statement;
-			char *start_label;
-			char *end_label; 
 		} statement_while;
 
 		struct {
@@ -275,10 +275,7 @@ typedef struct STATEMENT {
 			struct EXPRES *condition;
 			struct STATEMENT *right;
 			struct STATEMENT *statement;
-			char *start_label;
-			char *end_label;
 		} statement_for;
-
 	} value;
 } STATEMENT;
 
