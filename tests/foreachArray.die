@@ -1,0 +1,17 @@
+var i : int, iA : array of int, intArray : array of array of int;
+var a : int, b : int;
+
+allocate intArray of length 2;
+
+for each iA in intArray do {
+	allocate iA of length 2;
+	for each i in iA do {
+		i = 2;
+	}
+} 
+
+for a = 0; a < |intArray|; a += 1; do {
+	for b = 0; b < |intArray[a]|; b += 1; do {
+		write intArray[a][b];
+	}
+}

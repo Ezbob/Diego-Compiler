@@ -1,0 +1,12 @@
+var a : int, intArray : array of int;
+
+allocate intArray of length 10;
+
+for each a in intArray do {
+	write a;
+	a = 2;
+} 
+
+for each a in intArray do {
+	write a;
+} 

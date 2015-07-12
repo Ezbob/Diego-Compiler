@@ -119,6 +119,8 @@ void check_statement ( STATEMENT *statement){
 	SYMBOL_TYPE *returnType;
 	SYMBOL_TYPE *element_type;
 	SYMBOL_TYPE *collection_type;
+	int elementArrayDim;
+	int collectionArrayDim;
 
 	switch(statement->kind) {
 		case STATEMENT_RETURN:
@@ -298,22 +300,50 @@ void check_statement ( STATEMENT *statement){
 					symboltype;
 
 			if ( collection_type->type != SYMBOL_ARRAY ) {
-				check_error_report("Expected collection variable to be array",
+				check_error_report("Expected collection variable to be an"
+										   " array", statement->lineno);
+			}
+
+			if ( element_type->type != SYMBOL_ARRAY
+				 && element_type->type != SYMBOL_INT
+				 && element_type->type != SYMBOL_BOOL ) {
+				check_error_report("Expected element variable to be an array,"
+										   "integer or boolean",
 								   statement->lineno);
 			}
 
-			if (element_type->type != SYMBOL_BOOL && element_type->type !=
-															 SYMBOL_INT) {
-				check_error_report("Expected element variable to be integer "
-										   "or boolean",
-								   statement->lineno);
-			}
+			if ( element_type->type == SYMBOL_ARRAY ) {
+				collection_type = get_base_array_type(collection_type);
+				element_type = get_base_array_type(element_type);
+				// comparing two arrays
 
-			collection_type = get_base_array_type(collection_type);
+				collectionArrayDim = collection_type->arrayDim;
+				elementArrayDim = element_type->arrayDim;
 
-			if ( collection_type->type != element_type->type ) {
-				check_error_report("Invalid assignment; type mismatch",
-								   statement->lineno);
+				if ( elementArrayDim != (collectionArrayDim - 1) ) {
+					check_error_report("Array dimension mismatch",
+									   statement->lineno);
+				}
+
+				if ( collection_type->type == SYMBOL_RECORD ){
+					check_error_report("Records not supported in foreach"
+											   " statements",
+									   statement->lineno);
+				}
+
+				if (collection_type->type != element_type->type ) {
+					check_error_report(
+							"Invalid assignment; type mismatch",
+							statement->lineno);
+				}
+			} else {
+				collection_type = collection_type->nextArrayType;
+				// the immediate type
+
+				if ( collection_type->type != element_type->type ) {
+					check_error_report("Invalid assignment; type mismatch",
+									   statement->lineno);
+				}
 			}
 			check_statement(statement->value.statement_foreach.statement);
 			break;
