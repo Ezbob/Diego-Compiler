@@ -450,6 +450,16 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			}
 			loopStackPop(loopStack);
 			break;
+        case STATEMENT_FOREACH:
+            loopStackPush(loopStack, st);
+            st->value.statement_foreach.element =
+                    weed_variable(st->value.statement_foreach.element);
+            st->value.statement_foreach.collection =
+                    weed_variable(st->value.statement_foreach.collection);
+            st->value.statement_foreach.statement =
+                    weed_statement(st->value.statement_foreach.statement);
+            loopStackPop(loopStack);
+            break;
 	}
 	return st;
 

@@ -708,6 +708,22 @@ STATEMENT *make_STATEMENT_FOR(STATEMENT *assignment, EXPRES *condition,
 	return  new_statement;
 }
 
+STATEMENT *make_STATEMENT_FOREACH(VAR *element, VAR *collection,
+								  STATEMENT *statement) {
+
+	STATEMENT *new_statement = NEW(STATEMENT);
+	new_statement->lineno = lineno;
+	new_statement->kind = STATEMENT_FOREACH;
+	new_statement->currentLoop = NULL;
+	new_statement->value.statement_foreach.element = element;
+	new_statement->value.statement_foreach.collection = collection;
+	new_statement->value.statement_foreach.statement = statement;
+	new_statement->start_label = NULL;
+	new_statement->end_label = NULL;
+
+	return  new_statement;
+}
+
 STATEMENT *make_STATEMENT_BREAK(){
 	STATEMENT *stbreak = NEW(STATEMENT);
 	stbreak->lineno = lineno;

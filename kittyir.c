@@ -233,6 +233,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 	IR_INSTRUCTION *pushForm;
 	ARGUMENT *variable;
+	ARGUMENT *collection;
 
 	switch(st->kind){
 
@@ -506,7 +507,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ecx,
 							heapFreePointer));
-
 					break;
 				default:
 					break;
@@ -575,6 +575,74 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			// end of for-loop
 			append_element(ir_lines, make_instruction_label(st->end_label));
+			break;
+		case STATEMENT_FOREACH:
+			labelIdCounter = GET_NEXT_LABEL_ID;
+			GET_FLOW_CONTROL_LABEL(st->start_label, "foreachStart",
+								   labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(st->end_label, "foreachEnd",
+								   labelIdCounter);
+
+			// foreach preamble: get and push array size on stack,
+			// load element variable with the first element, save the current
+			// index. All in a days work.
+			collection = IR_builder_variable(st->value.statement_foreach.
+					collection);
+
+			append_element( ir_lines, make_instruction_movl(collection, ebx));
+
+			append_element( ir_lines, make_instruction_xor(eax, eax) );
+			append_element( ir_lines, make_instruction_movl(
+					make_argument_indexing(NULL, ebx, eax), ecx ));
+
+			append_element( ir_lines, make_instruction_incl(eax));
+
+
+			// load variable
+			variable = IR_builder_variable(st->value.statement_foreach.
+					element );
+			append_element( ir_lines, make_instruction_movl(
+					make_argument_indexing(NULL, ebx, eax), edx));
+			append_element( ir_lines, make_instruction_movl(edx, variable));
+
+			// START of foreach
+			append_element( ir_lines,
+							make_instruction_label(st->start_label) );
+
+			// compare index with array size
+			append_element( ir_lines, make_instruction_cmp(ecx, eax));
+			append_element( ir_lines, make_instruction_jg(st->end_label));
+
+			append_element( ir_lines, pushEcx); // save index and array size
+			append_element( ir_lines, pushEax);
+			append_element( ir_lines, pushEbx ); // save collection address
+
+			// get new element and put in variable
+			append_element( ir_lines, make_instruction_movl(
+					make_argument_indexing(NULL, ebx, eax), ebx));
+
+			variable = IR_builder_variable(st->value.statement_foreach.
+					element );
+			append_element( ir_lines, make_instruction_movl(ebx, variable));
+
+			// do statements
+			IR_builder_statement(st->value.statement_foreach.statement);
+
+
+			// update array with variable
+			variable = IR_builder_variable(st->value.statement_foreach.
+					element );
+			append_element(ir_lines, popEbx); // get address
+			append_element(ir_lines, popEax); // get index
+			append_element(ir_lines, popEcx); // get array size
+
+			append_element(ir_lines, make_instruction_movl(variable, edx));
+			append_element(ir_lines, make_instruction_movl(edx,
+						   make_argument_indexing(NULL, ebx, eax)));
+
+			append_element( ir_lines, make_instruction_incl(eax));
+			append_element( ir_lines, make_instruction_jmp(st->start_label));
+			append_element( ir_lines, make_instruction_label(st->end_label));
 			break;
 
 		case STATEMENT_LISTS:

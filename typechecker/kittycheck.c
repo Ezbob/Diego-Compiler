@@ -117,6 +117,8 @@ void check_statement ( STATEMENT *statement){
 	SYMBOL_TYPE *rightHand;
 	SYMBOL_TYPE *leftHand;
 	SYMBOL_TYPE *returnType;
+	SYMBOL_TYPE *element_type;
+	SYMBOL_TYPE *collection_type;
 
 	switch(statement->kind) {
 		case STATEMENT_RETURN:
@@ -285,6 +287,35 @@ void check_statement ( STATEMENT *statement){
 			check_statement(statement->value.statement_for.assignment);
 			check_statement(statement->value.statement_for.update);
 			check_statement(statement->value.statement_for.statement);
+			break;
+		case STATEMENT_FOREACH:
+			check_variable(statement->value.statement_foreach.element);
+			check_variable(statement->value.statement_foreach.collection);
+
+			element_type = statement->value.statement_foreach.element->
+					symboltype;
+			collection_type = statement->value.statement_foreach.collection->
+					symboltype;
+
+			if ( collection_type->type != SYMBOL_ARRAY ) {
+				check_error_report("Expected collection variable to be array",
+								   statement->lineno);
+			}
+
+			if (element_type->type != SYMBOL_BOOL && element_type->type !=
+															 SYMBOL_INT) {
+				check_error_report("Expected element variable to be integer "
+										   "or boolean",
+								   statement->lineno);
+			}
+
+			collection_type = get_base_array_type(collection_type);
+
+			if ( collection_type->type != element_type->type ) {
+				check_error_report("Invalid assignment; type mismatch",
+								   statement->lineno);
+			}
+			check_statement(statement->value.statement_foreach.statement);
 			break;
 	}
 }

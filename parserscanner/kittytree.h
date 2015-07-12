@@ -200,6 +200,7 @@ typedef struct DECLARATION {
 		} declaration_id;
 
 		struct FUNC *function;
+
 		struct VAR_DECL_LIST *var_decl_list;
 	} value;
 } DECLARATION;
@@ -228,6 +229,7 @@ typedef struct STATEMENT {
 		STATEMENT_RETURN,
 		STATEMENT_WRITE,
 		STATEMENT_FOR,
+		STATEMENT_FOREACH,
 		STATEMENT_ALLOCATE,
 		STATEMENT_ASSIGN,
 		STATEMENT_IFBRANCH,
@@ -276,6 +278,12 @@ typedef struct STATEMENT {
 			struct STATEMENT *update;
 			struct STATEMENT *statement;
 		} statement_for;
+
+		struct {
+			struct VAR *element;
+			struct VAR *collection;
+			struct STATEMENT *statement;
+		} statement_foreach;
 	} value;
 } STATEMENT;
 
@@ -390,6 +398,7 @@ STATEMENT *make_STATEMENT_SUBASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_MULASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_DIVASSIGN(VAR *, EXPRES *);
 STATEMENT *make_STATEMENT_MODASSIGN(VAR *, EXPRES *);
+STATEMENT *make_STATEMENT_FOREACH(VAR *, VAR *, STATEMENT *);
 
 /* Optional statement constructors */
 OPT_STATEMENT *make_OPT_STATEMENT_STATEMENT(STATEMENT *);

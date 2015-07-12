@@ -69,6 +69,8 @@
 %token DIV_ASSIGN_TOK
 %token MOD_ASSIGN_TOK
 %token FOR_TOK
+%token FOREACH_TOK
+%token IN_TOK
 
 %type <func> func
 %type <head> head
@@ -227,6 +229,8 @@ stm 			: RETURN_TOK exp ';' { $$ = make_STATEMENT_RETURN($2); }
 				| '{' stm_list '}' {$$ = make_STATEMENT_LIST($2);}
 				| FOR_TOK stm exp ';' stm DO_TOK stm {$$ =
                 					make_STATEMENT_FOR($2,$3,$5,$7);}
+                | FOREACH_TOK var IN_TOK var DO_TOK stm {$$ =
+                					make_STATEMENT_FOREACH($2,$4,$6);}
 				;
 
 stm_list		: stm { $$ = make_STATEMENT_LIST_STATEMENT($1); }

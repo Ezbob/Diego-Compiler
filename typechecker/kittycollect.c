@@ -289,6 +289,11 @@ void collect_statement ( STATEMENT *stm, SYMBOL_TABLE *st ) {
 			collect_statement(stm->value.statement_for.update, st);
 			collect_statement(stm->value.statement_for.statement, st);
 			break;
+		case STATEMENT_FOREACH:
+			collect_variable(stm->value.statement_foreach.element, st);
+			collect_variable(stm->value.statement_foreach.collection, st);
+			collect_statement(stm->value.statement_foreach.statement, st);
+			break;
 	}
 }
 

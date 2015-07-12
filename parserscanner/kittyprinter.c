@@ -239,10 +239,20 @@ void printer_statement ( STATEMENT *st){
 			printer_statement(st->value.statement_for.update);
 			printf(" do \n");
 			indentation++;
-			printer_statement(st->value.statement_if_branch.statement);
+			printer_statement(st->value.statement_for.statement);
 			indentation--;
 			printf("\n");
 			break;
+		case STATEMENT_FOREACH:
+			printf("foreach ");
+			printer_variable(st->value.statement_foreach.element);
+			printf(" in ");
+			printer_variable(st->value.statement_foreach.collection);
+			printf(" do\n");
+			indentation++;
+			printer_statement(st->value.statement_foreach.statement);
+			indentation--;
+			printf("\n");
 		case STATEMENT_LISTS:
 			printf("{\n");
 			printer_statement_list(st->value.statement_list);
