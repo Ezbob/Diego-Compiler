@@ -679,7 +679,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 				}
 
 			}
-
 			break;
 
 		case EXPRES_EQ:
@@ -747,7 +746,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 				}
 
 			}
-
 			break;
 
 		case EXPRES_LESS:
@@ -799,18 +797,29 @@ TERM *weed_term ( TERM *term) {
 		case TERM_NOT:
 			term->value.term = weed_term(term->value.term);
 
+			if (term->value.term->kind == TERM_NOT){
+				// double negative == positive
+				tempTerm = term->value.term;
+				term = term->value.term->value.term;
+				free(tempTerm);
+			}
 			if (term->value.term->kind == TERM_TRUE){
 				term->kind = TERM_FALSE;
 			}
-
 			if (term->value.term->kind == TERM_FALSE){
 				term->kind = TERM_TRUE;
 			}
-			
 			break;
 
 		case TERM_UMINUS:
 			term->value.term = weed_term(term->value.term);
+
+			if ( term->value.term->kind == TERM_UMINUS ) {
+				// like in NOT
+				tempTerm = term->value.term;
+				term = term->value.term->value.term;
+				free(tempTerm);
+			}
 			if ( term->value.term->kind == TERM_NUM ) {
 				tempTerm = term->value.term;
 				term->value.term = NULL;
