@@ -523,14 +523,28 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->kind = EXPRES_TERM;
 				}
 		 	}
-			if ( left_exp->kind == EXPRES_TERM &&
-				 left_term->kind == TERM_FALSE ) {
-				exp = left_exp;
-
-			} else if ( right_exp->kind == EXPRES_TERM &&
-						right_term->kind == TERM_FALSE ) {
-				exp = right_exp;
+			/* dominance rule and identity rule for AND with associativity */
+			if ( left_exp->kind == EXPRES_TERM ) {
+				 if ( left_term->kind == TERM_FALSE ) {
+					 // dominance rule
+					 exp = left_exp;
+				 } else if ( left_term->kind == TERM_TRUE ){
+					 // identity rule
+					 exp = right_exp;
+				 }
 			}
+
+			if ( right_exp->kind == EXPRES_TERM ) {
+				if (right_term->kind == TERM_FALSE ){
+					// dominance rule
+					exp = right_exp;
+				} else if (right_term->kind == TERM_TRUE){
+					// identity rule
+					exp = left_exp;
+				}
+			}
+
+
 			break;
 
 		case EXPRES_OR:
@@ -551,14 +565,25 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->kind = EXPRES_TERM;
 				}
 			}
+			/* dominance rule and identity rule for OR with associativity */
+			if ( left_exp->kind == EXPRES_TERM ) {
+				if ( left_term->kind == TERM_TRUE ) {
+					// dominance rule
+					exp = left_exp;
+				} else if ( left_term->kind == TERM_FALSE ){
+					// identity rule
+					exp = right_exp;
+				}
+			}
 
-			if ( left_exp->kind == EXPRES_TERM &&
-					left_term->kind == TERM_TRUE ) {
-				exp = left_exp;
-
-			} else if ( right_exp->kind == EXPRES_TERM &&
-					right_term->kind == TERM_TRUE ) {
-				exp = right_exp;
+			if ( right_exp->kind == EXPRES_TERM ) {
+				if (right_term->kind == TERM_TRUE ){
+					// dominance rule
+					exp = right_exp;
+				} else if (right_term->kind == TERM_FALSE ){
+					// identity rule
+					exp = left_exp;
+				}
 			}
 			break;
 
@@ -597,7 +622,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 				exp->kind = EXPRES_TERM;
 			}
-
 			break;
 
 		case EXPRES_TIMES:
