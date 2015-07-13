@@ -544,7 +544,18 @@ EXPRES *weed_expression( EXPRES *exp ){
 				}
 			}
 
-
+			if ( right_exp->kind == EXPRES_TERM &&
+				 left_exp->kind == EXPRES_TERM &&
+				 right_term->kind == TERM_VAR &&
+				 left_term->kind == TERM_VAR ){
+				if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+					// a && a = a
+					exp = left_exp;
+				}
+			}
 			break;
 
 		case EXPRES_OR:
@@ -582,6 +593,19 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp = right_exp;
 				} else if (right_term->kind == TERM_FALSE ){
 					// identity rule
+					exp = left_exp;
+				}
+			}
+
+			if ( right_exp->kind == EXPRES_TERM &&
+				 left_exp->kind == EXPRES_TERM &&
+				 right_term->kind == TERM_VAR &&
+				 left_term->kind == TERM_VAR ){
+				if (right_term->value.var->kind == VAR_ID &&
+					left_term->value.var->kind == VAR_ID &&
+					strcmp(right_term->value.var->id,
+						   left_term->value.var->id) == 0){
+					// a || a = a
 					exp = left_exp;
 				}
 			}
