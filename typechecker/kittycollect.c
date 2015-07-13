@@ -99,7 +99,8 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 		case TYPE_RECORD:
 			symbolType = make_SYMBOL_TYPE(SYMBOL_RECORD);
 			type->symbolType = symbolType;
-			symbolType->child = scopeSymbolTable(st, st->id);
+			symbolType->child = initSymbolTable(st->id); // don't scope
+					// else we can find ghost members in record
 			RESET_SCOPE_OFFSET;
 			symbolType->arguments =	collect_var_decl_list(
 				type->value.var_decl_list, symbolType->child,

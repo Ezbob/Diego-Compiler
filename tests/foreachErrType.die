@@ -1,0 +1,5 @@
+var a : bool, array : array of int;
+
+for each a in array do {
+	a = true;
+}

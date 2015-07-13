@@ -306,9 +306,10 @@ void check_statement ( STATEMENT *statement){
 
 			if ( element_type->type != SYMBOL_ARRAY
 				 && element_type->type != SYMBOL_INT
-				 && element_type->type != SYMBOL_BOOL ) {
+				 && element_type->type != SYMBOL_BOOL
+				 && element_type->type != SYMBOL_RECORD ) {
 				check_error_report("Expected element variable to be an array,"
-										   "integer or boolean",
+										   "integer, boolean or a record",
 								   statement->lineno);
 			}
 
@@ -322,19 +323,22 @@ void check_statement ( STATEMENT *statement){
 
 				if ( elementArrayDim != (collectionArrayDim - 1) ) {
 					check_error_report("Array dimension mismatch",
-									   statement->lineno);
+									   statement->value.statement_foreach.
+											   collection->lineno);
 				}
 
-				if ( collection_type->type == SYMBOL_RECORD ){
-					check_error_report("Records not supported in foreach"
-											   " statements",
-									   statement->lineno);
-				}
+				if ( collection_type->type == SYMBOL_RECORD &&
+						element_type->type == SYMBOL_RECORD &&
+						!compare_record_as_sets(collection_type, element_type)
+						) {
+					check_error_report("Invalid assignment; type mismatch",
+									   statement->value.statement_foreach.
+											   element->lineno);
 
-				if (collection_type->type != element_type->type ) {
-					check_error_report(
-							"Invalid assignment; type mismatch",
-							statement->lineno);
+				} else if (collection_type->type != element_type->type ) {
+					check_error_report("Invalid assignment; type mismatch",
+									   statement->value.statement_foreach.
+											   element->lineno);
 				}
 			} else {
 				collection_type = collection_type->nextArrayType;
@@ -342,7 +346,8 @@ void check_statement ( STATEMENT *statement){
 
 				if ( collection_type->type != element_type->type ) {
 					check_error_report("Invalid assignment; type mismatch",
-									   statement->lineno);
+									   statement->value.statement_foreach.
+											   element->lineno);
 				}
 			}
 			check_statement(statement->value.statement_foreach.statement);
@@ -749,7 +754,7 @@ int compare_record_as_sets(SYMBOL_TYPE *leftHand, SYMBOL_TYPE *rightHand) {
 	SYMBOL_TYPE *currentSymbolType;
 
 	// init the count matrix/uniqueName
-	for(int i = 0; i < NUMBER_OF_TYPES_SUPPORTED; i++){
+	for (int i = 0; i < NUMBER_OF_TYPES_SUPPORTED; i++) {
 		typeCount[0][i] = 0;
 		typeCount[1][i] = 0;
 	}

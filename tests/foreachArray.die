@@ -1,10 +1,11 @@
-var i : int, iA : array of int, intArray : array of array of int;
+var i : int, iA : array of int, 
+intArray : array of array of int;
 var a : int, b : int;
 
 allocate intArray of length 2;
 
 for each iA in intArray do {
-	allocate iA of length 2;
+	allocate iA of length 3;
 	for each i in iA do {
 		i = 2;
 	}

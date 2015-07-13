@@ -1,0 +1,9 @@
+var a : array of array of bool, b : array of bool;
+
+allocate b of length 3;
+
+for each a in b do {
+	allocate a of length 2;
+}
+
+write 32;
