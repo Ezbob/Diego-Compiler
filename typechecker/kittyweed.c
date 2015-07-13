@@ -523,6 +523,14 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->kind = EXPRES_TERM;
 				}
 		 	}
+			if ( left_exp->kind == EXPRES_TERM &&
+				 left_term->kind == TERM_FALSE ) {
+				exp = left_exp;
+
+			} else if ( right_exp->kind == EXPRES_TERM &&
+						right_term->kind == TERM_FALSE ) {
+				exp = right_exp;
+			}
 			break;
 
 		case EXPRES_OR:
@@ -531,7 +539,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 			right_term = right_exp->value.term;
 
 			if((left_term->kind == TERM_TRUE || 
-										left_term->kind == TERM_FALSE) &&
+				left_term->kind == TERM_FALSE) &&
 				(right_term->kind == TERM_TRUE || right_term->kind == 
 															TERM_FALSE)){
 				if(	left_exp->value.term->kind == TERM_FALSE && 
@@ -542,6 +550,15 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->value.term = make_TERM_TRUE();
 					exp->kind = EXPRES_TERM;
 				}
+			}
+
+			if ( left_exp->kind == EXPRES_TERM &&
+					left_term->kind == TERM_TRUE ) {
+				exp = left_exp;
+
+			} else if ( right_exp->kind == EXPRES_TERM &&
+					right_term->kind == TERM_TRUE ) {
+				exp = right_exp;
 			}
 			break;
 
