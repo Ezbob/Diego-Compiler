@@ -24,6 +24,7 @@ int Hash(char *str){
 SYMBOL_TABLE *initSymbolTable(int id){
 	SYMBOL_TABLE *tablePointer = NEW(SYMBOL_TABLE);
 	tablePointer->next = NULL;
+	tablePointer->recordParentScope = NULL;
 	tablePointer->temps = 0;
 	tablePointer->localVars = 0;
 	tablePointer->id = id;

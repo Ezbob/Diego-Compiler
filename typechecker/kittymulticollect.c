@@ -37,9 +37,18 @@ void multi_collect_type ( TYPE *type ) {
 
 	switch(type->kind) {
 		case TYPE_ID:
-			if ( type->symbolType->type == SYMBOL_UNKNOWN
-				&& (symbol = getSymbol(type->symbolTable,type->value.id))
-				!= NULL && symbol->symbolType->type != SYMBOL_UNKNOWN ) {
+			if ( type->symbolTable->recordParentScope != NULL ) {
+				// recordParentScope only set when using records
+				// this case gets priority so recursive definition in records
+				// gets resolved
+				symbol = getSymbol(type->symbolTable->recordParentScope,
+								   type->value.id);
+			} else {
+				symbol = getSymbol(type->symbolTable, type->value.id);
+			}
+
+			if (symbol != NULL && symbol->symbolType->type != SYMBOL_UNKNOWN
+				&& type->symbolType->type == SYMBOL_UNKNOWN ) {
 				type->symbolType = symbol->symbolType;
 			}
 			break;
@@ -80,13 +89,13 @@ void multi_collect_var_decl_list ( VAR_DECL_LIST *var_decl_list ) {
 
 void multi_collect_var_type ( VAR_TYPE *var_type ) {
 	multi_collect_type(var_type->type);
-	SYMBOL_TYPE *symboltype = var_type->type->symbolType;
+	SYMBOL_TYPE *symbolType = var_type->type->symbolType;
 	SYMBOL *symbol;
 
 	if ( ( symbol = getSymbol(var_type->symbolTable, var_type->id) )
 		!= NULL && symbol->symbolType->type == SYMBOL_UNKNOWN
-		&& symboltype->type != SYMBOL_UNKNOWN ) {
-		symbol->symbolType = symboltype;
+		&& symbolType->type != SYMBOL_UNKNOWN ) {
+		symbol->symbolType = symbolType;
 		unknownTypesCount--;
 	}
 }

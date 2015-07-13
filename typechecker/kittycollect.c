@@ -80,6 +80,16 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 				symbolType = symbol->symbolType;
 				type->symbolType = symbolType;
 				return symbolType;
+			} else if ( symbol == NULL && st->recordParentScope != NULL ) {
+				// records need to gather from outer scope when types
+				// has to be set
+				symbol = getSymbol(st->recordParentScope, type->value.id);
+				if ( symbol != NULL && symbol->symbolType->type
+									   != SYMBOL_UNKNOWN ) {
+					symbolType = symbol->symbolType;
+					type->symbolType = symbolType;
+					return symbolType;
+				}
 			}
 			type->symbolType = make_SYMBOL_TYPE(SYMBOL_UNKNOWN);
 			return type->symbolType; // set to unknown if we can't find it
@@ -99,11 +109,13 @@ SYMBOL_TYPE *collect_type ( TYPE *type, SYMBOL_TABLE *st ) {
 		case TYPE_RECORD:
 			symbolType = make_SYMBOL_TYPE(SYMBOL_RECORD);
 			type->symbolType = symbolType;
-			symbolType->child = initSymbolTable(st->id); // don't scope
+			symbolType->childScope = initSymbolTable(st->id); // don't scope
 					// else we can find ghost members in record
+			symbolType->childScope->recordParentScope = st;
+				// instead make a pointer to the parent
 			RESET_SCOPE_OFFSET;
 			symbolType->arguments =	collect_var_decl_list(
-				type->value.var_decl_list, symbolType->child,
+				type->value.var_decl_list, symbolType->childScope,
 				RECORD_MEMBER_SYMBOL);
 			RESET_SCOPE_OFFSET;
 			symbolType->recordMembers = type->value.var_decl_list;
@@ -135,7 +147,6 @@ int collect_par_decl_list ( PAR_DECL_LIST *pdecl, SYMBOL_TABLE *st ) {
 //Collecting lists and passing on offsets to variables
 int collect_var_decl_list ( VAR_DECL_LIST *vdecl, SYMBOL_TABLE *st,
 							SYMBOL_KIND symbolKind ) {
-
 	vdecl->symbolTable = st;
 	int numberOfVariables = 1;
 	switch(vdecl->kind){
@@ -428,7 +439,7 @@ SYMBOL_TYPE *make_SYMBOL_TYPE(TYPES_SUPPORTED type) {
 	new_type->nextArrayType = NULL;
 	new_type->recordMembers = NULL;
 	new_type->return_type = NULL;
-	new_type->child = NULL;
+	new_type->childScope = NULL;
   	new_type->arguments = 0;
   	new_type->arrayDim = 0;
   	new_type->type = type;

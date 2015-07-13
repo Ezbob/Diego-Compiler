@@ -429,7 +429,7 @@ int check_variable ( VAR *var){
 
 			if(var->value.var_record.var->symboltype->type == SYMBOL_RECORD) {
 				
-				innerScope = var->value.var_record.var->symboltype->child;
+				innerScope = var->value.var_record.var->symboltype->childScope;
 
 				if((symbol = getSymbol(innerScope, var->value.var_record
 					.id)) != NULL){

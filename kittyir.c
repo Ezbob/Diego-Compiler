@@ -769,7 +769,7 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case VAR_RECORD:
 			base = IR_builder_variable(var->value.var_record.var);
 
-			childTable = var->value.var_record.var->symboltype->child;
+			childTable = var->value.var_record.var->symboltype->childScope;
 				// This must be the child table
 
 			if( ( symbol = getSymbol(childTable, var->value.var_record.id) )

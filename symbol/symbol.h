@@ -25,7 +25,7 @@ typedef struct SYMBOL_TYPE {
     struct SYMBOL_TYPE *nextArrayType; // for arrays
     struct VAR_DECL_LIST *recordMembers; // for records
     struct SYMBOL_TYPE *return_type; // for functions
-    struct SYMBOL_TABLE *child; // for records
+    struct SYMBOL_TABLE *childScope; // for records
     TYPES_SUPPORTED type;
     int arguments; // or members
     int arrayDim;
@@ -46,6 +46,7 @@ typedef struct SYMBOL {
 typedef struct SYMBOL_TABLE {
     SYMBOL *table[HASH_SIZE];
     struct SYMBOL_TABLE *next;
+    struct SYMBOL_TABLE *recordParentScope;
     int temps;
     int localVars; // used in allocation of local variables
     int id;
