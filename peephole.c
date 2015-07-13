@@ -103,6 +103,8 @@ void useless_transient_move(linked_list *currentLine) {
             (IR_INSTRUCTION *) currentLine->data;
     IR_INSTRUCTION *nextInstruction =
             (IR_INSTRUCTION *) currentLine->next->data;
+    IR_INSTRUCTION *thirdInstruction =
+            (IR_INSTRUCTION *) currentLine->next->next->data;
     linked_list *new_list_element;
 
     linked_list *nextLine = currentLine->next;
@@ -121,6 +123,13 @@ void useless_transient_move(linked_list *currentLine) {
              && nextArg1->kind == register_arg
              && strcmp(currentArg2->charConst, nextArg1->charConst) == 0){
 
+            if ( thirdInstruction->arg1 != NULL &&
+                    thirdInstruction->arg1->kind == register_arg &&
+                    strcmp(nextArg1->charConst, thirdInstruction->arg1
+                            ->charConst) == 0){
+                // register still in use
+                return;
+            }
 
             new_list_element = NEW(linked_list);
 

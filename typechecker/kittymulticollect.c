@@ -114,20 +114,20 @@ void multi_collect_decl_list ( DECL_LIST *decl_list ) {
 
 void multi_collect_declaration ( DECLARATION *declaration ) {
 	SYMBOL *symbol;
-	SYMBOL_TYPE *symboltype;
+	SYMBOL_TYPE *symbolType;
 
 	switch(declaration->kind) {
 		case DECLARATION_ID:
 			multi_collect_type(declaration->value.declaration_id.type);
-			symboltype = declaration->value.declaration_id.type->symbolType;
+			symbolType = declaration->value.declaration_id.type->symbolType;
 
 			if( ( symbol = getSymbol(declaration->symbolTable,
 									declaration->value.declaration_id.id) )
 				!= NULL && symbol->symbolType->type == SYMBOL_UNKNOWN
-				&& symboltype->type != SYMBOL_UNKNOWN) {
+				&& symbolType->type != SYMBOL_UNKNOWN) {
 
 				unknownTypesCount--;
-				symbol->symbolType = symboltype;
+				symbol->symbolType = symbolType;
 			}
 			break;
 		case DECLARATION_FUNC:

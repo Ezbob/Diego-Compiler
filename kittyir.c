@@ -459,10 +459,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 												  .opt_length);
 					append_element(ir_lines, popEcx);
 
-					//if(runtime_enabled){ //This cant be covered by rtc
+					if(runtime_enabled){ //This cant be covered by rtc
 						// edi and esi is free here
 						negative_array_size_check(st->lineno, ecx);
-					//}
+					}
 
 					// move the array size to the first index
 					append_element(ir_lines, make_instruction_movl(ecx,
