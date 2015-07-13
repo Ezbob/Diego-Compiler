@@ -9,6 +9,7 @@
 static int current_label = 0;
 static int has_errors = 0;
 static int has_prints = 0;
+static int runtime_enabled = 0;
 
 extern linked_list *ir_lines; // plug IR code in here
 static linked_list *data_lines; // for allocates, we use variables
@@ -81,8 +82,9 @@ void init_heap() {
     }
 }
 
-void IR_build( BODY *program ) {
+void IR_build( BODY *program, int rtc ) {
 	fprintf(stderr, "Initializing intermediate code generation phase\n");
+	runtime_enabled = rtc;
 	ir_lines = initialize_list();
 	data_lines = initialize_list();
 	function_stack = stackInit();
@@ -359,7 +361,9 @@ void IR_builder_statement ( STATEMENT *st ) {
                 case STATEMENT_MODASSIGN:
                     append_element(ir_lines, make_instruction_movl(variable,
                                                                    eax));
-                    division_by_zero_runtime_check(st->lineno, ebx);
+                    if(runtime_enabled){
+                    	division_by_zero_runtime_check(st->lineno, ebx);                    	
+                    }
 
                     append_element(ir_lines, make_instruction_xor(edx, edx));
                     // Clear edx for modulo
@@ -455,8 +459,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 												  .opt_length);
 					append_element(ir_lines, popEcx);
 
-					// edi and esi is free here
-					negative_array_size_check(st->lineno, ecx);
+					//if(runtime_enabled){ //This cant be covered by rtc
+						// edi and esi is free here
+						negative_array_size_check(st->lineno, ecx);
+					//}
 
 					// move the array size to the first index
 					append_element(ir_lines, make_instruction_movl(ecx,
@@ -470,8 +476,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ecx));
 
-					// eax is free, ebx is free
-					out_of_memory_runtime_check(st->lineno, ecx);
+					if(runtime_enabled){
+						// eax is free, ebx is free
+						out_of_memory_runtime_check(st->lineno, ecx);
+					}
 
 					// update the heap free pointer
 					append_element(ir_lines, make_instruction_addl(ecx,
@@ -501,8 +509,10 @@ void IR_builder_statement ( STATEMENT *st ) {
 					append_element(ir_lines, make_instruction_imul(
 							make_argument_constant(WORD_SIZE), ecx));
 
-					// eax and ebx is free
-					out_of_memory_runtime_check(st->lineno, ecx);
+					if(runtime_enabled){
+						// eax and ebx is free
+						out_of_memory_runtime_check(st->lineno, ecx);
+					}
 
 					// add to the next pointer
 					append_element(ir_lines, make_instruction_addl(ecx,
@@ -738,12 +748,17 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 		case VAR_ARRAY:
 			base = IR_builder_variable(var->value.var_array.var);
 			append_element(ir_lines, make_instruction_movl(base, esi));
-			null_pointer_runtime_check(var->lineno, esi);
+
+			if(runtime_enabled){
+				null_pointer_runtime_check(var->lineno, esi);
+			}
 
 			IR_builder_expression(var->value.var_array.exp);
 			append_element(ir_lines, popEdi);
 				// exp
-			out_of_bounds_runtime_check(var->lineno, esi, edi);
+			if(runtime_enabled){
+				out_of_bounds_runtime_check(var->lineno, esi, edi);
+			}
 
 			append_element(ir_lines, make_instruction_incl(edi));
 				// increment since we use the first element as the size
@@ -764,8 +779,11 @@ ARGUMENT *IR_builder_variable (VAR *var) {
 				// member index is zero indiced
 			}
 			append_element(ir_lines, make_instruction_movl(base, esi));
-			null_pointer_runtime_check(var->lineno, esi);
 
+			if(runtime_enabled){
+				null_pointer_runtime_check(var->lineno, esi);
+			}
+			
 			append_element(ir_lines, make_instruction_movl(offset, edi));
 
 			// returns much the same as arrays
@@ -821,7 +839,9 @@ void IR_builder_expression ( EXPRES *exp ) {
 			append_element(ir_lines, popEax);
 			// lhs
 
-			division_by_zero_runtime_check(exp->lineno, ebx);
+			if(runtime_enabled){
+				division_by_zero_runtime_check(exp->lineno, ebx);
+			}
 
 			append_element(ir_lines, make_instruction_xor(edx, edx));
 				// Clear edx for modulo

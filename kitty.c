@@ -24,6 +24,7 @@
 #define PEEPHOLE_STATISTICS 1
 #define PRETTY_PRINTER 2
 #define NO_OPTIMIZATION 3
+#define RUNTIME_CHECKS 4
 #endif
 
 #ifndef PARSE_MSGS
@@ -44,6 +45,8 @@ int main_argument_decider(int argc, char **argStrings) {
 		} else if (strcmp(argStrings[1], "--nooptimization") == 0 ||
 				strcmp(argStrings[1],"-n") == 0){
 			return NO_OPTIMIZATION;
+		} else if ( strcmp(argStrings[1], "-rtc") == 0) {
+			return RUNTIME_CHECKS;
 		}
 	} else if ( argc == 1 ) {
 		return NO_ARGUMENTS;
@@ -84,19 +87,23 @@ int main ( int argc, char *argv[] ) {
 					printer_body(_main_);
 					break;
 				case PEEPHOLE_STATISTICS:
-					IR_build(_main_);
+					IR_build(_main_, 0);
 					begin_peephole( 1 );
 					IR_printer(ir_lines);
 					break;
 				case NO_OPTIMIZATION:
-					IR_build(_main_);
+					IR_build(_main_, 0);
 					IR_printer(ir_lines);
 					break;
 				case NO_ARGUMENTS:
-					IR_build(_main_);
+					IR_build(_main_, 0);
 					begin_peephole( 0 );
 					IR_printer(ir_lines);
 					break;
+				case RUNTIME_CHECKS:
+					IR_build(_main_, 1);
+					begin_peephole( 0 );
+					IR_printer(ir_lines);
 				default:
 					break;
 			}
