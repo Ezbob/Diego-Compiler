@@ -78,10 +78,10 @@ int main ( int argc, char *argv[] ) {
 			fprintf(stderr, "Error: Parse out of memory\n");
 			return COMPILATION_FAILURE;
 		case PARSE_SUCCESS:
-			begin_weed(_main_);
 			begin_collect(_main_);
 			begin_multi_collect(_main_);
 			begin_check(_main_);
+			begin_weed(_main_);
 			switch ( main_argument_decider(argc, argv) ) {
 				case PRETTY_PRINTER:
 					printer_body(_main_);

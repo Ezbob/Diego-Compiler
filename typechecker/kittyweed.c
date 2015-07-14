@@ -523,36 +523,39 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->kind = EXPRES_TERM;
 				}
 		 	}
-			/* dominance rule and identity rule for AND with associativity */
+
 			if ( left_exp->kind == EXPRES_TERM ) {
+			/* dominance rule and identity rule for AND with associativity */
 				 if ( left_term->kind == TERM_FALSE ) {
 					 // dominance rule
 					 exp = left_exp;
-				 } else if ( left_term->kind == TERM_TRUE ){
+				 } else if ( left_term->kind == TERM_TRUE ) {
 					 // identity rule
 					 exp = right_exp;
 				 }
 			}
-
 			if ( right_exp->kind == EXPRES_TERM ) {
-				if (right_term->kind == TERM_FALSE ){
+				if (right_term->kind == TERM_FALSE ) {
 					// dominance rule
 					exp = right_exp;
-				} else if (right_term->kind == TERM_TRUE){
+				} else if (right_term->kind == TERM_TRUE) {
 					// identity rule
 					exp = left_exp;
 				}
 			}
-
 			if ( right_exp->kind == EXPRES_TERM &&
 				 left_exp->kind == EXPRES_TERM &&
 				 right_term->kind == TERM_VAR &&
-				 left_term->kind == TERM_VAR ){
+				 left_term->kind == TERM_VAR ) {
 				if (right_term->value.var->kind == VAR_ID &&
 						left_term->value.var->kind == VAR_ID &&
 						strcmp(right_term->value.var->id,
 							   left_term->value.var->id) == 0){
 					// a && a = a
+					free(right_term->value.var);
+					free(right_term);
+					free(right_exp);
+
 					exp = left_exp;
 				}
 			}
@@ -565,18 +568,19 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 			if((left_term->kind == TERM_TRUE || 
 				left_term->kind == TERM_FALSE) &&
-				(right_term->kind == TERM_TRUE || right_term->kind == 
-															TERM_FALSE)){
-				if(	left_exp->value.term->kind == TERM_FALSE && 
-								right_exp->value.term->kind	== TERM_FALSE){
+				( right_term->kind == TERM_TRUE ||
+						right_term->kind == TERM_FALSE) ) {
+				if (left_exp->value.term->kind == TERM_FALSE &&
+					right_exp->value.term->kind == TERM_FALSE) {
 					exp->value.term = make_TERM_FALSE();
 					exp->kind = EXPRES_TERM;
 				} else {
 					exp->value.term = make_TERM_TRUE();
 					exp->kind = EXPRES_TERM;
 				}
+				/* dominance rule and identity rule for OR
+				 * with associativity */
 			}
-			/* dominance rule and identity rule for OR with associativity */
 			if ( left_exp->kind == EXPRES_TERM ) {
 				if ( left_term->kind == TERM_TRUE ) {
 					// dominance rule
@@ -606,6 +610,10 @@ EXPRES *weed_expression( EXPRES *exp ){
 					strcmp(right_term->value.var->id,
 						   left_term->value.var->id) == 0){
 					// a || a = a
+					free(right_term->value.var);
+					free(right_term);
+					free(right_exp);
+
 					exp = left_exp;
 				}
 			}
@@ -673,28 +681,26 @@ EXPRES *weed_expression( EXPRES *exp ){
 		case EXPRES_DIVIDE:
 
 			if( left_exp->kind == EXPRES_TERM &&
-					right_exp->kind == EXPRES_TERM ){
+				right_exp->kind == EXPRES_TERM ){
 
-					left_term = left_exp->value.term;
-					right_term = right_exp->value.term;
+				left_term = left_exp->value.term;
+				right_term = right_exp->value.term;
 
-					if(left_term->kind != TERM_NUM || 
-					   right_term->kind != TERM_NUM ) {
-						break;
-					}
+				if(left_term->kind != TERM_NUM ||
+				   right_term->kind != TERM_NUM ) {
+					break;
+				}
 
-					if(right_term->value.intconst == 0){
-						weed_error_report("Division by 0", exp->lineno);
-					}
+				if(right_term->value.intconst == 0){
+					weed_error_report("Division by 0", exp->lineno);
+				}
 
-					int temp_res = left_term->value.intconst / right_term->
-															value.intconst;			
+				int temp_res = left_term->value.intconst / right_term->
+														value.intconst;
 
-					exp->value.term = make_TERM_NUM(temp_res);
-					exp->kind = EXPRES_TERM;
-
+				exp->value.term = make_TERM_NUM(temp_res);
+				exp->kind = EXPRES_TERM;
 			}
-
 			break;
 
 		case EXPRES_LEQ:
@@ -705,21 +711,37 @@ EXPRES *weed_expression( EXPRES *exp ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != TERM_NUM || 
-				   right_term->kind != TERM_NUM ) {
-					break;
-				}
-
-				if( left_term->value.intconst <= right_term->value.intconst ){
+				if(left_term->kind == TERM_NUM &&
+				   	right_term->kind == TERM_NUM ) {
+					if( left_term->value.intconst <=
+							right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
-				} else {
+					} else {
 						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
+				}
+
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a == a -> true
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_TRUE());
+					}
 				}
 
 			}
-
 			break;
 
 		case EXPRES_GEQ:
@@ -730,17 +752,35 @@ EXPRES *weed_expression( EXPRES *exp ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != TERM_NUM || 
-				   right_term->kind != TERM_NUM ) {
-					break;
-				}
+				if( left_term->kind == TERM_NUM &&
+				   right_term->kind == TERM_NUM ) {
 
-				if( left_term->value.intconst >= right_term->value.intconst ){
+					if( left_term->value.intconst >=
+							right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
-				} else {
+					} else {
 						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
+				}
+
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a == a -> true
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_TRUE());
+					}
 				}
 
 			}
@@ -753,7 +793,8 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
-				if(left_term->kind == TERM_NUM && 
+
+				if(left_term->kind == TERM_NUM &&
 				    right_term->kind == TERM_NUM ) { 
 					if( left_term->value.intconst ==
 							right_term->value.intconst ){
@@ -762,6 +803,24 @@ EXPRES *weed_expression( EXPRES *exp ){
 					} else {
 						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
+				}
+
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a == a -> true
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_TRUE());
 					}
 				}
 			}
@@ -774,6 +833,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
+
 				if(left_term->kind == TERM_NUM && 
 				    right_term->kind == TERM_NUM ) { 
 					if( left_term->value.intconst != 
@@ -783,6 +843,24 @@ EXPRES *weed_expression( EXPRES *exp ){
 					} else {
 						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
+				}
+
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a != a -> FALSE
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_FALSE());
 					}
 				}
 			}
@@ -796,20 +874,35 @@ EXPRES *weed_expression( EXPRES *exp ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != TERM_NUM || 
-				   right_term->kind != TERM_NUM ) {
-					break;
-				}
-
-				if( left_term->value.intconst >
+				if(left_term->kind == TERM_NUM &&
+				   right_term->kind == TERM_NUM ) {
+					if( left_term->value.intconst >
 						right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
-				} else {
+					} else {
 						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
 				}
 
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a > a -> FALSE
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_FALSE());
+					}
+				}
 			}
 			break;
 
@@ -821,18 +914,35 @@ EXPRES *weed_expression( EXPRES *exp ){
 				left_term = left_exp->value.term;
 				right_term = right_exp->value.term;
 
-				if(left_term->kind != TERM_NUM || 
-				   right_term->kind != TERM_NUM ) {
-					break;
-				}
-				if( left_term->value.intconst < right_term->value.intconst ){
+				if( left_term->kind == TERM_NUM &&
+				    right_term->kind == TERM_NUM ) {
+					if( left_term->value.intconst <
+							right_term->value.intconst ){
 						exp->value.term = make_TERM_TRUE();
 						exp->kind = EXPRES_TERM;
-				} else {
-						exp->value.term = make_TERM_FALSE();	
+					} else {
+						exp->value.term = make_TERM_FALSE();
 						exp->kind = EXPRES_TERM;
+					}
 				}
-	
+
+				if ( right_term->kind == TERM_VAR &&
+					 left_term->kind == TERM_VAR ){
+					if (right_term->value.var->kind == VAR_ID &&
+						left_term->value.var->kind == VAR_ID &&
+						strcmp(right_term->value.var->id,
+							   left_term->value.var->id) == 0){
+						// a < a -> FALSE
+						free(left_term->value.var);
+						free(right_term->value.var);
+						free(left_term);
+						free(right_term);
+						free(left_exp);
+						free(right_exp);
+
+						exp = make_EXPRES_TERM(make_TERM_FALSE());
+					}
+				}
 			}
 			break;
 		default:
@@ -896,6 +1006,19 @@ TERM *weed_term ( TERM *term) {
 
 		case TERM_PARENTESES:
 			term->value.exp = weed_expression(term->value.exp);
+
+			if ( term->value.exp->kind == EXPRES_TERM ) {
+				// if (23), (true) or (false)
+				tempTerm = term->value.exp->value.term;
+				if ( tempTerm->kind == TERM_NUM
+					 || tempTerm->kind == TERM_TRUE
+					 || tempTerm->kind == TERM_FALSE ) {
+					term->value.exp = NULL;
+					free(term->value.exp);
+					free(term);
+					term = tempTerm;
+				}
+			}
 			break;
 
 		case TERM_ABS:
