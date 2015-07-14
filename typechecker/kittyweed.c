@@ -490,6 +490,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 	EXPRES *right_exp;
 	TERM *left_term;
 	TERM *right_term;
+	int temp_res;
 
 	if(exp->kind == EXPRES_TERM ){
 		exp->value.term = weed_term(exp->value.term);
@@ -679,6 +680,7 @@ EXPRES *weed_expression( EXPRES *exp ){
 			break;
 
 		case EXPRES_DIVIDE:
+		case EXPRES_MODULO:
 
 			if( left_exp->kind == EXPRES_TERM &&
 				right_exp->kind == EXPRES_TERM ){
@@ -695,8 +697,13 @@ EXPRES *weed_expression( EXPRES *exp ){
 					weed_error_report("Division by 0", exp->lineno);
 				}
 
-				int temp_res = left_term->value.intconst / right_term->
-														value.intconst;
+				if ( exp->kind == EXPRES_DIVIDE ) {
+					temp_res = left_term->value.intconst /
+							right_term->value.intconst;
+				} else {
+					temp_res = left_term->value.intconst %
+							right_term->value.intconst;
+				}
 
 				exp->value.term = make_TERM_NUM(temp_res);
 				exp->kind = EXPRES_TERM;
@@ -990,7 +997,7 @@ TERM *weed_term ( TERM *term) {
 			term->value.term = weed_term(term->value.term);
 
 			if ( term->value.term->kind == TERM_UMINUS ) {
-				// like in NOT
+				// like in NOT -> discard double negative
 				tempTerm = term->value.term;
 				term = term->value.term->value.term;
 				free(tempTerm);
@@ -1008,7 +1015,7 @@ TERM *weed_term ( TERM *term) {
 			term->value.exp = weed_expression(term->value.exp);
 
 			if ( term->value.exp->kind == EXPRES_TERM ) {
-				// if (23), (true) or (false)
+				// if (23), (true) or (false) -> discard parentheses
 				tempTerm = term->value.exp->value.term;
 				if ( tempTerm->kind == TERM_NUM
 					 || tempTerm->kind == TERM_TRUE
@@ -1023,13 +1030,27 @@ TERM *weed_term ( TERM *term) {
 
 		case TERM_ABS:
 			term->value.exp = weed_expression(term->value.exp);
-			if (term->value.exp->kind == EXPRES_TERM){
+			if (term->value.exp->kind == EXPRES_TERM) {
+				tempTerm = term->value.exp->value.term;
 
-				if (term->value.exp->value.term->kind == TERM_NUM){
-					
-					if(term->value.exp->value.term->value.intconst < 0){
-						term->value.exp->value.term->value.intconst *= (-1);
-					} 
+				if (tempTerm->kind == TERM_NUM) {
+					if (tempTerm->value.intconst < 0) {
+						// negate and remove abs operation
+						tempTerm->value.intconst *= (-1);
+
+						term->value.exp->value.term = NULL;
+						free(term);
+						free(term->value.exp);
+
+						term = tempTerm;
+					} else {
+						// positive, remove abs operation
+						term->value.exp->value.term = NULL;
+						free(term);
+						free(term->value.exp);
+
+						term = tempTerm;
+					}
 				}
 			}
 			break;
