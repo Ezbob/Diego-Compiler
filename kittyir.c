@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include "kittyir.h"
 #include "irInstructions.h"
-#include "parserscanner/kittytree.h"
 #include "typechecker/stack.h"
 
 static int current_label = 0;
@@ -12,8 +11,9 @@ static int has_prints = 0;
 static int runtime_enabled = 0;
 
 extern linked_list *ir_lines; // plug IR code in here
+extern stackT *functionStack;
 static linked_list *data_lines; // for allocates, we use variables
-static stackT *function_stack;
+
 
 ARGUMENT *eax, *ebx, *ecx, *edx, *edi, *esi, *ebp, *esp;
 ARGUMENT *one, *zero;
@@ -85,9 +85,7 @@ void init_heap() {
 void IR_build( BODY *program, int rtc ) {
 	fprintf(stderr, "Initializing intermediate code generation phase\n");
 	runtime_enabled = rtc;
-	ir_lines = initialize_list();
 	data_lines = initialize_list();
-	function_stack = stackInit();
 	init_argument_constants();
 	init_stack_instructions();
 
@@ -116,12 +114,10 @@ void IR_build( BODY *program, int rtc ) {
 	append_element(ir_lines, make_instruction_ret());
 
 	build_data_section();
-
-	stackDestroy(function_stack);
 }
 
 void IR_builder_function(FUNC *func) {
-	funcStackPush(function_stack, func);
+	funcStackPush(functionStack, func);
 	// we can now refer to the current function
 
 	// move the handling of the declaration list here instead of the body to
@@ -135,7 +131,7 @@ void IR_builder_function(FUNC *func) {
 
 	func->symbolTable->localVars = 0; // reset local variables in scope
 
-	funcStackPop(function_stack);
+	funcStackPop(functionStack);
 		// leaving the function
 }
 
@@ -1040,8 +1036,8 @@ void IR_builder_term ( TERM *term ) {
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			if ( !stackIsEmpty(function_stack) &&
-					strcmp(funcStackPeek(function_stack)->head->id,
+			if ( !stackIsEmpty(functionStack) &&
+					strcmp(funcStackPeek(functionStack)->head->id,
 						   term->value.term_act_list.id) == 0 ) {
 				// recursion here just have to push the same base
 				// pointer again

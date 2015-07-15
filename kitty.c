@@ -57,6 +57,9 @@ int main_argument_decider(int argc, char **argStrings) {
 int lineno = 1;
 BODY *_main_; // root of the AST
 linked_list *ir_lines; // list of the IR lines of code
+stackT *functionStack; //Stack for functions
+stackT *loopStack; //Stack for keeping track of loops
+					//used with break/continue
 
 int main ( int argc, char *argv[] ) {
 
@@ -78,6 +81,10 @@ int main ( int argc, char *argv[] ) {
 			fprintf(stderr, "Error: Parse out of memory\n");
 			return COMPILATION_FAILURE;
 		case PARSE_SUCCESS:
+			functionStack = stackInit();
+			loopStack = stackInit();
+			ir_lines = initialize_list();
+
 			begin_collect(_main_);
 			begin_multi_collect(_main_);
 			begin_check(_main_);
@@ -107,6 +114,10 @@ int main ( int argc, char *argv[] ) {
 				default:
 					break;
 			}
+
+			stackDestroy(functionStack);
+			stackDestroy(loopStack);
+			terminate_list(&ir_lines);
 			break;
 		default:
 			fprintf(stderr, "Error: Fatal error in parsing \n");

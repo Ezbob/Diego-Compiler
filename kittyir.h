@@ -17,12 +17,17 @@
 
 // shorthand for allocating a new string label
 #define NEW_LABEL ((char*) calloc(MAX_LABEL_SIZE + 1, sizeof(char)))
-// standardization of the building of function labels for calls
+
+// standardization of the building of function labels for calls, with a limit
+// of MAX_LABEL_SIZE-1
 #define GET_FUNCTION_LABEL(functionLabel, name, offset) functionLabel = \
-	NEW_LABEL; sprintf(functionLabel,"f_%s.%d", name, offset)
+	NEW_LABEL; sprintf(functionLabel,"f_%.*s.%d", MAX_LABEL_SIZE-1, name, \
+	offset)
+
 // shorthand/standardization for creation of control flow labels
 #define GET_FLOW_CONTROL_LABEL(flowControlLabel, name, id) flowControlLabel =\
 	NEW_LABEL; sprintf(flowControlLabel,"j_%s.%d", name, id)
+
 // shorthand/explaining macro for creating unique label identifiers
 #define GET_NEXT_LABEL_ID (current_label++)
 

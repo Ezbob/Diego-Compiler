@@ -4,9 +4,8 @@
 #include "kittyweed.h"
 #include "../parserscanner/kittytree.h"
 
-stackT *functionStack; //Stack for functions
-stackT *loopStack; //Stack for keeping track of loops
-				   //used with break/continue
+extern stackT *functionStack;
+extern stackT *loopStack;
 
 void weed_error_report(const char* errorMsg, int lineno){
 	if (lineno < 0){
@@ -26,8 +25,6 @@ BODY *begin_weed(BODY *body){
 	 * need this to attach to statements to make  
 	 * sure the return type is correct
 	 */
-	functionStack = stackInit();
-	loopStack = stackInit();
 
 	body = weed_body(body);
 
@@ -304,13 +301,11 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			st->value.statement_return.exp = 
 				weed_expression(st->value.statement_return.exp);
 
-			if(functionStack->top == NULL){
+			if( stackIsEmpty(functionStack) ){
 				weed_error_report("Return not associated with function",
 																st->lineno);
 			}
 
-			st->value.statement_return.function =
-					funcStackPeek(functionStack);
 			st->foundReturn = 1;
 			return st;
 

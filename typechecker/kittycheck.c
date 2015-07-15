@@ -1,7 +1,10 @@
 #include "kittycheck.h"
 #include "kittycollect.h"
-#include "../parserscanner/kittytree.h"
-#include <stdio.h>
+#include "stack.h"
+
+extern stackT *functionStack;
+	// externalize the functionStack to make the coupling between phases weak-
+	// er.
 
 void check_error_report(const char* errorMsg, int lineno) {
 	if (lineno < 0){
@@ -19,9 +22,12 @@ void begin_check ( BODY *main ) {
 }
 
 void check_function ( FUNC *function ) {
+	funcStackPush(functionStack, function);
 
 	check_head(function->head);
 	check_body(function->body);
+
+	funcStackPop(functionStack);
 }
 
 void check_head ( HEAD *header ) {
@@ -127,11 +133,11 @@ void check_statement ( STATEMENT *statement){
 			check_expression(statement->value.statement_return.exp);
 			// Note: return type set in weeder
 			leftHand = statement->value.statement_return.exp->symbolType;
-			returnType = statement->value.statement_return.function->
-					symbolType->return_type;
-			if (leftHand->type != returnType->type
-				&& ((returnType->type == SYMBOL_RECORD || returnType->type ==
-														  SYMBOL_ARRAY) &&
+			returnType = funcStackPeek(functionStack)->symbolType;
+
+			if (leftHand->type != returnType->type &&
+					((returnType->type == SYMBOL_RECORD ||
+					returnType->type == SYMBOL_ARRAY) &&
 					leftHand->type != SYMBOL_NULL)) {
 				check_error_report(
 						"type error: Return type does not match function",
