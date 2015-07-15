@@ -86,6 +86,7 @@ void callee_end();
 void function_epilog();
 void function_prolog(SYMBOL_TABLE*);
 IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *);
+void push_static_link(char *termLabel,int definedScopeId, int callScopeId);
 void init_heap();
 void init_argument_constants();
 void init_stack_instructions();

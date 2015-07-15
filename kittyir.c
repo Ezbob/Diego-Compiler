@@ -4,6 +4,7 @@
 #include "kittyir.h"
 #include "irInstructions.h"
 #include "typechecker/stack.h"
+#include "parserscanner/kittytree.h"
 
 static int current_label = 0;
 static int has_errors = 0;
@@ -624,7 +625,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					make_argument_indexing(NULL, ebx, eax), edx));
 			append_element( ir_lines, make_instruction_movl(edx, variable));
 
-			// START of foreach
+			// START of foreach loop
 			append_element( ir_lines,
 							make_instruction_label(st->start_label) );
 
@@ -1050,34 +1051,8 @@ void IR_builder_term ( TERM *term ) {
 			// push functionParameters on stack recursively
 			IR_builder_act_list(term->value.term_act_list.actlist);
 
-			if ( !stackIsEmpty(functionStack) &&
-					strcmp(funcStackPeek(functionStack)->head->id,
-						   term->value.term_act_list.id) == 0 ) {
-				// recursion here just have to push the same base
-				// pointer again
-
-				append_element(ir_lines, make_instruction_pushl(
-						make_argument_address(8, ebp)));
-					// pass the previous base pointer
-			} else if( callScopeId > definedScopeId ) {
-				// we have to to fetch the right base pointer e.g.: the base
-				// pointer of the scope where the function is defined
-				append_element(ir_lines, make_instruction_movl(
-						make_argument_address(8, ebp), eax));
-				callScopeId--;
-
-				while ( definedScopeId != callScopeId) {
-					// get previous base pointer by iteration
-					append_element(ir_lines, make_instruction_movl(
-							make_argument_address(8, eax), eax));
-					callScopeId--;
-				}
-
-				append_element(ir_lines, pushEax);
-			} else if ( callScopeId == definedScopeId ) {
-				// top level, we just push the base pointer on the stack
-				append_element(ir_lines, pushEbp);
-			}
+            push_static_link(term->value.term_act_list.id,
+                              definedScopeId, callScopeId);
 
 			append_element(ir_lines, make_instruction_call(
 					make_argument_label(functionLabel)));
@@ -1191,6 +1166,37 @@ IR_INSTRUCTION *local_variable_allocation(SYMBOL_TABLE *currentScope) {
 		// reset counter at end of function
 	}
 	return NULL;
+}
+
+void push_static_link(char *termLabel,int definedScopeId, int callScopeId) {
+
+    if ( !stackIsEmpty(functionStack) &&
+         strcmp(funcStackPeek(functionStack)->head->id, termLabel) == 0 ) {
+        // recursion here just have to push the same base
+        // pointer again
+
+        append_element(ir_lines, make_instruction_pushl(
+                make_argument_address(8, ebp)));
+        // pass the previous base pointer
+    } else if( callScopeId > definedScopeId ) {
+        // we have to to fetch the right base pointer e.g.: the base
+        // pointer of the scope where the function is defined
+        append_element(ir_lines, make_instruction_movl(
+                make_argument_address(8, ebp), eax));
+        callScopeId--;
+
+        while ( definedScopeId != callScopeId) {
+            // get previous base pointer by iteration
+            append_element(ir_lines, make_instruction_movl(
+                    make_argument_address(8, eax), eax));
+            callScopeId--;
+        }
+
+        append_element(ir_lines, pushEax);
+    } else if ( callScopeId == definedScopeId ) {
+        // top level, we just push the base pointer on the stack
+        append_element(ir_lines, pushEbp);
+    }
 }
 
 void negative_array_size_check(int lineno, ARGUMENT *arraySize) {
