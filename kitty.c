@@ -45,7 +45,8 @@ int main_argument_decider(int argc, char **argStrings) {
 		} else if (strcmp(argStrings[1], "--nooptimization") == 0 ||
 				strcmp(argStrings[1],"-n") == 0){
 			return NO_OPTIMIZATION;
-		} else if ( strcmp(argStrings[1], "-rtc") == 0) {
+		} else if ( strcmp(argStrings[1], "-rtc") == 0 ||
+					strcmp(argStrings[1],"--runtimechecks") == 0) {
 			return RUNTIME_CHECKS;
 		}
 	} else if ( argc == 1 ) {
@@ -68,7 +69,8 @@ int main ( int argc, char *argv[] ) {
 				"\nCorrect usage:\n\t./kitty \"flag\" "
 				"< \"input_file\" > \"output_file\" \n\nValid "
 				"flags are: \"--print\",\"-p\" OR \"--histogram\""
-				",\"-h\" OR \"--nooptimization\",\"-n\" \n");
+				",\"-h\" OR \"--nooptimization\",\"-n\" "
+				"OR \"--runtimechecks\",\"-rtc\" \n");
 		exit(1);
 	}
 
@@ -111,6 +113,15 @@ int main ( int argc, char *argv[] ) {
 					IR_build(_main_, 1);
 					begin_peephole( 0 );
 					IR_printer(ir_lines);
+					break;
+				case INVALID_ARGUMENTS:
+					fprintf(stderr, "Invalid flags parsed to compiler.\n"
+							"\nCorrect usage:\n\t./kitty \"flag\" "
+							"< \"input_file\" > \"output_file\" \n\nValid "
+							"flags are: \"--print\",\"-p\" OR \"--histogram\""
+							",\"-h\" OR \"--nooptimization\",\"-n\" "
+							"OR \"--runtimechecks\",\"-rtc\" \n");
+					break;
 				default:
 					break;
 			}
