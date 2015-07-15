@@ -297,7 +297,6 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 
 	switch(st->kind){
 		case STATEMENT_RETURN:
-			
 			st->value.statement_return.exp = 
 				weed_expression(st->value.statement_return.exp);
 
@@ -309,21 +308,20 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 			st->foundReturn = 1;
 			return st;
 
-
 		case STATEMENT_IFBRANCH:
-			st->value.statement_if_branch.condition = weed_expression(st->
-									value.statement_if_branch.condition);
+			st->value.statement_if_branch.condition =
+					weed_expression(st->value.statement_if_branch.condition);
 
-			st->value.statement_if_branch.statement = weed_statement(st->value.
-					statement_if_branch.statement);
+			st->value.statement_if_branch.statement =
+					weed_statement(st->value.statement_if_branch.statement);
 			
-			st->value.statement_if_branch.opt_else = weed_opt_else(st->value.
-					statement_if_branch.opt_else);
+			st->value.statement_if_branch.opt_else =
+					weed_opt_else(st->value.statement_if_branch.opt_else);
 			
 
 			if(st->value.statement_if_branch.opt_else->kind ==
-			   		OPT_ELSE_EMPTY && st->value.statement_if_branch.statement
-										 == NULL){
+			   		OPT_ELSE_EMPTY
+			   && st->value.statement_if_branch.statement == NULL){
 					break;
 			}
 
@@ -348,8 +346,9 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 					break;
 				}
 
-				if (ifTerm->kind == TERM_FALSE && (st->value.
-						statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY)){
+				if (ifTerm->kind == TERM_FALSE
+					&& (st->value.statement_if_branch.opt_else->kind
+												   != OPT_ELSE_EMPTY)){
 					// if FALSE then we should only look at else
 					return st->value.statement_if_branch.opt_else->statement;
 				}else if (ifTerm->kind == TERM_TRUE){
@@ -501,7 +500,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 	switch(exp->kind){
 
 		case EXPRES_AND:
-
 			left_term  = left_exp->value.term;
 			right_term = right_exp->value.term;
 
@@ -531,8 +529,16 @@ EXPRES *weed_expression( EXPRES *exp ){
 				 }
 			}
 			if ( right_exp->kind == EXPRES_TERM ) {
+
 				if (right_term->kind == TERM_FALSE ) {
 					// dominance rule
+
+					if ( left_exp->kind == EXPRES_TERM
+						 && left_term->kind == TERM_ACT_LIST ) {
+						// because of potential side effects and
+						// lazy evaluation we don't skip function calls here
+						break;
+					}
 					exp = right_exp;
 				} else if (right_term->kind == TERM_TRUE) {
 					// identity rule
@@ -558,11 +564,10 @@ EXPRES *weed_expression( EXPRES *exp ){
 			break;
 
 		case EXPRES_OR:
-
 			left_term  = left_exp->value.term;
 			right_term = right_exp->value.term;
 
-			if((left_term->kind == TERM_TRUE || 
+			if((left_term->kind == TERM_TRUE ||
 				left_term->kind == TERM_FALSE) &&
 				( right_term->kind == TERM_TRUE ||
 						right_term->kind == TERM_FALSE) ) {
@@ -574,9 +579,10 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp->value.term = make_TERM_TRUE();
 					exp->kind = EXPRES_TERM;
 				}
-				/* dominance rule and identity rule for OR
-				 * with associativity */
+
 			}
+			 // dominance rule and identity rule for OR
+				 // with associativity
 			if ( left_exp->kind == EXPRES_TERM ) {
 				if ( left_term->kind == TERM_TRUE ) {
 					// dominance rule
@@ -586,17 +592,21 @@ EXPRES *weed_expression( EXPRES *exp ){
 					exp = right_exp;
 				}
 			}
-
 			if ( right_exp->kind == EXPRES_TERM ) {
-				if (right_term->kind == TERM_TRUE ){
+				if (right_term->kind == TERM_TRUE ) {
 					// dominance rule
+					if ( left_exp->kind == EXPRES_TERM
+						 && left_term->kind == TERM_ACT_LIST ) {
+						// because of potential side effects and
+						// lazy evaluation we don't skip function calls here
+						break;
+					}
 					exp = right_exp;
 				} else if (right_term->kind == TERM_FALSE ){
 					// identity rule
 					exp = left_exp;
 				}
 			}
-
 			if ( right_exp->kind == EXPRES_TERM &&
 				 left_exp->kind == EXPRES_TERM &&
 				 right_term->kind == TERM_VAR &&
