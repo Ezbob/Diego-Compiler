@@ -12,6 +12,7 @@ static int runtime_enabled = 0;
 
 extern linked_list *ir_lines; // plug IR code in here
 extern stackT *functionStack;
+extern stackT *loopStack;
 static linked_list *data_lines; // for allocates, we use variables
 
 
@@ -233,7 +234,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 	ARGUMENT *variable;
 	ARGUMENT *collection;
 
-	switch(st->kind){
+	switch(st->kind) {
 
 		case STATEMENT_RETURN:	
 			IR_builder_expression(st->value.statement_return.exp);
@@ -401,7 +402,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			//Comparison with "true" boolean value
 			append_element(ir_lines, make_instruction_cmp(one, eax));
 
-			if(st->value.statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY){
+			if (st->value.statement_if_branch.opt_else->kind !=
+					OPT_ELSE_EMPTY) {
 				// if not equal goto else part
 				append_element(ir_lines, make_instruction_jne(elseLabel));
 			} else {
@@ -413,7 +415,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			IR_builder_statement(st->value.statement_if_branch.statement);
 				// build statements in if-case
 
-			if(st->value.statement_if_branch.opt_else->kind != OPT_ELSE_EMPTY){
+			if (st->value.statement_if_branch.opt_else->kind !=
+					OPT_ELSE_EMPTY) {
 
 				// we have to jump over
 				//else when if-case is true
@@ -520,12 +523,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_WHILE:
+			loopStackPush(loopStack, st);
 			labelIdCounter = GET_NEXT_LABEL_ID;
 
             GET_FLOW_CONTROL_LABEL(st->start_label, "whileStart",
 								   labelIdCounter);
             GET_FLOW_CONTROL_LABEL(st->end_label, "whileEnd", labelIdCounter);
-            
+
 			// while-start label insert
 			append_element(ir_lines, make_instruction_label(st->start_label));
 
@@ -549,10 +553,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// insertion of while-end
 			append_element(ir_lines, make_instruction_label(
                     st->end_label));
+
+			loopStackPop(loopStack);
 			break;
 
 		case STATEMENT_FOR:
+			loopStackPush(loopStack, st);
 			labelIdCounter = GET_NEXT_LABEL_ID;
+
 			GET_FLOW_CONTROL_LABEL(st->start_label, "forStart",
 								   labelIdCounter);
 			GET_FLOW_CONTROL_LABEL(st->end_label, "forEnd", labelIdCounter);
@@ -581,13 +589,18 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			// end of for-loop
 			append_element(ir_lines, make_instruction_label(st->end_label));
+
+			loopStackPop(loopStack);
 			break;
+
 		case STATEMENT_FOREACH:
+			loopStackPush(loopStack, st);
 			labelIdCounter = GET_NEXT_LABEL_ID;
+
 			GET_FLOW_CONTROL_LABEL(st->start_label, "foreachStart",
 								   labelIdCounter);
-			GET_FLOW_CONTROL_LABEL(st->end_label, "foreachEnd",
-								   labelIdCounter);
+			GET_FLOW_CONTROL_LABEL(st->end_label,
+								   "foreachEnd", labelIdCounter);
 
 			// foreach preamble: get and push array size on stack,
 			// load element variable with the first element, save the current
@@ -599,9 +612,9 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			append_element( ir_lines, make_instruction_xor(eax, eax) );
 			append_element( ir_lines, make_instruction_movl(
-					make_argument_indexing(NULL, ebx, eax), ecx ));
+					make_argument_indexing(NULL, ebx, eax), ecx ) );
 
-			append_element( ir_lines, make_instruction_incl(eax));
+			append_element( ir_lines, make_instruction_incl(eax) );
 
 
 			// load variable
@@ -616,8 +629,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 							make_instruction_label(st->start_label) );
 
 			// compare index with array size
-			append_element( ir_lines, make_instruction_cmp(ecx, eax));
-			append_element( ir_lines, make_instruction_jg(st->end_label));
+			append_element( ir_lines, make_instruction_cmp(ecx, eax) );
+			append_element( ir_lines, make_instruction_jg(st->end_label) );
 
 			append_element( ir_lines, pushEcx); // save index and array size
 			append_element( ir_lines, pushEax);
@@ -625,15 +638,14 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 			// get new element and put in variable
 			append_element( ir_lines, make_instruction_movl(
-					make_argument_indexing(NULL, ebx, eax), ebx));
+					make_argument_indexing(NULL, ebx, eax), ebx) );
 
 			variable = IR_builder_variable(st->value.statement_foreach.
 					element );
-			append_element( ir_lines, make_instruction_movl(ebx, variable));
+			append_element( ir_lines, make_instruction_movl(ebx, variable) );
 
 			// do statements
 			IR_builder_statement(st->value.statement_foreach.statement);
-
 
 			// update array with variable
 			variable = IR_builder_variable(st->value.statement_foreach.
@@ -649,6 +661,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 			append_element( ir_lines, make_instruction_incl(eax));
 			append_element( ir_lines, make_instruction_jmp(st->start_label));
 			append_element( ir_lines, make_instruction_label(st->end_label));
+
+			loopStackPop(loopStack);
 			break;
 
 		case STATEMENT_LISTS:
@@ -656,13 +670,13 @@ void IR_builder_statement ( STATEMENT *st ) {
 			break;
 
 		case STATEMENT_BREAK:
-			append_element(ir_lines, make_instruction_jmp(
-				st->currentLoop->end_label));
+			append_element( ir_lines, make_instruction_jmp(
+				loopStackPeek(loopStack)->end_label) );
 			break;
 
 		case STATEMENT_CONTINUE:
-			append_element(ir_lines, make_instruction_jmp(
-				st->currentLoop->start_label));
+			append_element( ir_lines, make_instruction_jmp(
+				loopStackPeek(loopStack)->start_label) );
 			break;
 	}
 } 
