@@ -567,10 +567,11 @@ EXPRES *weed_expression( EXPRES *exp ){
 			left_term  = left_exp->value.term;
 			right_term = right_exp->value.term;
 
-			if((left_term->kind == TERM_TRUE ||
+			if( (left_term->kind == TERM_TRUE ||
 				left_term->kind == TERM_FALSE) &&
 				( right_term->kind == TERM_TRUE ||
 						right_term->kind == TERM_FALSE) ) {
+
 				if (left_exp->value.term->kind == TERM_FALSE &&
 					right_exp->value.term->kind == TERM_FALSE) {
 					exp->value.term = make_TERM_FALSE();

@@ -133,15 +133,18 @@ void check_statement ( STATEMENT *statement){
 			check_expression(statement->value.statement_return.exp);
 			// Note: return type set in weeder
 			leftHand = statement->value.statement_return.exp->symbolType;
-			returnType = funcStackPeek(functionStack)->symbolType;
 
-			if (leftHand->type != returnType->type &&
+			if ( !stackIsEmpty(functionStack) ) {
+				returnType = funcStackPeek(functionStack)->symbolType;
+
+				if (leftHand->type != returnType->type &&
 					((returnType->type == SYMBOL_RECORD ||
-					returnType->type == SYMBOL_ARRAY) &&
-					leftHand->type != SYMBOL_NULL)) {
-				check_error_report(
-						"type error: Return type does not match function",
-						statement->lineno);
+					  returnType->type == SYMBOL_ARRAY) &&
+					 leftHand->type != SYMBOL_NULL)) {
+					check_error_report(
+							"type error: Return type does not match function",
+							statement->lineno);
+				}
 			}
 			break;
 		case STATEMENT_WRITE:
