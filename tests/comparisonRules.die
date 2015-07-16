@@ -1,0 +1,19 @@
+var a : int, b : bool;
+
+# test of comparisons that can be reduced 
+
+write a == a; # should be true
+
+write a != a; # false
+
+write b || a == a; # true
+
+write a < a; # false
+
+write a > a; # false
+
+write a >= a; # true
+
+write a <= a; # true
+
+write (a <= a || b == b) && b; # should be b

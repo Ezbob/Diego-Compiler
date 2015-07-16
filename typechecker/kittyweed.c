@@ -682,7 +682,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 				exp->kind = EXPRES_TERM;
 
 			}
-
 			break;
 
 		case EXPRES_DIVIDE:
@@ -753,7 +752,6 @@ EXPRES *weed_expression( EXPRES *exp ){
 						exp = make_EXPRES_TERM(make_TERM_TRUE());
 					}
 				}
-
 			}
 			break;
 

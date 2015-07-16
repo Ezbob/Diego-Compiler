@@ -1,0 +1,9 @@
+(* should be reduced to a *)
+var a : bool, b : int;
+
+a = true;
+b = 2;
+
+write !!a;
+write !!false;
+write --b;
