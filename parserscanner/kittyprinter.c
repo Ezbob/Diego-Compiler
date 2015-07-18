@@ -19,8 +19,9 @@ void lineShift(){
 }
 
 void printer_function(FUNC *func) {
-	printf("%s", "Func ");
+	printf("Func ");
 	printer_head(func->head);
+	printf("\n");
 	indentation++;
 	printer_body(func->body);
 	indentation--;
