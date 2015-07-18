@@ -1,0 +1,13 @@
+func functionIf (a : bool) : int
+	if ( a ) then 
+		return 5;
+	else {
+		write 10;
+		return 12;
+		write 44;
+		return 11;
+		write 4;
+	}
+end functionIf
+ 
+write functionIf(false);

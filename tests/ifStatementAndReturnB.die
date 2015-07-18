@@ -1,0 +1,15 @@
+func functionIf () : int
+	if ( true ) then { 
+	# statement should just be replace with normal statement
+		write 1;
+		return 5;
+	}
+	# code after if's statement is dead code (code after a return) 
+	write 10;
+	return 12;
+	write 44;
+	return 11;
+	write 4;
+end functionIf
+ 
+write functionIf();

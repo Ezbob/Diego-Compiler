@@ -237,10 +237,35 @@ DECLARATION *weed_declaration ( DECLARATION *decl ){
 }
 
 STATEMENT_LIST *weed_statement_list ( STATEMENT_LIST *slst ){
+
 	switch ( slst->kind ) {
 		case STATEMENT_LIST_LIST:
 			slst->statement_list = weed_statement_list(slst->statement_list);
 			slst->statement = weed_statement(slst->statement);
+
+			// if-statement with false condition
+			// without else-statement removed
+			if ( slst->statement_list->statement->kind == STATEMENT_IFBRANCH
+				 && slst->statement_list->statement->value.
+					statement_if_branch.opt_else->kind == OPT_ELSE_EMPTY ) {
+
+				if ( slst->statement_list->statement->value.
+						statement_if_branch.condition->kind == EXPRES_TERM
+					 && slst->statement_list->statement->value.
+						statement_if_branch.condition->value.
+						term->kind == TERM_FALSE) {
+
+					if ( slst->statement_list->statement_list == NULL ) {
+						// if if-false-statement is first element make this
+						// the first
+						slst->kind = STATEMENT_LIST_STATEMENT;
+					} else {
+						// else jump over if-false statement
+						slst->statement_list = slst->statement_list->
+								statement_list;
+					}
+				}
+			}
 
 			// remove dead code after return statement
 			if ( slst->statement_list->statement->foundReturn ) {
@@ -288,31 +313,44 @@ STATEMENT *weed_statement ( STATEMENT *st ){
 					weed_opt_else(st->value.statement_if_branch.opt_else);
 			
 
-			if (st->value.statement_if_branch.opt_else->kind
-				== OPT_ELSE_EMPTY) {
-					break;
-			}
-			isReturnInIfCase = st->value.statement_if_branch.
-					statement->foundReturn;
-			isReturnInElseCase = st->value.statement_if_branch.opt_else->
-					statement->foundReturn;
+			if ( st->value.statement_if_branch.opt_else->kind
+				== OPT_ELSE_EMPTY ) {
+				if ( st->value.statement_if_branch.condition->kind
+					== EXPRES_TERM ) {
+					ifTerm = st->value.statement_if_branch.condition->value.
+							term;
+					// if true and no else just replace if with it's statement
+					if ( ifTerm->kind == TERM_TRUE ) {
+						return st->value.statement_if_branch.statement;
+					}
+				}
+			} else {
+				isReturnInIfCase = st->value.statement_if_branch.
+						statement->foundReturn;
+				isReturnInElseCase = st->value.statement_if_branch.opt_else->
+						statement->foundReturn;
 
-			// Case where there exists a return in both if and else,
-			// can ignore everything after the if/else
-			if( isReturnInIfCase && isReturnInElseCase ) {
-			   	st->foundReturn = 1;
-			}
+				// Case where there exists a return in both if and else,
+				// can ignore everything after the if/else
+				if( isReturnInIfCase && isReturnInElseCase ) {
+					st->foundReturn = 1;
+				}
 
-			if (st->value.statement_if_branch.condition->kind == EXPRES_TERM){
-				ifTerm = st->value.statement_if_branch.condition->value.term;
-				if ( ifTerm->kind == TERM_FALSE ) {
-					// if FALSE then we should only look at else
-					return st->value.statement_if_branch.opt_else->statement;
-				}else if ( ifTerm->kind == TERM_TRUE ) {
-					// if TRUE then we should only look at if
-					return st->value.statement_if_branch.statement;
+				if (st->value.statement_if_branch.condition->kind
+					== EXPRES_TERM){
+					ifTerm = st->value.statement_if_branch.condition->value.
+							term;
+					if ( ifTerm->kind == TERM_FALSE ) {
+						// if FALSE then we should only look at else
+						return st->value.statement_if_branch.opt_else->
+								statement;
+					}else if ( ifTerm->kind == TERM_TRUE ) {
+						// if TRUE then we should only look at if
+						return st->value.statement_if_branch.statement;
+					}
 				}
 			}
+
 			break;
 		case STATEMENT_LISTS:
 			st->value.statement_list =
