@@ -74,7 +74,6 @@ SYMBOL *putSymbol(SYMBOL_TABLE *t, char *name, SYMBOL_TYPE *symbolT){
 	strncpy(PutSymbol->name,name,strlen(name)+1);
 	PutSymbol->next = NULL;
 	PutSymbol->symbolType = symbolT;
-	PutSymbol->uniqueName = calloc(11,sizeof(char));
 	PutSymbol->offset = 0;
 	PutSymbol->tableId = t->id;
 
