@@ -2,7 +2,7 @@ func fun1( a : int ) : int
 
 	if a == 1 then 
 		if a == 2 then return 42;
-		else return 1;
+			else return 1;
 	else return 1;
 
 end fun1

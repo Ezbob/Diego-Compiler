@@ -11,11 +11,12 @@ static int useHistogram;
 int frequencySum = 0;
 int numberOfPasses = 0;
 int lineCount = 1;
+linked_list *first;
 
 void begin_peephole(int showHistogram) {
     fprintf(stderr, "Initializing peephole optimization phase \n");
     useHistogram = showHistogram;
-
+    first = ir_lines->next;
     if ( showHistogram ) {
         histogramValues = calloc(NUMBER_OF_TEMPLATES,sizeof(int));
     }
@@ -35,10 +36,12 @@ void list_run() {
             /* add templates here */
 
             useless_arithmetic_register_moves(iterator);
+            useless_push_pop_self(iterator);
             useless_push_pop(iterator);
             useless_move_between_push_pop(iterator);
             useless_transient_move(iterator);
             useless_move_of_same_register(iterator);
+            short_jumps(iterator);
 
             lineCount++;
             iterator = iterator->next;
@@ -46,6 +49,36 @@ void list_run() {
         numberOfPasses++;
     } while ( frequencySum > 0 );
 }
+
+/* Example:
+ * pushl %ebx
+ * popl %ebx
+ * to: delete instruction
+ */
+void useless_push_pop_self(linked_list *currentLine) {
+
+    IR_INSTRUCTION *currentInstruction =
+            (IR_INSTRUCTION *) currentLine->data;
+    IR_INSTRUCTION *nextInstruction =
+            (IR_INSTRUCTION *) currentLine->next->data;
+
+    if( currentInstruction->op_code == pushl &&
+            nextInstruction->op_code == popl) {
+        if( currentInstruction->arg1->kind == register_arg &&
+            nextInstruction->arg1->kind == register_arg) {
+            if( strcmp(currentInstruction->arg1->charConst,
+                        nextInstruction->arg1->charConst) == 0){
+                currentLine->previous->next = currentLine->next->next;
+                currentLine->next->next->previous = currentLine->previous;
+
+                COUNT_IN_HISTOGRAM(PUSH_POP_SELF);
+                frequencySum++;
+
+            }
+        }
+    }
+}
+
 
 /* Example:
  * pushl %eax
@@ -147,6 +180,10 @@ void useless_transient_move(linked_list *currentLine) {
     }
 }
 
+/*
+ * example for template:
+
+ */
 void useless_move_between_push_pop(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction =
             (IR_INSTRUCTION *) currentLine->data;
@@ -190,7 +227,14 @@ void useless_move_between_push_pop(linked_list *currentLine) {
 }
 
 /*
- *
+ * example for template
+ * movl %ebx, %eax
+ * movl %edx, %ecx
+ * addl %ecx, %eax
+ * pushl %eax
+ * to:
+ * addl %edx, %ebx
+ * pushl %ebx
  */
 void useless_arithmetic_register_moves(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction =
@@ -252,6 +296,11 @@ void useless_arithmetic_register_moves(linked_list *currentLine) {
     }
 }
 
+/*
+ * example for template:
+ * movl %ebx, %ebx
+ * to: delete instruction
+ */
 void useless_move_of_same_register(linked_list *currentLine) {
     IR_INSTRUCTION *currentInstruction = (IR_INSTRUCTION *) currentLine->data;
 
@@ -268,6 +317,37 @@ void useless_move_of_same_register(linked_list *currentLine) {
         }
     }
 }
+
+/*
+ * example for template:
+ * jmp label
+ * label
+ * to:
+ * label
+ */
+void short_jumps(linked_list *currentLine) {
+
+    IR_INSTRUCTION *currentInstruction =
+            (IR_INSTRUCTION *) currentLine->data;
+    IR_INSTRUCTION *nextInstruction =
+            (IR_INSTRUCTION *) currentLine->next->data;
+
+
+    if( currentInstruction->op_code == jmp &&
+        nextInstruction->op_code == label){
+        if( strcmp(currentInstruction->label, 
+            nextInstruction->label) == 0 ){
+            
+            currentLine->previous->next = currentLine->next;
+            currentLine->next->previous = currentLine->previous;
+
+            COUNT_IN_HISTOGRAM(SHORT_JUMP);
+            frequencySum++;
+        }
+    }
+
+}
+
 
 void get_template_name(int index) {
 
@@ -287,6 +367,13 @@ void get_template_name(int index) {
             break;
         case ARITHMETIC_REGISTER_MOVE:
             fprintf(stderr, "arithmetic_register_move");
+            break;
+        case PUSH_POP_SELF:
+            fprintf(stderr, "push_pop_self");
+            break;
+        case SHORT_JUMP:
+            fprintf(stderr, "short_jump");
+            break;
         default:
             break;
     }
