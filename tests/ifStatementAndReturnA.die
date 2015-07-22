@@ -1,0 +1,16 @@
+func functionIf () : int
+	write 1;
+	if ( false ) then {
+	# if statement should just be removed since it's dead code
+		write 1;
+		return 5;
+	}
+	# should be weeded as normaly
+	write 10;
+	return 12;
+	write 44;
+	return 11;
+	write 4;
+end functionIf
+ 
+write functionIf();

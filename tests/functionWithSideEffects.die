@@ -1,0 +1,24 @@
+(* We tests reduction of OR and AND when side effects occur *)
+
+var k : int;
+
+func boolFuncWithSideEffects ( a : int ) : bool 
+	k = a; # side effect
+	return true;
+end boolFuncWithSideEffects
+
+write true || boolFuncWithSideEffects(42); 
+	# with lazy evaluation the side effect doesn't get evaluated
+
+write boolFuncWithSideEffects(37) || true;
+	# with lazy eval. the side effect gets evaluated
+
+write k;
+
+write false && boolFuncWithSideEffects(42);
+	# with lazy eval -> no side effects, we can reduces this to false then
+
+write boolFuncWithSideEffects(37) && false;
+	# with lazy eval -> side effects, we cannot reduces this because of sideeffects
+
+write k;

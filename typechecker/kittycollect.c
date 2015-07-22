@@ -45,7 +45,6 @@ void collect_head (HEAD *header, SYMBOL_TABLE *inner, SYMBOL_TABLE *outer) {
 	RESET_SCOPE_OFFSET;
 
 	header->arguments = noArguments;
-	inner->temps = noArguments;
 
 	/* symbol for the function */
 	symbol = putSymbol(outer, header->id, header->symbolType);
@@ -187,8 +186,6 @@ void collect_var_type ( VAR_TYPE *vtype, SYMBOL_TABLE *st,
 	} else {
 		vtype->symbol->offset = 0;
 	}
-
-	st->temps++;
 }
 
 void collect_decl_list ( DECL_LIST *dlst, SYMBOL_TABLE *st ) {

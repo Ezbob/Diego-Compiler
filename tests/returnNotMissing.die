@@ -1,0 +1,10 @@
+func functionIf () : int
+	write 10;
+	if ( true ) then {
+		# return statement is now last statement 
+		write 1;
+		return 5;
+	}
+end functionIf
+ 
+write functionIf();

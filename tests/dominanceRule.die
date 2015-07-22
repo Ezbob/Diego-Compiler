@@ -1,0 +1,5 @@
+var a : bool;
+
+write a || true; # true
+
+write a && false; # false

@@ -1,0 +1,10 @@
+func functionIf () : int
+	# missing return statement because if-false statement
+	write 10;
+	if ( false ) then { 
+		write 1;
+		return 5;
+	}
+end functionIf
+ 
+write functionIf();

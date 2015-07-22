@@ -1,0 +1,7 @@
+var a : bool, b : bool;
+
+write a || a; # true
+
+write a && a; # true
+
+write b && a; # just b && a

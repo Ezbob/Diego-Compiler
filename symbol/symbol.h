@@ -38,7 +38,6 @@ typedef struct SYMBOL {
     struct SYMBOL *next; // for hash chaining
     struct PAR_DECL_LIST *functionParameters;
     int noParameters; // number of parameters needed by the function
-    char *uniqueName; // The function name at assembler level
     int offset; // for offsetting into the stack
     int tableId; // for checking when to use static link
 } SYMBOL;
@@ -47,7 +46,6 @@ typedef struct SYMBOL_TABLE {
     SYMBOL *table[HASH_SIZE];
     struct SYMBOL_TABLE *next;
     struct SYMBOL_TABLE *recordParentScope;
-    int temps;
     int localVars; // used in allocation of local variables
     int id;
 } SYMBOL_TABLE;
