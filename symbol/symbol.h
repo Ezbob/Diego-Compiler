@@ -46,7 +46,6 @@ typedef struct SYMBOL_TABLE {
     SYMBOL *table[HASH_SIZE];
     struct SYMBOL_TABLE *next;
     struct SYMBOL_TABLE *recordParentScope;
-    int temps;
     int localVars; // used in allocation of local variables
     int id;
 } SYMBOL_TABLE;
