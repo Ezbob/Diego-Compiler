@@ -1,0 +1,10 @@
+type recA = record of { a1 : int };
+var y : recA, x : array of recA;
+
+allocate x of length 4;
+
+# write and allocate
+for each y in x do {
+	allocate y;
+	y.a1 = 10;
+}
