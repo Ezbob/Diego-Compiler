@@ -1,0 +1,11 @@
+var a : int, b : int, c : int;
+
+a = 21;
+b = 1;
+c = 0 - 7;
+
+write -12;
+write a;
+write -a;
+write c;
+write -( a + b );
