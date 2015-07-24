@@ -1,8 +1,11 @@
 #Shows that the compiler only does pointer based comparisons on arrays and not structual
-var a: array of int, b:array of int;
+var a : array of int, b : array of int;
 allocate a of length 2;
 allocate b of length 2;
-a[0]=1;
-b[0]=1;
-if (a==a) then write 1;
+a[0]= 1;
+b[0]= a[0];
+a[1]= 2;
+b[1]= a[1];
+#Arrays a and b should [1,2] and [1,2] 
+if (a==b) then write 1;
 	else write 0;
