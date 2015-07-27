@@ -247,11 +247,12 @@ void IR_builder_statement ( STATEMENT *st ) {
 
 		case STATEMENT_WRITE:
             has_prints = 1;
-			IR_builder_expression(st->value.exp);
-			append_element(ir_lines, popEax);
-				// result from expression
 			switch(st->value.exp->symbolType->type){
 				case SYMBOL_BOOL:
+					IR_builder_expression(st->value.exp);
+						// sub-expression
+					append_element(ir_lines, popEax);
+
 					labelIdCounter = GET_NEXT_LABEL_ID;
 
                     GET_FLOW_CONTROL_LABEL(falseLabel, "printFalse",
@@ -300,7 +301,8 @@ void IR_builder_statement ( STATEMENT *st ) {
 								   make_instruction_pushl(printFormNull));
 					break;
 				case SYMBOL_INT:
-					append_element(ir_lines, pushEax);
+					IR_builder_expression(st->value.exp);
+						// already on stack
 					noWriteArguments++;
 
 					append_element(ir_lines,
@@ -310,7 +312,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 					break;
 			}
 			// call to print
-			append_element( ir_lines, make_instruction_call(printfLabel));
+			append_element(ir_lines, make_instruction_call(printfLabel));
 
 			add_to_stack_pointer(noWriteArguments); // clean up
 			break;
