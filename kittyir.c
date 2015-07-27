@@ -454,7 +454,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 												  .opt_length);
 					append_element(ir_lines, popEcx);
 
-					if(runtime_enabled){ //This cant be covered by rtc
+					if(runtime_enabled){
 						// edi and esi is free here
 						negative_array_size_check(st->lineno, ecx);
 					}
@@ -611,14 +611,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 					make_argument_indexing(NULL, ebx, eax), ecx ) );
 
 			append_element( ir_lines, make_instruction_incl(eax) );
-
-
-			// load variable
-			variable = IR_builder_variable(st->value.statement_foreach.
-					element );
-			append_element( ir_lines, make_instruction_movl(
-					make_argument_indexing(NULL, ebx, eax), edx));
-			append_element( ir_lines, make_instruction_movl(edx, variable));
 
 			// START of foreach loop
 			append_element( ir_lines,
