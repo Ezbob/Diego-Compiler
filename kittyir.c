@@ -224,6 +224,7 @@ void IR_builder_statement_list ( STATEMENT_LIST *slst ) {
 void IR_builder_statement ( STATEMENT *st ) {
 	int labelIdCounter = 0;
 	int numberOfRecordMembers;
+	int noWriteArguments = 1;
 
 	char *endLabel;
 	char *elseLabel;
@@ -258,7 +259,7 @@ void IR_builder_statement ( STATEMENT *st ) {
                     GET_FLOW_CONTROL_LABEL(trueLabel, "printTrue",
                                            labelIdCounter);
                     GET_FLOW_CONTROL_LABEL(printLabel,"printBool",
-                                           labelIdCounter);
+										   labelIdCounter);
 
 					// compare boolean value to true
 					append_element(ir_lines, make_instruction_cmp(one, eax));
@@ -294,24 +295,16 @@ void IR_builder_statement ( STATEMENT *st ) {
 							printLabel));
 					break;
 
-				case SYMBOL_INT:
 				case SYMBOL_NULL:
-					append_element(ir_lines, pushEax);
-
-					if (st->value.exp->value.term->kind == TERM_NULL) {
-						pushForm = make_instruction_pushl(printFormNull);
-					} else {
-						pushForm = make_instruction_pushl(printFormInt);
-					}
-
-					append_element(ir_lines, pushForm);
+					append_element(ir_lines,
+								   make_instruction_pushl(printFormNull));
 					break;
-
-				case SYMBOL_ARRAY:
+				case SYMBOL_INT:
 					append_element(ir_lines, pushEax);
+					noWriteArguments++;
 
-					append_element(ir_lines, make_instruction_pushl(
-							printFormInt));
+					append_element(ir_lines,
+								   make_instruction_pushl(printFormInt));
 					break;
 				default:
 					break;
@@ -319,7 +312,7 @@ void IR_builder_statement ( STATEMENT *st ) {
 			// call to print
 			append_element( ir_lines, make_instruction_call(printfLabel));
 
-			add_to_stack_pointer(2); // clean up
+			add_to_stack_pointer(noWriteArguments); // clean up
 			break;
 
         case STATEMENT_ADDASSIGN:
