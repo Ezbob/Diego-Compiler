@@ -2,6 +2,7 @@
 %{
 	#include <stdio.h>
 	#include "y.tab.h"
+	#define ERR_LABEL_SIZE 42
 	extern int lineno;
 	int commentcalls = 0;
 %}
@@ -97,8 +98,10 @@ WHITESPACE [\ \t]*
 ">"	{ return '>'; }
 
 {DIGITS}	{ yylval.int_val = atoi(yytext); return NUM; }
-{ID}		{ yylval.str_val = (char*)malloc(strlen(yytext)+1*sizeof(char));
+{ID}		{ yylval.str_val = malloc(strlen(yytext)+1 * sizeof(char) );
 				sprintf(yylval.str_val,"%s",yytext); return ID; }
 
-. 			yy_fatal_error("Error: invalid symbols found \n");
+. 			{ char *errorMsg = malloc(ERR_LABEL_SIZE * sizeof(char) );
+		sprintf(errorMsg,"Error: invalid symbols found at line %i ",lineno);
+			yy_fatal_error(errorMsg);}
 %%
