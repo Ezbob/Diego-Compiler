@@ -25,5 +25,6 @@ void printer_expression ( EXPRES *exp);
 void printer_term ( TERM *term);
 void printer_act_list ( ACT_LIST *actlst);
 void printer_expression_list ( EXP_LIST *explst);
+void decide_type(SYMBOL_TYPE *stype, char *id_of_type);
 
 #endif /* END OF __KITTYPRINTER_H */

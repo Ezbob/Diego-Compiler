@@ -1,15 +1,12 @@
 #include <stdio.h>
-#include <stdarg.h> 
 #include "kittyprinter.h"
-#include "kittytree.h"
+#include "../parserscanner/kittytree.h"
 
-static int indentation = -1;
+static int indentation = 0;
 static int tabSize = 4;
 
 /*Line shift with the current indentations level */
 void lineShift(){
-
-	printf("\n");
 
 	int i;
 	for (i = (indentation * tabSize); i > 0; i--){
@@ -26,6 +23,7 @@ void printer_function(FUNC *func) {
 	printer_body(func->body);
 	indentation--;
 	printer_tail(func->tail);
+	printf("\n");
 }
 
 void printer_head (HEAD *header){
@@ -42,9 +40,7 @@ void printer_body (BODY *body){
 }
 
 void printer_tail (TAIL *tail){
-
-	printf("End %s", tail->id);
-	lineShift();
+	printf("end %s", tail->id);
 }
 
 
@@ -64,14 +60,9 @@ void printer_type ( TYPE *type){
 			printer_type(type->value.type);
 			break;
 		case TYPE_RECORD:
-			printf(" record of {");
-			indentation += 2;
-			lineShift();
+			printf(" record of { ");
 			printer_var_decl_list(type->value.var_decl_list);
-			indentation -= 2;
-			lineShift();
-			printf("};");
-			lineShift();
+			printf(" };");
 			break;
 	}
 }
@@ -92,7 +83,6 @@ void printer_var_decl_list ( VAR_DECL_LIST *vdecl){
 		case VAR_DECL_LIST_LIST:
 			printer_var_decl_list(vdecl->var_decl_list);
 			printf(", ");
-			lineShift();
 			printer_var_type(vdecl->var_type);
 			break;
 		case VAR_DECL_LIST_TYPE:
@@ -102,7 +92,6 @@ void printer_var_decl_list ( VAR_DECL_LIST *vdecl){
 }
 
 void printer_var_type ( VAR_TYPE *vtype){
-
 	printf("%s :", vtype->id);
 	printer_type(vtype->type);
 }
@@ -110,8 +99,9 @@ void printer_var_type ( VAR_TYPE *vtype){
 void printer_decl_list ( DECL_LIST *dlst){
 	switch(dlst->kind){
 		case DECL_LIST_LIST:
-			printer_decl_list(dlst->decl_list);		
+			printer_decl_list(dlst->decl_list);
 			printer_declaration(dlst->declaration);
+			printf("\n");
 			break;
 		case DECL_LIST_EMPTY:
 			break;
@@ -120,23 +110,20 @@ void printer_decl_list ( DECL_LIST *dlst){
 
 
 void printer_declaration ( DECLARATION *decl){
-	indentation++;
 	switch(decl->kind){
 		case DECLARATION_ID:
-			printf("Type %s = ", decl->value.declaration_id.id);
+			printf("Type %s =", decl->value.declaration_id.id);
 			printer_type(decl->value.declaration_id.type);
 			break;
 		case DECLARATION_FUNC:
 			printer_function(decl->value.function);
 			break;
 		case DECLARATION_VAR:
-			lineShift();
 			printf("Var ");
 			printer_var_decl_list(decl->value.var_decl_list);
 			printf(";");
 			break;
 	}
-	indentation--;
 }
 
 void printer_statement_list ( STATEMENT_LIST *slst){
@@ -152,100 +139,89 @@ void printer_statement_list ( STATEMENT_LIST *slst){
 }
 
 void printer_statement ( STATEMENT *st){
+	lineShift();
 	switch(st->kind){
 		case STATEMENT_RETURN:
-			lineShift();
-			printf("Return ");
+			printf("return ");
 			printer_expression(st->value.statement_return.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_WRITE:
-			lineShift();
-			printf("Write ");
+			printf("write ");
 			printer_expression(st->value.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_ALLOCATE:
-			lineShift();
-			printf("Allocate ");
+			printf("allocate ");
 			printer_variable(st->value.statement_allocate.var);
 			printer_opt_length(st->value.statement_allocate.opt_length);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_ASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" := ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_ADDASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" += ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_SUBASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" -= ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_MULASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" *= ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_DIVASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" /= ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_MODASSIGN:
-			lineShift();
 			printer_variable(st->value.statement_assign.var);
 			printf(" %%= ");
 			printer_expression(st->value.statement_assign.exp);
-			printf(";\n");
+			printf(";");
 			break;
 		case STATEMENT_IFBRANCH:
 			printf("If ");
 			printer_expression(st->value.statement_if_branch.condition);
-			printf(" then");
+			printf(" then\n");
 			indentation++;
 			printer_statement(st->value.statement_if_branch.statement);
 			indentation--;
-			lineShift();
 			printer_opt_else(st->value.statement_if_branch.opt_else);
-			printf("\n");
 			break;
 		case STATEMENT_WHILE:
 			printf("while ");
 			printer_expression(st->value.statement_while.condition);
+			printf(" ");
 			printer_statement(st->value.statement_while.statement);
-			printf("\n");
 			break;
 		case STATEMENT_FOR:
 			printf("for ");
 			printer_statement(st->value.statement_for.assignment);
 			printf(" ");
 			printer_expression(st->value.statement_for.condition);
-			printf(" ");
+			printf("; ");
 			printer_statement(st->value.statement_for.update);
 			printf(" do \n");
 			indentation++;
 			printer_statement(st->value.statement_for.statement);
 			indentation--;
-			printf("\n");
 			break;
 		case STATEMENT_FOREACH:
-			printf("foreach ");
+			printf("for each ");
 			printer_variable(st->value.statement_foreach.element);
 			printf(" in ");
 			printer_variable(st->value.statement_foreach.collection);
@@ -253,18 +229,20 @@ void printer_statement ( STATEMENT *st){
 			indentation++;
 			printer_statement(st->value.statement_foreach.statement);
 			indentation--;
-			printf("\n");
 		case STATEMENT_LISTS:
 			printf("{\n");
+			indentation++;
 			printer_statement_list(st->value.statement_list);
+			indentation--;
 			printf("}");
 			break;
 		case STATEMENT_BREAK:
-			printf("break;\n");
+			printf("break;");
 			break;
 		case STATEMENT_CONTINUE:
-			printf("continue;\n");
+			printf("continue;");
 	}
+	printf("\n");
 }
 
 void printer_opt_length ( OPT_LENGTH *oplen){
@@ -281,7 +259,8 @@ void printer_opt_length ( OPT_LENGTH *oplen){
 void printer_opt_else ( OPT_ELSE *opel){
 	switch(opel->kind){
 		case OPT_ELSE_STATEMENT:
-			printf("else:");
+			lineShift();
+			printf("else:\n");
 			indentation++;
 			printer_statement(opel->statement);
 			indentation--;
@@ -298,9 +277,9 @@ void printer_variable ( VAR *var){
 			break;
 		case VAR_ARRAY:
 			printer_variable(var->value.var_array.var);
-			printf("[ ");
+			printf("[");
 			printer_expression(var->value.var_array.exp);
-			printf(" ] ");
+			printf("]");
 			break;
 		case VAR_RECORD:
 			printer_variable(var->value.var_record.var);
@@ -310,103 +289,80 @@ void printer_variable ( VAR *var){
 }
 
 void printer_expression ( EXPRES *exp){
+	printf("(, ");
+	decide_type(exp->symbolType, NULL);
+	printf(": ");
 	switch(exp->kind){
 		case EXPRES_TERM:
 			printer_term(exp->value.term);
 			break;
 		case EXPRES_PLUS:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" + ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_MINUS:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" - ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_TIMES:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" * ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_DIVIDE:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" / ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_MODULO:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" %% ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_EQ:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" == ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_NEQ:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" != ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_GREATER:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" > ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_LESS:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" < ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_LEQ:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" <= ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_GEQ:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" >= ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_AND:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" && ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 		case EXPRES_OR:
-			printf("(");
 			printer_expression(exp->value.sides.left);
 			printf(" || ");
 			printer_expression(exp->value.sides.right);
-			printf(")");
 			break;
 	}
-
+	printf(" ,)");
 }
 
 void printer_term ( TERM *term){
@@ -415,7 +371,7 @@ void printer_term ( TERM *term){
 			printer_variable(term->value.var);
 			break;
 		case TERM_ACT_LIST:
-			printf("%s (", term->value.term_act_list.id);
+			printf("%s(", term->value.term_act_list.id);
 			printer_act_list(term->value.term_act_list.actlist);
 			printf(")");
 			break;
@@ -448,7 +404,7 @@ void printer_term ( TERM *term){
 			printf("FALSE");
 			break;
 		case TERM_NUM:
-			printf("(%i)",term->value.intconst);
+			printf("%i",term->value.intconst);
 			break;
 	}
 }
@@ -470,8 +426,42 @@ void printer_expression_list ( EXP_LIST *explst){
 			break;
 		case EXP_LIST_LIST:
 			printer_expression_list(explst->explist);
-			printf(",");
+			printf(", ");
 			printer_expression(explst->exp);
 			break;
 	}
+}
+
+void decide_type (SYMBOL_TYPE *stype, char *id_of_type) {
+	switch (stype->type) {
+		case SYMBOL_RECORD:
+			printf("record");
+			break;
+		case SYMBOL_INT:
+			printf("int");
+			break;
+		case SYMBOL_ARRAY:
+			printf("array");
+			break;
+		case SYMBOL_FUNCTION:
+			printf("function");
+			break;
+		case SYMBOL_ID:
+			if(id_of_type != NULL) {
+				printf("%s",id_of_type);
+			} else {
+				printf("id");
+			}
+			break;
+		case SYMBOL_BOOL:
+			printf("bool");
+			break;
+		case SYMBOL_NULL:
+			printf("null");
+			break;
+		case SYMBOL_UNKNOWN:
+			printf("unknown");
+			break;
+	}
+
 }

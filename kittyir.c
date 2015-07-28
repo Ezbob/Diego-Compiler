@@ -232,7 +232,6 @@ void IR_builder_statement ( STATEMENT *st ) {
 	char *falseLabel;
 	char *trueLabel;
 
-	IR_INSTRUCTION *pushForm;
 	ARGUMENT *variable;
 	ARGUMENT *collection;
 
