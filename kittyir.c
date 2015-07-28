@@ -1087,8 +1087,6 @@ void IR_builder_term ( TERM *term ) {
 				append_element(ir_lines, make_instruction_negl(ebx));
 				// false negates the argument as two's complement
 
-				append_element(ir_lines, pushEbx);
-
 				append_element(ir_lines,
 							   make_instruction_label(positiveNumberLabel));
 
