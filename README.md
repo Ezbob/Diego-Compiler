@@ -3,7 +3,7 @@
 ## What is this?
 This is a compiler for a simple language called Diego. The Diego language is a toy procedural programming language made-up to satisfy the requires of my BA project.  
 
-## What does the it do?
+## What does it do?
 The goal of the Diego compiler is to take any legal Diego program and translate the Diego code into x86 assembler code. As such if your computer cannot execute x86 assembler code, then this compiler won't work for you (that is, you can compile Diego programs but you can't execute them).
 
 ### Language and compiler used
