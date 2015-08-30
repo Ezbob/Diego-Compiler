@@ -14,6 +14,12 @@ Version 1.0.0
 
 ## How-to
 ### Compiling the source
+
+#### Required tools
+- make build tool
+- flex scanner generator tool
+- bison parser generator tool
+
 As the project uses the make tool to compile the whole project the following shell command should give you a executable named "kitty":
 ``` bash
 make
