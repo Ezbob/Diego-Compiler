@@ -64,7 +64,7 @@ var a: int, b: bool;
 DanskDiego supports `arrays`, and `records`. To define an array, prefix the type with `array of`, e.g.
 
 ```
-var a: array of int, b: array of bool, c: array of array of char;
+var a: array of int, b: array of bool, c: array of array of bool;
 ```
 
 Where `c` is a two-dimensional array.
