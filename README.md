@@ -108,12 +108,12 @@ func returnInteger(a: int): int
 end returnInteger
 ```
 
-which defines the function `returnMe` which takes a single argument, an integer.
+which defines the function `returnInteger` which takes a single argument, an integer.
 
 Calling the function is done like most C-like programming languages:
 
 ```
-returnMe(5);
+returnInteger(5);
 ```
 
 ### Array length and absolute value
