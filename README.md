@@ -65,7 +65,7 @@ The keyword `type` can be used to define a type. E.g. `type id = int;` would ali
 
 ### Collections
 
-DanskDiego supports `arrays`, and `records`. To define an array, prefix the type with `array of`, e.g.
+Diego supports `arrays`, and `records`. To define an array, prefix the type with `array of`, e.g.
 
 ```
 var a: array of int, b: array of bool, c: array of array of bool;
@@ -149,7 +149,7 @@ write |a|; // 5
 
 ## Comparisons
 
-DanskDiego has `true` and `false` as boolean constants, and `null` for usage with records or arrays.
+Diego has `true` and `false` as boolean constants, and `null` for usage with records or arrays.
 
 Equality operators in Diego are similar to most other imperative languages, being `==` for equality, `!=` for inequality.
 Additionally, the language has `<`, `>`, `<=`, `>=` for equality checks.
@@ -158,7 +158,7 @@ Additionally, the language has `<`, `>`, `<=`, `>=` for equality checks.
 
 #### If-statements
 
-If-statements in DanskDiego can be followed a else-statement, or have the else omitted. The predicate must be enclosed by
+If-statements in Diego can be followed a else-statement, or have the else omitted. The predicate must be enclosed by
 a parenthesis. Predicates can be chained using the `&&` or the `||` operators.
 
 ```
