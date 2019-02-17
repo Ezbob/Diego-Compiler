@@ -107,6 +107,35 @@ type Node = record { leftChild: Node, rightChild: Node, key: int };
 
 Which defines a node of a binary tree.
 
+### Code comments
+
+Diego supports two types of source code comments, single line comments, and nested multi-line comments. 
+These are filtered out by the lexer on compile time.
+Single comments are marked by a bang character and can both inhabit it's own whole line or be on the right side of the code:
+```
+# This is a comment
+var a: int; # <-- Look at this variable! It's very important! 
+```
+Multiline are comprised of a parenthese character followed immediately by a asterisk. These can be nested:
+```
+(*
+  A multi-
+  line com-
+  ment
+*)
+var a: int;
+(*
+ This is how you write a multiline comment:
+ (*
+   Comment,
+   comment,
+   nice,
+   comment
+ *)
+*)
+a = 42;
+```
+
 ### Functions
 
 Defining a function is done using the `func` keyword. A function must have a name and a return type, and be terminated 
@@ -143,7 +172,7 @@ Additionally, the pipe operator can also be used on an integer to get the absolu
 
 ```
 var a: int;
-a = 0-5;
+a = -5;
 write |a|; // 5
 ```
 
@@ -175,11 +204,34 @@ While loops syntax require a predicate, similar to if statements, but the predic
 ```
 var i: int;
 i = 5;
-while (i < 5) do write i;
+while i < 5 do write i;
 ```
 
 The body of a while statement can either be a single statement, or list of statements.
 
+#### For loops
+
+As with the while loops and if-statements, Diego also includes a for loop structure:
+```
+var i : int;
+
+for i = 1; i < 10; i *= 2; do write i;
+
+# Or with a block of statements
+
+for i = 1; i < 10; i *= 2; do {
+  write i;
+}
+```
+These examples are equivalent to the following while loop:
+```
+var i : int;
+
+while i < 10; do { 
+  write i;
+  i *= 2;
+}
+```
 ### Example - Binary tree traversal
 
 ```
@@ -213,3 +265,5 @@ write sumKeys(root); // 3
 The main contributors are:
 - Anders Busch <andersbusch@gmail.com>
 - Henrik K. Clausen
+
+Many thanks to any other contributors!
