@@ -227,6 +227,7 @@ These examples are equivalent to the following while loop:
 ```
 var i : int;
 
+i = 1;
 while i < 10; do { 
   write i;
   i *= 2;
